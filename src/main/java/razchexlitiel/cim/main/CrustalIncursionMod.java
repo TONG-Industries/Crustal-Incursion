@@ -3,6 +3,7 @@ package razchexlitiel.cim.main;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -10,6 +11,7 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.MobSpawnEvent;
 import net.minecraftforge.event.level.LevelEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -141,7 +143,7 @@ public class CrustalIncursionMod {
 
         if (event.getTab() == ModCreativeTabs.CIM_TECH_TAB.get()) {
 
-
+            event.accept(ModBlocks.SHAFT_WOODEN);
             event.accept(ModBlocks.SHAFT_IRON);
             event.accept(ModBlocks.MOTOR_ELECTRO);
             event.accept(ModBlocks.WIND_GEN_FLUGER);
@@ -207,15 +209,19 @@ public class CrustalIncursionMod {
 
         if (event.getTab() == ModCreativeTabs.CIM_NATURE_TAB.get()) {
 
-            event.accept(ModItems.DEPTH_WORM_SPAWN_EGG);
-            event.accept(ModBlocks.DEPTH_WORM_NEST);
-            event.accept(ModBlocks.HIVE_SOIL);
             event.accept(ModBlocks.SEQUOIA_PLANKS.get());
             event.accept(ModBlocks.SEQUOIA_BARK.get());
             event.accept(ModBlocks.SEQUOIA_HEARTWOOD.get());
+            event.accept(ModBlocks.SEQUOIA_LEAVES.get());
             event.accept(ModBlocks.WASTE_LOG.get());
+            event.accept(ModBlocks.NECROSIS_PORTAL.get());
             event.accept(ModBlocks.NECROSIS_TEST.get());
-
+            event.accept(ModBlocks.NECROSIS_TEST2.get());
+            event.accept(ModBlocks.NECROSIS_TEST3.get());
+            event.accept(ModBlocks.NECROSIS_TEST4.get());
+            event.accept(ModItems.DEPTH_WORM_SPAWN_EGG);
+            event.accept(ModBlocks.DEPTH_WORM_NEST);
+            event.accept(ModBlocks.HIVE_SOIL);
         }
     }
 
@@ -225,7 +231,20 @@ public class CrustalIncursionMod {
         event.put(ModEntities.TURRET_LIGHT.get(), TurretLightEntity.createAttributes().build());
         event.put(ModEntities.TURRET_LIGHT_LINKED.get(), TurretLightEntity.createAttributes().build());
     }
+    @SubscribeEvent
+    public static void onEntitySpawn(MobSpawnEvent.FinalizeSpawn event) {
+        Level level = (Level) event.getLevel();
+        // Если мы в Некрозе
+        if (level.dimension().location().getPath().equals("necrosis")) {
+            double spawnY = event.getY();
+            Player nearestPlayer = level.getNearestPlayer(event.getX(), spawnY, event.getZ(), 128, false);
 
+            // Если игрок далеко по вертикали (больше 50 блоков) - отменяем спавн
+            if (nearestPlayer != null && Math.abs(nearestPlayer.getY() - spawnY) > 50) {
+                event.setSpawnCancelled(true);
+            }
+        }
+    }
     @SubscribeEvent
     public void onAttachCapabilitiesLevel(AttachCapabilitiesEvent<Level> event) {
         // Проверка, чтобы не прикрепить дважды

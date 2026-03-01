@@ -102,10 +102,12 @@ public class ModBlockEntities {
             BLOCK_ENTITIES.register("motor_electro_be",
                     () -> BlockEntityType.Builder.of(MotorElectroBlockEntity::new, ModBlocks.MOTOR_ELECTRO.get()).build(null));
 
-    public static final RegistryObject<BlockEntityType<ShaftIronBlockEntity>> SHAFT_IRON_BE =
-            BLOCK_ENTITIES.register("shaft_iron_be",
-                    () -> BlockEntityType.Builder.of(ShaftIronBlockEntity::new, ModBlocks.SHAFT_IRON.get()).build(null));
-
+    public static final RegistryObject<BlockEntityType<ShaftBlockEntity>> SHAFT_BLOCK_BE =
+            BLOCK_ENTITIES.register("shaft",
+                    () -> BlockEntityType.Builder.of(ShaftBlockEntity::new,
+                            ModBlocks.SHAFT_IRON.get(),
+                            ModBlocks.SHAFT_WOODEN.get() // и все другие валы
+                    ).build(null));
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }

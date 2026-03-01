@@ -106,22 +106,19 @@ public class AdderBlockEntity extends BlockEntity implements RotationalNode {
         long totalTorque = 0;
         boolean anyInput = false;
 
-        // Опрашиваем левую и правую стороны
         for (Direction dir : new Direction[]{left, right}) {
             BlockPos neighborPos = pos.relative(dir);
             BlockEntity neighbor = level.getBlockEntity(neighborPos);
             if (neighbor == null) continue;
 
-            // Пытаемся найти источник, начиная с соседа, с направления от сумматора к соседу
             RotationSource src = RotationNetworkHelper.findSource(neighbor, dir.getOpposite());
             if (src != null && src.speed() > 0) {
                 totalSpeed += src.speed();
-                totalTorque = Math.max(totalTorque, src.torque());
+                totalTorque += src.torque(); // теперь суммируется крутящий момент
                 anyInput = true;
             }
         }
 
-        // Если нет входов, обнуляем
         if (!anyInput) {
             totalSpeed = 0;
             totalTorque = 0;

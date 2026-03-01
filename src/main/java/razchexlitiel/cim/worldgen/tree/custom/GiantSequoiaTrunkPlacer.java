@@ -75,10 +75,12 @@ public class GiantSequoiaTrunkPlacer extends TrunkPlacer {
                                 // Если выпадает меньше 0.3 (шанс 30%), ставим замшелые корни
                                 if (random.nextFloat() < 0.3f) {
                                     // ЗАМЕНИ MOSSY_SEQUOIA_ROOTS на точное название твоего блока замшелых корней!
+
                                     blockSetter.accept(currentPos, ModBlocks.SEQUOIA_BARK_MOSSY.get().defaultBlockState());
                                 } else {
                                     // Иначе ставим обычные (шанс 70%)
                                     blockSetter.accept(currentPos, ModBlocks.SEQUOIA_BARK.get().defaultBlockState());
+
                                 }
                             }
                         } else {

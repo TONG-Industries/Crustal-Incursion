@@ -1,0 +1,25 @@
+{
+  "has_precipitation": false,
+  "temperature": 0.5,
+  "downfall": 0.0,
+  "effects": {
+    "sky_color": 0,
+    "fog_color": 12632256,
+    "water_color": 4159204,
+    "water_fog_color": 329011,
+    "ambient_particle": {
+      "options": { "type": "minecraft:ash" },
+      "probability": 0.01
+    }
+  },
+  "spawners": {},
+  "spawn_costs": {},
+  "carvers": {
+    "air": [
+      "minecraft:cave",
+      "minecraft:canyon"
+    ]
+  },
+
+  "features": []
+}

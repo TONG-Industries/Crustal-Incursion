@@ -51,8 +51,10 @@ public class ModBiomes {
 
         // ШАГ 5: Растительность (СТРОЖАЙШИЙ ПОРЯДОК!)
         // 5.1 Сначала ВСЕГДА идут деревья
+
         biomeBuilder.addFeature(GenerationStep.Decoration.VEGETAL_DECORATION, ModPlacedFeatures.SMALL_SEQUOIA_PLACED_KEY);
         biomeBuilder.addFeature(GenerationStep.Decoration.VEGETAL_DECORATION, ModPlacedFeatures.MEDIUM_SEQUOIA_PLACED_KEY);
+
         biomeBuilder.addFeature(GenerationStep.Decoration.VEGETAL_DECORATION, ModPlacedFeatures.GIANT_SEQUOIA_PLACED_KEY);
 
         // 5.2 Затем трава и папоротники

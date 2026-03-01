@@ -19,6 +19,7 @@ public class ModSurfaceRules {
 
         // --- МАГИЯ ШУМА: Создаем реалистичные пятна на земле ---
         SurfaceRules.RuleSource groundMix = SurfaceRules.sequence(
+
                 // От -1.0 до -0.3: Крупные полянки твоего кастомного мха/хвои
                 SurfaceRules.ifTrue(SurfaceRules.noiseCondition(Noises.SURFACE, -1.0D, -0.3D), makeStateRule(ModBlocks.SEQUOIA_BIOME_MOSS.get())),
 
@@ -30,6 +31,7 @@ public class ModSurfaceRules {
 
                 // Всё остальное (фон) заливаем сочным дёрном!
                 makeStateRule(Blocks.GRASS_BLOCK)
+
         );
 
         SurfaceRules.RuleSource sequoiaSurface = SurfaceRules.sequence(

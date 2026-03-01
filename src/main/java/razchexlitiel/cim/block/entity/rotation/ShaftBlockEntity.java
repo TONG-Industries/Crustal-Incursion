@@ -1,10 +1,12 @@
 package razchexlitiel.cim.block.entity.rotation;
 
+import net.minecraft.world.level.block.Block;
 import razchexlitiel.cim.api.rotation.RotationNetworkHelper;
 import razchexlitiel.cim.api.rotation.RotationSource;
 import razchexlitiel.cim.api.rotation.RotationalNode;
 import razchexlitiel.cim.block.basic.ModBlocks;
-import razchexlitiel.cim.block.basic.rotation.ShaftIronBlock;
+import razchexlitiel.cim.block.basic.rotation.ShaftBlock;
+import razchexlitiel.cim.block.basic.rotation.ShaftType;
 import razchexlitiel.cim.block.entity.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -27,7 +29,7 @@ import software.bernie.geckolib.core.animation.RawAnimation;
 import software.bernie.geckolib.core.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-public class ShaftIronBlockEntity extends BlockEntity implements GeoBlockEntity, RotationalNode {
+public class ShaftBlockEntity extends BlockEntity implements GeoBlockEntity, RotationalNode {
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private long speed = 0;
@@ -37,8 +39,10 @@ public class ShaftIronBlockEntity extends BlockEntity implements GeoBlockEntity,
     private long cacheTimestamp;
     private static final long CACHE_LIFETIME = 10;
 
-    private static final long MAX_SPEED = 300;
-    private static final long MAX_TORQUE = 150;
+    // Эти поля больше не статические, получаем из блока
+    // private static final long MAX_SPEED = 300;
+    // private static final long MAX_TORQUE = 150;
+
     private static final float ACCELERATION = 0.1f;
     private static final float DECELERATION = 0.03f;
     private static final int STOP_DELAY_TICKS = 5;
@@ -49,8 +53,8 @@ public class ShaftIronBlockEntity extends BlockEntity implements GeoBlockEntity,
 
     private static final RawAnimation ROTATION = RawAnimation.begin().thenLoop("rotation");
 
-    public ShaftIronBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.SHAFT_IRON_BE.get(), pos, state);
+    public ShaftBlockEntity(BlockPos pos, BlockState state) {
+        super(ModBlockEntities.SHAFT_BLOCK_BE.get(), pos, state);
     }
 
     // ========== NBT и Sync ==========
@@ -86,7 +90,7 @@ public class ShaftIronBlockEntity extends BlockEntity implements GeoBlockEntity,
     @Override public long getTorque() { return torque; }
     @Override public void setSpeed(long speed) { this.speed = speed; setChanged(); sync(); invalidateNeighborCaches(); }
     @Override public void setTorque(long torque) { this.torque = torque; setChanged(); sync(); invalidateNeighborCaches(); }
-    @Override public long getMaxSpeed() { return 0; }
+    @Override public long getMaxSpeed() { return 0; } // не используется для вала?
     @Override public long getMaxTorque() { return 0; }
 
     // ========== RotationalNode ==========
@@ -101,7 +105,6 @@ public class ShaftIronBlockEntity extends BlockEntity implements GeoBlockEntity,
 
     @Override
     public void invalidateCache() {
-        // Проверка обязательна, чтобы избежать бесконечной рекурсии!
         if (this.cachedSource != null) {
             this.cachedSource = null;
             if (level != null && !level.isClientSide) {
@@ -112,7 +115,7 @@ public class ShaftIronBlockEntity extends BlockEntity implements GeoBlockEntity,
 
     private void invalidateNeighborCaches() {
         if (level == null || level.isClientSide) return;
-        Direction facing = getBlockState().getValue(ShaftIronBlock.FACING);
+        Direction facing = getBlockState().getValue(ShaftBlock.FACING);
         for (Direction dir : new Direction[]{facing, facing.getOpposite()}) {
             BlockPos neighborPos = worldPosition.relative(dir);
             if (level.getBlockEntity(neighborPos) instanceof RotationalNode node) {
@@ -123,7 +126,7 @@ public class ShaftIronBlockEntity extends BlockEntity implements GeoBlockEntity,
 
     @Override
     public Direction[] getPropagationDirections(@Nullable Direction fromDir) {
-        Direction myFacing = getBlockState().getValue(ShaftIronBlock.FACING);
+        Direction myFacing = getBlockState().getValue(ShaftBlock.FACING);
         if (fromDir != null) {
             if (fromDir == myFacing || fromDir == myFacing.getOpposite()) {
                 return new Direction[]{fromDir.getOpposite()};
@@ -136,11 +139,14 @@ public class ShaftIronBlockEntity extends BlockEntity implements GeoBlockEntity,
     }
 
     // ========== Logic ==========
-    public static void tick(Level level, BlockPos pos, BlockState state, ShaftIronBlockEntity be) {
+    public static void tick(Level level, BlockPos pos, BlockState state, ShaftBlockEntity be) {
         if (level.isClientSide) {
             be.handleClientAnimation();
             return;
         }
+
+        // Получаем тип вала из блока
+        ShaftType type = ((ShaftBlock) state.getBlock()).getShaftType();
 
         long currentTime = level.getGameTime();
 
@@ -154,15 +160,15 @@ public class ShaftIronBlockEntity extends BlockEntity implements GeoBlockEntity,
         long newSpeed = (src != null) ? src.speed() : 0;
         long newTorque = (src != null) ? src.torque() : 0;
 
-        // 2. Проверка перегрузки
-        if (newSpeed > MAX_SPEED || newTorque > MAX_TORQUE) {
+        // 2. Проверка перегрузки (используем лимиты из типа)
+        if (newSpeed > type.getMaxSpeed() || newTorque > type.getMaxTorque()) {
             level.removeBlock(pos, false);
             Containers.dropItemStack(level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
-                    new ItemStack(ModBlocks.SHAFT_IRON.get()));
+                    new ItemStack(ModBlocks.SHAFT_IRON.get())); // TODO: заменить на предмет этого вала
             return;
         }
 
-        // 3. Применение изменений
+        // 3. Применение изменений (остальное без изменений)
         boolean changed = false;
         if (be.speed != newSpeed) {
             be.speed = newSpeed;
@@ -176,13 +182,10 @@ public class ShaftIronBlockEntity extends BlockEntity implements GeoBlockEntity,
         if (changed) {
             be.setChanged();
             be.sync();
-            // ВАЖНО: Уведомляем соседей, что наша скорость изменилась!
-            // Это заставит их сбросить кеш и перепроверить источник через нас.
             be.invalidateNeighborCaches();
         }
     }
 
-    // ... методы анимации и GeckoLib без изменений ...
     private void handleClientAnimation() {
         float targetSpeed = (speed > 0) ? Math.max(0.1f, speed / 100f) : 0f;
         if (targetSpeed > 0) {

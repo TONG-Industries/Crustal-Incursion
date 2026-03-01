@@ -99,6 +99,6 @@
     }
   },
   "textures": {
-    "particle": "cim:shaft_iron"
+    "particle": "cim:shaft_wooden"
   }
 }
