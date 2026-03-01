@@ -1,6 +1,5 @@
 package razchexlitiel.cim.block.basic.rotation;
 
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -20,20 +19,27 @@ import org.jetbrains.annotations.Nullable;
 import razchexlitiel.cim.api.rotation.RotationalNode;
 import razchexlitiel.cim.block.entity.ModBlockEntities;
 import razchexlitiel.cim.block.entity.rotation.GearPortBlockEntity;
-import razchexlitiel.cim.block.entity.rotation.ShaftIronBlockEntity;
+import razchexlitiel.cim.block.entity.rotation.ShaftBlockEntity;
 
-public class ShaftIronBlock extends BaseEntityBlock {
+public class ShaftBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.FACING;
 
-    public ShaftIronBlock(Properties properties) {
+    private final ShaftType shaftType; // хранит все характеристики
+
+    public ShaftBlock(Properties properties, ShaftType shaftType) {
         super(properties);
+        this.shaftType = shaftType;
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
+    }
+
+    public ShaftType getShaftType() {
+        return shaftType;
     }
 
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new ShaftIronBlockEntity(pos, state);
+        return new ShaftBlockEntity(pos, state);
     }
 
     @Override
@@ -48,7 +54,6 @@ public class ShaftIronBlock extends BaseEntityBlock {
         BlockPos placePos = context.getClickedPos();
         Direction clickedFace = context.getClickedFace();
 
-        // Блок, на который мы кликаем (сосед)
         BlockPos targetPos = placePos.relative(clickedFace.getOpposite());
         BlockState targetState = level.getBlockState(targetPos);
         Block targetBlock = targetState.getBlock();
@@ -56,7 +61,7 @@ public class ShaftIronBlock extends BaseEntityBlock {
         boolean canPlace = false;
         Direction shaftFacing = clickedFace;
 
-        // 1. Мотор (только спереди)
+        // (здесь все проверки на соседей, как в оригинале, только вместо ShaftIronBlock используем ShaftBlock)
         if (targetBlock instanceof MotorElectroBlock) {
             Direction motorFacing = targetState.getValue(MotorElectroBlock.FACING);
             if (clickedFace == motorFacing) {
@@ -64,9 +69,8 @@ public class ShaftIronBlock extends BaseEntityBlock {
                 shaftFacing = motorFacing;
             }
         }
-        // 2. Другой вал (продолжаем линию)
-        else if (targetBlock instanceof ShaftIronBlock) {
-            Direction existingFacing = targetState.getValue(ShaftIronBlock.FACING);
+        else if (targetBlock instanceof ShaftBlock) {
+            Direction existingFacing = targetState.getValue(ShaftBlock.FACING);
             if (clickedFace == existingFacing || clickedFace == existingFacing.getOpposite()) {
                 canPlace = true;
                 shaftFacing = existingFacing;
@@ -137,10 +141,8 @@ public class ShaftIronBlock extends BaseEntityBlock {
             }
             return null;
         }
-
         return this.defaultBlockState().setValue(FACING, shaftFacing);
     }
-
 
     // Вспомогательный метод для визуального фидбека
     private void spawnErrorParticles(Level level, BlockPos pos) {
@@ -210,14 +212,14 @@ public class ShaftIronBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return createTickerHelper(type, ModBlockEntities.SHAFT_IRON_BE.get(), ShaftIronBlockEntity::tick);
+        return createTickerHelper(type, ModBlockEntities.SHAFT_BLOCK_BE.get(), ShaftBlockEntity::tick);
     }
 
     @Override
     public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean isMoving) {
         super.neighborChanged(state, level, pos, block, fromPos, isMoving);
         if (!level.isClientSide) {
-            if (level.getBlockEntity(pos) instanceof ShaftIronBlockEntity be) {
+            if (level.getBlockEntity(pos) instanceof ShaftBlockEntity be) {
                 be.invalidateCache();
             }
         }
@@ -252,6 +254,4 @@ public class ShaftIronBlock extends BaseEntityBlock {
             );
         }
     }
-
-
 }

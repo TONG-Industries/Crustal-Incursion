@@ -2,31 +2,30 @@ package razchexlitiel.cim.client.gecko.block.rotation;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
-import razchexlitiel.cim.block.basic.rotation.ShaftIronBlock;
-import razchexlitiel.cim.block.entity.rotation.ShaftIronBlockEntity;
+import razchexlitiel.cim.block.basic.rotation.ShaftBlock;
+import razchexlitiel.cim.block.entity.rotation.ShaftBlockEntity;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.renderer.GeoBlockRenderer;
 
-public class ShaftIronRenderer extends GeoBlockRenderer<ShaftIronBlockEntity> {
+public class ShaftRenderer extends GeoBlockRenderer<ShaftBlockEntity> {
 
-    public ShaftIronRenderer(BlockEntityRendererProvider.Context context) {
-        super(new ShaftIronModel());
+    public ShaftRenderer(BlockEntityRendererProvider.Context context) {
+        super(new ShaftModel());
     }
 
     @Override
-    public void preRender(PoseStack poseStack, ShaftIronBlockEntity animatable,
+    public void preRender(PoseStack poseStack, ShaftBlockEntity animatable,
                           BakedGeoModel model, MultiBufferSource bufferSource,
                           VertexConsumer buffer, boolean isReRender, float partialTick,
                           int packedLight, int packedOverlay, float red, float green,
                           float blue, float alpha) {
 
         BlockState state = animatable.getBlockState();
-        Direction facing = state.getValue(ShaftIronBlock.FACING);
+        Direction facing = state.getValue(ShaftBlock.FACING);
 
         // Смещаем к центру блока
         poseStack.translate(0.5f, 0.5f, 0.5f);

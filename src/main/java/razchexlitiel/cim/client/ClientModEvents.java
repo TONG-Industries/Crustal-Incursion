@@ -16,9 +16,8 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import razchexlitiel.cim.block.entity.ModBlockEntities;
 import razchexlitiel.cim.client.config.ModConfigKeybindHandler;
-import razchexlitiel.cim.client.config.ModKeyBindings;
 import razchexlitiel.cim.client.gecko.block.rotation.MotorElectroRenderer;
-import razchexlitiel.cim.client.gecko.block.rotation.ShaftIronRenderer;
+import razchexlitiel.cim.client.gecko.block.rotation.ShaftRenderer;
 import razchexlitiel.cim.client.gecko.block.rotation.WindGenFlugerRenderer;
 import razchexlitiel.cim.client.gecko.block.turrets.TurretLightPlacerRenderer;
 import razchexlitiel.cim.client.gecko.entity.bullets.TurretBulletRenderer;
@@ -60,7 +59,7 @@ public class ClientModEvents {
 
 
         BlockEntityRenderers.register(ModBlockEntities.MOTOR_ELECTRO_BE.get(), MotorElectroRenderer::new);
-        BlockEntityRenderers.register(ModBlockEntities.SHAFT_IRON_BE.get(), ShaftIronRenderer::new);
+        BlockEntityRenderers.register(ModBlockEntities.SHAFT_BLOCK_BE.get(), ShaftRenderer::new);
         BlockEntityRenderers.register(ModBlockEntities.WIND_GEN_FLUGER_BE.get(), WindGenFlugerRenderer::new);
         BlockEntityRenderers.register(ModBlockEntities.TURRET_LIGHT_PLACER_BE.get(), TurretLightPlacerRenderer::new);
 

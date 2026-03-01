@@ -91,6 +91,15 @@ public class ModBlocks {
     public static final RegistryObject<Block> NECROSIS_TEST = registerBlock("necrosis_test",
             () -> new Block(BlockBehaviour.Properties.of()
                     .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
+    public static final RegistryObject<Block> NECROSIS_TEST2 = registerBlock("necrosis_test2",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
+    public static final RegistryObject<Block> NECROSIS_TEST3 = registerBlock("necrosis_test3",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
+    public static final RegistryObject<Block> NECROSIS_TEST4 = registerBlock("necrosis_test4",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
     public static final RegistryObject<Block> WASTE_LOG = registerBlock("waste_log",
             () -> new FullOBlock(BlockBehaviour.Properties.copy(Blocks.OAK_WOOD).sound(SoundType.WOOD)));
 
@@ -114,6 +123,8 @@ public class ModBlocks {
     public static final RegistryObject<StairBlock> CONCRETE_GREEN_STAIRS = registerBlock("concrete_green_stairs",
             () -> new StairBlock(CONCRETE_GREEN.get().defaultBlockState(),
                     BlockBehaviour.Properties.copy(CONCRETE_GREEN.get())));
+
+
     public static final RegistryObject<SlabBlock> CONCRETE_GREEN_SLAB = registerBlock("concrete_green_slab",
             () -> new SlabBlock(BlockBehaviour.Properties.copy(CONCRETE_GREEN.get())));
     public static final RegistryObject<StairBlock> CONCRETE_HAZARD_NEW_STAIRS = registerBlock("concrete_hazard_new_stairs",
@@ -149,8 +160,17 @@ public class ModBlocks {
             () -> new WindGenFlugerBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)
                     .strength(3.0f, 4.0f).noOcclusion().requiresCorrectToolForDrops()));
     public static final RegistryObject<Block> SHAFT_IRON = BLOCKS.register("shaft_iron",
-            () -> new ShaftIronBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)
-                    .strength(3.0f, 4.0f).noOcclusion().requiresCorrectToolForDrops()));
+            () -> new ShaftBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)
+                    .strength(3.0f, 4.0f).noOcclusion().requiresCorrectToolForDrops(),
+                    new ShaftType(300, 150, "shaft_iron",
+                            "geo/shaft_iron.geo.json",
+                            "animations/shaft_iron.animation.json")));
+    public static final RegistryObject<Block> SHAFT_WOODEN = BLOCKS.register("shaft_wooden",
+            () -> new ShaftBlock(BlockBehaviour.Properties.copy(Blocks.OAK_PLANKS)
+                    .strength(2.0f, 3.0f).noOcclusion(),
+                    new ShaftType(150, 75, "shaft_wooden",
+                            "geo/shaft_wooden.geo.json",
+                            "animations/shaft_wooden.animation.json")));
     public static final RegistryObject<Block> GEAR_PORT = registerBlock("gear_port",
             () -> new GearPortBlock(BlockBehaviour.Properties.copy(Blocks.STONE)
                     .strength(5.0f, 4.0f).requiresCorrectToolForDrops()));
@@ -170,56 +190,45 @@ public class ModBlocks {
             () -> new RConverterBlock(BlockBehaviour.Properties.copy(Blocks.STONE)
                     .strength(5.0f, 4.0f).requiresCorrectToolForDrops()));
 
+    //СИКВОЯ
     public static final RegistryObject<Block> SEQUOIA_BARK = registerBlock("sequoia_bark",
             () -> new Block(BlockBehaviour.Properties.copy(Blocks.OAK_PLANKS)));
-
-    // 2. Блок Сердцевины (Самый обычный блок для теста)
     public static final RegistryObject<Block> SEQUOIA_HEARTWOOD = registerBlock("sequoia_heartwood",
             () -> new Block(BlockBehaviour.Properties.copy(Blocks.OAK_PLANKS)));
-
     public static final RegistryObject<Block> SEQUOIA_PLANKS  = registerBlock("sequoia_planks",
             () -> new Block(BlockBehaviour.Properties.copy(Blocks.OAK_PLANKS).strength(0.5f, 4.0f).requiresCorrectToolForDrops()));
-
     public static final RegistryObject<Block> SEQUOIA_ROOTS  = registerBlock("sequoia_roots",
             () -> new Block(BlockBehaviour.Properties.copy(Blocks.OAK_PLANKS).strength(0.5f, 4.0f).requiresCorrectToolForDrops()));
-
     public static final RegistryObject<Block> SEQUOIA_ROOTS_MOSSY  = registerBlock("sequoia_roots_mossy",
             () -> new Block(BlockBehaviour.Properties.copy(Blocks.OAK_PLANKS).strength(0.5f, 4.0f).requiresCorrectToolForDrops()));
-
     public static final RegistryObject<Block> SEQUOIA_BARK_DARK = registerBlock("sequoia_bark_dark",
             () -> new Block(BlockBehaviour.Properties.copy(Blocks.OAK_PLANKS)));
-
     public static final RegistryObject<Block> SEQUOIA_BARK_LIGHT = registerBlock("sequoia_bark_light",
             () -> new Block(BlockBehaviour.Properties.copy(Blocks.OAK_PLANKS)));
-
     public static final RegistryObject<Block> SEQUOIA_BARK_MOSSY = registerBlock("sequoia_bark_mossy",
             () -> new Block(BlockBehaviour.Properties.copy(Blocks.OAK_PLANKS)));
-
     public static final RegistryObject<Block> SEQUOIA_BIOME_MOSS = registerBlock("sequoia_biome_moss",
             () -> new Block(BlockBehaviour.Properties.copy(Blocks.MOSS_BLOCK)));
-
     public static final RegistryObject<Block> SEQUOIA_LEAVES = registerBlock("sequoia_leaves",
-            () -> new LeavesBlock(BlockBehaviour.Properties.copy(Blocks.SPRUCE_LEAVES)
-                    .noOcclusion() // Прозрачность
+            () -> new LeavesBlock(BlockBehaviour.Properties.copy(Blocks.SPRUCE_LEAVES).noOcclusion()
                     .isSuffocating((state, level, pos) -> false)
                     .isViewBlocking((state, level, pos) -> false)) {
-
-                // --- FORGE WAY: ГОРЮЧЕСТЬ ПРЯМО В БЛОКЕ ---
                 @Override
                 public boolean isFlammable(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
                     return true;
                 }
-
                 @Override
                 public int getFlammability(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
                     return 60; // Как быстро сгорает
                 }
-
                 @Override
                 public int getFireSpreadSpeed(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
                     return 30; // Шанс, что огонь перекинется на этот блок
-                }
-            });
+                }});
+
+
+
+
 
     // Вспомогательный метод: регистрирует блок И предмет для него
     private static <T extends Block> RegistryObject<T> registerBlock(String name, Supplier<T> block) {

@@ -13,7 +13,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import razchexlitiel.cim.block.basic.rotation.GearPortBlock;
 import razchexlitiel.cim.block.basic.rotation.Mode;
-import razchexlitiel.cim.block.basic.rotation.ShaftIronBlock;
+import razchexlitiel.cim.block.basic.rotation.ShaftBlock;
 import razchexlitiel.cim.block.basic.rotation.TachometerBlock;
 import razchexlitiel.cim.block.entity.rotation.GearPortBlockEntity;
 import razchexlitiel.cim.block.entity.rotation.TachometerBlockEntity;
@@ -35,8 +35,8 @@ public class ScrewdriverItem extends Item {
         boolean isSneaking = player.isShiftKeyDown();
 
         // Обработка вала
-        if (state.getBlock() instanceof ShaftIronBlock) {
-            Direction currentFacing = state.getValue(ShaftIronBlock.FACING);
+        if (state.getBlock() instanceof ShaftBlock) {
+            Direction currentFacing = state.getValue(ShaftBlock.FACING);
             Direction newFacing;
 
             if (isSneaking) {
@@ -46,7 +46,7 @@ public class ScrewdriverItem extends Item {
                 newFacing = rotate90(currentFacing, lookDir);
             }
 
-            BlockState newState = state.setValue(ShaftIronBlock.FACING, newFacing);
+            BlockState newState = state.setValue(ShaftBlock.FACING, newFacing);
             level.setBlock(pos, newState, 3);
             syncWithNeighbors(level, pos, newState);
 
@@ -97,21 +97,21 @@ public class ScrewdriverItem extends Item {
      * Логика: вал должен смотреть в ту же сторону что и сосед (продолжать линию)
      */
     private void syncWithNeighbors(Level level, BlockPos pos, BlockState state) {
-        Direction myFacing = state.getValue(ShaftIronBlock.FACING);
+        Direction myFacing = state.getValue(ShaftBlock.FACING);
 
         // Проверяем соседей вдоль оси вала (фронт и тыл)
         for (Direction dir : new Direction[]{myFacing, myFacing.getOpposite()}) {
             BlockPos neighborPos = pos.relative(dir);
             BlockState neighborState = level.getBlockState(neighborPos);
 
-            if (neighborState.getBlock() instanceof ShaftIronBlock) {
-                Direction neighborFacing = neighborState.getValue(ShaftIronBlock.FACING);
+            if (neighborState.getBlock() instanceof ShaftBlock) {
+                Direction neighborFacing = neighborState.getValue(ShaftBlock.FACING);
 
                 // Если сосед смотрит в ту же сторону — всё ок, ничего не делаем
                 // Если сосед смотрит в противоположную сторону — разворачиваемся
                 if (neighborFacing == myFacing.getOpposite()) {
                     Direction correctedFacing = myFacing.getOpposite();
-                    BlockState correctedState = state.setValue(ShaftIronBlock.FACING, correctedFacing);
+                    BlockState correctedState = state.setValue(ShaftBlock.FACING, correctedFacing);
                     level.setBlock(pos, correctedState, 3);
                     return;
                 }

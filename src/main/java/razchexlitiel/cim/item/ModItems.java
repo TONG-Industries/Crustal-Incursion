@@ -5,6 +5,7 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import razchexlitiel.cim.block.basic.ModBlocks;
+import razchexlitiel.cim.block.basic.rotation.ShaftType;
 import razchexlitiel.cim.item.activators.DetonatorItem;
 import razchexlitiel.cim.item.activators.MultiDetonatorItem;
 import razchexlitiel.cim.item.activators.RangeDetonatorItem;
@@ -14,7 +15,7 @@ import razchexlitiel.cim.item.guns.MachineGunItem;
 import razchexlitiel.cim.item.mobs.DepthWormSpawnEggItem;
 import razchexlitiel.cim.item.rotation.MotorElectroBlockItem;
 import razchexlitiel.cim.item.rotation.ScrewdriverItem;
-import razchexlitiel.cim.item.rotation.ShaftIronBlockItem;
+import razchexlitiel.cim.item.rotation.ShaftBlockItem;
 import razchexlitiel.cim.item.rotation.WindGenFlugerBlockItem;
 import razchexlitiel.cim.item.weapons.ammo.AmmoTurretItem;
 import razchexlitiel.cim.item.weapons.turrets.TurretChipItem;
@@ -28,7 +29,6 @@ public class ModItems {
 
 
     //ОБЫЧНЫЕ ПРЕДМЕТЫ
-
     public static final RegistryObject<Item> DEPTH_WORM_SPAWN_EGG = ITEMS.register("depth_worm_spawn_egg",
             () -> new DepthWormSpawnEggItem(new Item.Properties()));
 
@@ -59,7 +59,9 @@ public class ModItems {
     public static final RegistryObject<Item> WIND_GEN_FLUGER = ITEMS.register("wind_gen_fluger",
             () -> new WindGenFlugerBlockItem(ModBlocks.WIND_GEN_FLUGER.get(), new Item.Properties()));
     public static final RegistryObject<Item> SHAFT_IRON_ITEM = ITEMS.register("shaft_iron",
-            () -> new ShaftIronBlockItem(ModBlocks.SHAFT_IRON.get(), new Item.Properties()));
+            () -> new ShaftBlockItem(ModBlocks.SHAFT_IRON.get(), new Item.Properties()));
+    public static final RegistryObject<Item> SHAFT_WOODEN_ITEM = ITEMS.register("shaft_wooden",
+            () -> new ShaftBlockItem(ModBlocks.SHAFT_WOODEN.get(), new Item.Properties()));
     public static final RegistryObject<Item> TURRET_LIGHT_PLACER_ITEM = ITEMS.register("turret_light_placer",
             () -> new TurretLightPlacerBlockItem(ModBlocks.TURRET_LIGHT_PLACER.get(), new Item.Properties()));
 
