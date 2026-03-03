@@ -133,22 +133,35 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
 
     // ====================== МЕТОДЫ ЭНЕРГОЯЧЕЕК ======================
 
-    /**
-     * Вставить энергоячейку в указанный слот (0-3).
-     * Возвращает true если вставка успешна.
-     */
     public boolean insertCell(int slot, ItemStack stack) {
         if (slot < 0 || slot >= CELL_SLOT_COUNT) return false;
-        if (!cellEmpty[slot]) return false; // Слот уже занят
+        if (!cellEmpty[slot]) return false;
         if (stack.isEmpty()) return false;
         if (!(stack.getItem() instanceof EnergyCellItem cell)) return false;
         if (!cell.isValidCell(stack)) return false;
 
-        // Вставляем ровно 1 ячейку
-        cellSlots[slot] = stack.split(1);
+        // Берём 1 ячейку из стака
+        ItemStack cellStack = stack.split(1);
+
+        // Ячейка отдаёт свою энергию в каркас
+        long cellEnergy = EnergyCellItem.getStoredEnergy(cellStack);
+        if (cellEnergy > 0) {
+            this.energy += cellEnergy;
+            EnergyCellItem.setStoredEnergy(cellStack, 0);
+        }
+
+        // Вставляем ячейку
+        cellSlots[slot] = cellStack;
         cellEmpty[slot] = false;
 
+        // Пересчитываем параметры (capacity может вырасти)
         recalculateCellStats();
+
+        // Обрезаем энергию если она вдруг больше нового буфера
+        if (energy > capacity) {
+            energy = capacity;
+        }
+
         setChanged();
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
@@ -158,19 +171,41 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
 
     /**
      * Извлечь энергоячейку из указанного слота (0-3).
-     * Возвращает ItemStack ячейки или EMPTY.
+     * При извлечении ячейка ВСАСЫВАЕТ столько энергии из каркаса,
+     * сколько может вместить.
+     *
+     * Пример: 2.5M в каркасе, 4 ячейки по 1M.
+     *   Вытаскиваем 1ю → забирает 1M, остаётся 1.5M
+     *   Вытаскиваем 2ю → забирает 1M, остаётся 0.5M
+     *   Вытаскиваем 3ю → забирает 0.5M (сколько есть), остаётся 0
+     *   Вытаскиваем 4ю → забирает 0, пустая
      */
     public ItemStack extractCell(int slot) {
         if (slot < 0 || slot >= CELL_SLOT_COUNT) return ItemStack.EMPTY;
         if (cellEmpty[slot]) return ItemStack.EMPTY;
 
         ItemStack extracted = cellSlots[slot].copy();
+
+        // === ЯЧЕЙКА ВСАСЫВАЕТ ЭНЕРГИЮ ИЗ КАРКАСА ===
+        long cellMax = EnergyCellItem.getMaxEnergy(extracted);
+        long cellCurrent = EnergyCellItem.getStoredEnergy(extracted);
+        long cellSpace = cellMax - cellCurrent;        // сколько может принять
+        long available = this.energy;                   // сколько есть в каркасе
+        long toAbsorb = Math.min(cellSpace, available); // сколько реально заберёт
+
+        if (toAbsorb > 0) {
+            EnergyCellItem.setStoredEnergy(extracted, cellCurrent + toAbsorb);
+            this.energy -= toAbsorb;
+        }
+
+        // Очищаем слот
         cellSlots[slot] = ItemStack.EMPTY;
         cellEmpty[slot] = true;
 
+        // Пересчитываем параметры каркаса
         recalculateCellStats();
 
-        // Защита: если энергия больше нового буфера, обрезаем
+        // Защита: энергия не может быть больше нового буфера
         if (energy > capacity) {
             energy = capacity;
         }

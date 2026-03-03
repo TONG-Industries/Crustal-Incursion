@@ -257,7 +257,7 @@ public class ModBlocks {
 
     private static RegistryObject<Block> registerBattery(String name) {
         RegistryObject<Block> batteryBlock = BLOCKS.register(name,
-                () -> new MachineBatteryBlock(Block.Properties.of().strength(5.0f).requiresCorrectToolForDrops()));
+                () -> new MachineBatteryBlock(Block.Properties.of().strength(5.0f).requiresCorrectToolForDrops().noOcclusion()));
 
         ModItems.ITEMS.register(name,
                 () -> new BlockItem(batteryBlock.get(), new Item.Properties()));

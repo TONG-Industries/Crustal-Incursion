@@ -164,6 +164,10 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.SWITCH);
             event.accept(ModBlocks.CONVERTER_BLOCK);
 
+            event.accept(ModItems.ENERGY_CELL_BASIC);
+
+
+
             List<RegistryObject<Item>> batteriesToAdd = List.of(
                     ModItems.BATTERY,
                     ModItems.BATTERY_ADVANCED,

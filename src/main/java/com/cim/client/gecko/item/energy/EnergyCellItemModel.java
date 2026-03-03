@@ -9,8 +9,8 @@ public class EnergyCellItemModel extends GeoModel<EnergyCellItem> {
 
     @Override
     public ResourceLocation getModelResource(EnergyCellItem animatable) {
-        // assets/cim/geo/energy_cell_basic.geo.json
-        return new ResourceLocation(CrustalIncursionMod.MOD_ID, "geo/energy_cell_basic.geo.json");
+        // assets/cim/geo/energy_cell.geo.json
+        return new ResourceLocation(CrustalIncursionMod.MOD_ID, "geo/energy_cell.geo.json");
     }
 
     @Override
