@@ -23,9 +23,8 @@ import com.cim.block.basic.explosives.DetMinerBlock;
 import com.cim.block.basic.necrosis.NecrosisPortalBlock;
 import com.cim.block.basic.necrosis.hive.DepthWormNestBlock;
 import com.cim.block.basic.necrosis.hive.HiveSoilBlock;
-import com.cim.block.basic.rotation.*;
 import com.cim.block.basic.weapons.TurretLightPlacerBlock;
-import com.cim.item.fekal_electric.MachineBatteryBlockItem;
+import com.cim.item.energy.MachineBatteryBlockItem;
 import com.cim.main.CrustalIncursionMod;
 import com.cim.item.ModItems;
 
@@ -39,10 +38,9 @@ public class ModBlocks {
 
     //ЭНЕРГОСЕТЬ
     public static final List<RegistryObject<Block>> BATTERY_BLOCKS = new ArrayList<>();
-    public static final RegistryObject<Block> MACHINE_BATTERY = registerBattery
-            ("machine_battery", 1_000_000L);
-    public static final RegistryObject<Block> MACHINE_BATTERY_LITHIUM = registerBattery
-            ("machine_battery_lithium", 50_000_000L);
+
+    public static final RegistryObject<Block> MACHINE_BATTERY = registerBattery("machine_battery");
+
     public static final RegistryObject<Block> CONVERTER_BLOCK = registerBlock("converter_block",
             () -> new ConverterBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)));
     public static final RegistryObject<Block> WIRE_COATED = registerBlock("wire_coated",
@@ -255,18 +253,16 @@ public class ModBlocks {
         return ModItems.ITEMS.register(name, () -> new BlockItem(block.get(), new Item.Properties()));
     }
 
-    private static RegistryObject<Block> registerBattery(String name, long capacity) {
-        // 1. Регистрируем БЛОК
+
+
+    private static RegistryObject<Block> registerBattery(String name) {
         RegistryObject<Block> batteryBlock = BLOCKS.register(name,
-                () -> new MachineBatteryBlock(Block.Properties.of().strength(5.0f).requiresCorrectToolForDrops(), capacity));
+                () -> new MachineBatteryBlock(Block.Properties.of().strength(5.0f).requiresCorrectToolForDrops()));
 
-        // 2. Регистрируем ПРЕДМЕТ (MachineBatteryBlockItem)
         ModItems.ITEMS.register(name,
-                () -> new MachineBatteryBlockItem(batteryBlock.get(), new Item.Properties(), capacity));
+                () -> new BlockItem(batteryBlock.get(), new Item.Properties()));
 
-        // 3. Добавляем в список для TileEntity
         BATTERY_BLOCKS.add(batteryBlock);
-
         return batteryBlock;
     }
 

@@ -1,5 +1,6 @@
 package com.cim.item;
 
+import com.cim.item.energy.EnergyCellItem;
 import com.cim.item.rotation.*;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.registries.DeferredRegister;
@@ -9,11 +10,10 @@ import com.cim.block.basic.ModBlocks;
 import com.cim.item.activators.DetonatorItem;
 import com.cim.item.activators.MultiDetonatorItem;
 import com.cim.item.activators.RangeDetonatorItem;
-import com.cim.item.fekal_electric.ItemCreativeBattery;
-import com.cim.item.fekal_electric.ModBatteryItem;
+import com.cim.item.energy.ItemCreativeBattery;
+import com.cim.item.energy.ModBatteryItem;
 import com.cim.item.guns.MachineGunItem;
 import com.cim.item.mobs.DepthWormSpawnEggItem;
-import com.cim.item.rotation.*;
 import com.cim.item.weapons.ammo.AmmoTurretItem;
 import com.cim.item.weapons.turrets.TurretChipItem;
 import com.cim.item.weapons.turrets.TurretLightPortativePlacer;
@@ -79,6 +79,13 @@ public class ModItems {
 
 
     //БАТАРЕИ
+
+    public static final RegistryObject<Item> ENERGY_CELL_BASIC = ITEMS.register("energy_cell_basic",
+            () -> new EnergyCellItem(new Item.Properties().stacksTo(1),
+                    1_000_000L,     // capacity
+                    5_000L,         // chargingSpeed
+                    5_000L));       // unchargingSpeed
+
     public static final RegistryObject<Item> CREATIVE_BATTERY = ITEMS.register("battery_creative",
             () -> new ItemCreativeBattery(new Item.Properties()));
     public static final RegistryObject<Item> BATTERY = ITEMS.register("battery",

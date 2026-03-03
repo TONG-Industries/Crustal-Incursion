@@ -1,4 +1,4 @@
-package com.cim.item.fekal_electric;
+package com.cim.item.energy;
 
 
 import net.minecraft.nbt.CompoundTag;

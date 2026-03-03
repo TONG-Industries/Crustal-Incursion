@@ -1,6 +1,8 @@
 package com.cim.block.basic.energy;
 
 
+import com.cim.item.energy.EnergyCellItem;
+import com.cim.item.rotation.ScrewdriverItem;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -8,6 +10,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
@@ -26,6 +30,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkHooks;
 import com.cim.api.energy.EnergyNetworkManager;
 import com.cim.block.entity.ModBlockEntities;
@@ -36,21 +41,20 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * Универсальный класс блока для всех энергохранилищ.
- * ✅ Корректно интегрирован в энергосеть HBM.
+ * Универсальный класс блока каркаса энергохранилища.
+ * Каркас сам по себе имеет 0 ёмкости. Параметры определяются энергоячейками.
+ *
+ * На лицевой стороне блока расположены 4 слота (2x2) для энергоячеек.
+ * ПКМ с ячейкой в руке -> вставка.
+ * ПКМ с отвёрткой -> извлечение.
+ * Пустая рука ПКМ -> открытие GUI.
  */
 public class MachineBatteryBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
-    private final long capacity;
 
-    public MachineBatteryBlock(Properties properties, long capacity) {
+    public MachineBatteryBlock(Properties properties) {
         super(properties);
-        this.capacity = capacity;
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
-    }
-
-    public long getCapacity() {
-        return this.capacity;
     }
 
     @Override
@@ -73,10 +77,6 @@ public class MachineBatteryBlock extends BaseEntityBlock {
         builder.add(FACING);
     }
 
-    @Override
-    public RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL;
-    }
 
     @Nullable
     @Override
@@ -90,33 +90,146 @@ public class MachineBatteryBlock extends BaseEntityBlock {
         return createTickerHelper(type, ModBlockEntities.MACHINE_BATTERY_BE.get(), MachineBatteryBlockEntity::tick);
     }
 
-    // ✅ Регистрация в энергосети
-
-
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock()) && !level.isClientSide()) {
-            // Оставляем *только* логику удаления из сети
             EnergyNetworkManager.get((ServerLevel) level).removeNode(pos);
 
-            // ... (и другое, если оно не связано с дропом) ...
+            // Дропаем все ячейки при разрушении блока
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof MachineBatteryBlockEntity battery) {
+                for (int i = 0; i < MachineBatteryBlockEntity.CELL_SLOT_COUNT; i++) {
+                    ItemStack cell = battery.getCellStack(i);
+                    if (!cell.isEmpty()) {
+                        popResource(level, pos, cell.copy());
+                    }
+                }
+            }
         }
-
-        // Вызываем super.onRemove, который сам вызовет loot table
         super.onRemove(state, level, pos, newState, isMoving);
     }
 
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos,
                                  Player player, InteractionHand hand, BlockHitResult hit) {
-        if (!level.isClientSide) {
-            BlockEntity entity = level.getBlockEntity(pos);
-            if (entity instanceof MachineBatteryBlockEntity battery) {
-                NetworkHooks.openScreen((ServerPlayer) player, battery, pos);
+        if (level.isClientSide) return InteractionResult.SUCCESS;
+
+        BlockEntity entity = level.getBlockEntity(pos);
+        if (!(entity instanceof MachineBatteryBlockEntity battery)) return InteractionResult.PASS;
+
+        ItemStack heldItem = player.getItemInHand(hand);
+        Direction facing = state.getValue(FACING);
+        Direction hitFace = hit.getDirection();
+
+        // Взаимодействие с ячейками только с лицевой стороны
+        if (hitFace == facing) {
+            int cellSlot = getCellSlotFromHit(hit, pos, facing);
+
+            if (cellSlot >= 0) {
+                // --- ОТВЁРТКА: извлечение ячейки ---
+                if (heldItem.getItem() instanceof ScrewdriverItem) {
+                    if (!battery.isCellEmpty(cellSlot)) {
+                        ItemStack extracted = battery.extractCell(cellSlot);
+                        if (!extracted.isEmpty()) {
+                            if (!player.getInventory().add(extracted)) {
+                                popResource(level, pos.relative(facing), extracted);
+                            }
+                            level.playSound(null, pos, SoundEvents.IRON_TRAPDOOR_OPEN, SoundSource.BLOCKS, 0.6f, 1.2f);
+                            heldItem.hurtAndBreak(1, player, (p) -> p.broadcastBreakEvent(hand));
+                            player.displayClientMessage(
+                                    Component.literal("§eЯчейка извлечена из слота " + (cellSlot + 1)), true);
+                            return InteractionResult.CONSUME;
+                        }
+                    } else {
+                        player.displayClientMessage(
+                                Component.literal("§7Слот " + (cellSlot + 1) + " пуст"), true);
+                        return InteractionResult.CONSUME;
+                    }
+                }
+
+                // --- ЭНЕРГОЯЧЕЙКА В РУКЕ: вставка ---
+                if (heldItem.getItem() instanceof EnergyCellItem) {
+                    if (battery.isCellEmpty(cellSlot)) {
+                        if (battery.insertCell(cellSlot, heldItem)) {
+                            level.playSound(null, pos, SoundEvents.IRON_TRAPDOOR_CLOSE, SoundSource.BLOCKS, 0.6f, 0.9f);
+                            player.displayClientMessage(
+                                    Component.literal("§aЯчейка вставлена в слот " + (cellSlot + 1)), true);
+                            return InteractionResult.CONSUME;
+                        }
+                    } else {
+                        player.displayClientMessage(
+                                Component.literal("§cСлот " + (cellSlot + 1) + " уже занят!"), true);
+                        return InteractionResult.CONSUME;
+                    }
+                }
             }
+        }
+
+        // --- ПУСТАЯ РУКА или другие предметы: открываем GUI ---
+        if (heldItem.isEmpty() || (!(heldItem.getItem() instanceof EnergyCellItem) && !(heldItem.getItem() instanceof ScrewdriverItem))) {
+            NetworkHooks.openScreen((ServerPlayer) player, battery, pos);
             return InteractionResult.CONSUME;
         }
-        return InteractionResult.SUCCESS;
+
+        return InteractionResult.CONSUME;
+    }
+
+    /**
+     * Определяет номер слота ячейки (0-3) по координатам клика на лицевой стороне.
+     *
+     * Лицевая сторона блока разделена на сетку 2x2:
+     *   [0] [1]     (верхний левый, верхний правый)
+     *   [2] [3]     (нижний левый, нижний правый)
+     *
+     * Координаты рассчитываются относительно направления facing.
+     * Возвращает -1 если клик вне зоны слотов.
+     */
+    private int getCellSlotFromHit(BlockHitResult hit, BlockPos pos, Direction facing) {
+        Vec3 hitVec = hit.getLocation();
+
+        // Локальные координаты внутри блока (0.0 - 1.0)
+        double localX = hitVec.x - pos.getX();
+        double localY = hitVec.y - pos.getY();
+        double localZ = hitVec.z - pos.getZ();
+
+        // Определяем горизонтальную (u) и вертикальную (v) координату на лицевой стороне
+        // u = 0 слева, 1 справа (с точки зрения игрока, смотрящего на лицо)
+        // v = 0 снизу, 1 сверху
+        double u, v;
+        v = localY; // Вертикаль всегда по Y
+
+        switch (facing) {
+            case NORTH -> u = 1.0 - localX; // Игрок смотрит на юг -> X инвертирован
+            case SOUTH -> u = localX;
+            case WEST -> u = localZ;
+            case EAST -> u = 1.0 - localZ;
+            default -> { return -1; }
+        }
+
+        // Зона слотов: центральная часть лицевой стороны
+        // Отступы: 0.15 по краям (слоты занимают 0.15..0.85 по u и 0.15..0.85 по v)
+        double minU = 0.15, maxU = 0.85;
+        double minV = 0.15, maxV = 0.85;
+
+        if (u < minU || u > maxU || v < minV || v > maxV) {
+            return -1; // Клик вне зоны слотов
+        }
+
+        // Нормализуем в пределах зоны слотов (0..1)
+        double normU = (u - minU) / (maxU - minU);
+        double normV = (v - minV) / (maxV - minV);
+
+        // Определяем колонку (0 = левая, 1 = правая)
+        int col = normU < 0.5 ? 0 : 1;
+
+        // Определяем строку (0 = верхняя, 1 = нижняя)
+        // v=1 это верх блока, v=0 это низ
+        int row = normV >= 0.5 ? 0 : 1;
+
+        // slot = row * 2 + col
+        //  [0][1]   верх
+        //  [2][3]   низ
+        return row * 2 + col;
     }
 
     @Override
@@ -126,46 +239,33 @@ public class MachineBatteryBlock extends BaseEntityBlock {
         if (!pLevel.isClientSide) {
             BlockEntity be = pLevel.getBlockEntity(pPos);
             if (be instanceof MachineBatteryBlockEntity batteryBE) {
-
-                // Проверяем, есть ли у предмета NBT
                 CompoundTag itemNbt = pStack.getTag();
-
-                // Ищем наш специальный тег "BlockEntityTag", который создал лут-тейбл
                 if (itemNbt != null && itemNbt.contains("BlockEntityTag")) {
-
-                    // Загружаем все данные из этого тега в наш BlockEntity
                     batteryBE.load(itemNbt.getCompound("BlockEntityTag"));
-
-                    // (Метод load() в MachineBatteryBlockEntity
-                    // уже содержит super.load(), так что мы просто передаем ему наши данные)
-
-                    batteryBE.setChanged(); // Уведомляем мир об изменениях
+                    batteryBE.setChanged();
                 }
             }
         }
     }
-    
 
     @Override
     public void appendHoverText(ItemStack pStack, @Nullable BlockGetter pLevel, List<Component> pTooltip, TooltipFlag pFlag) {
         super.appendHoverText(pStack, pLevel, pTooltip, pFlag);
 
-        // 1. Получаем сохраненную энергию из NBT
         long energy = 0;
         CompoundTag nbt = pStack.getTag();
-
-        // Мы читаем тот же "BlockEntityTag", который записали в loot table
         if (nbt != null && nbt.contains("BlockEntityTag")) {
             energy = nbt.getCompound("BlockEntityTag").getLong("Energy");
         }
 
-        // 2. Форматируем
-        // this.capacity берется из поля класса MachineBatteryBlock
         String energyStr = EnergyFormatter.format(energy);
-        String maxEnergyStr = EnergyFormatter.format(this.capacity);
+        pTooltip.add(Component.literal("§7Каркас энергохранилища"));
+        pTooltip.add(Component.literal("§eЭнергия: " + energyStr + " HE"));
+        pTooltip.add(Component.literal("§8Вставьте энергоячейки для увеличения параметров"));
+    }
 
-        // 3. Добавляем в тултип
-        pTooltip.add(Component.translatable("tooltip.cim.machine_battery.stored", energyStr, maxEnergyStr)
-                .withStyle(ChatFormatting.YELLOW));
+    @Override
+    public RenderShape getRenderShape(BlockState state) {
+        return RenderShape.ENTITYBLOCK_ANIMATED;
     }
 }

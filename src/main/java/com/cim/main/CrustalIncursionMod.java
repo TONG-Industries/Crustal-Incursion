@@ -29,7 +29,7 @@ import com.cim.entity.ModEntities;
 import com.cim.entity.mobs.DepthWormEntity;
 import com.cim.entity.weapons.turrets.TurretLightEntity;
 import com.cim.event.CrateBreaker;
-import com.cim.item.fekal_electric.ModBatteryItem;
+import com.cim.item.energy.ModBatteryItem;
 import com.cim.menu.ModMenuTypes;
 import com.cim.network.ModPacketHandler;
 import com.cim.sound.ModSounds;
@@ -160,7 +160,6 @@ public class CrustalIncursionMod {
 
             event.accept(ModItems.CREATIVE_BATTERY);
             event.accept(ModBlocks.MACHINE_BATTERY);
-            event.accept(ModBlocks.MACHINE_BATTERY_LITHIUM);
             event.accept(ModBlocks.WIRE_COATED);
             event.accept(ModBlocks.SWITCH);
             event.accept(ModBlocks.CONVERTER_BLOCK);
