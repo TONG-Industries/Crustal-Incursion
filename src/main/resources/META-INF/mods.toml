@@ -1,13 +1,13 @@
 modLoader="javafml"
 loaderVersion="[47,)"
-license="All Rights Reserved"
-issueTrackerURL="https://github.com"
+license="GPL-3.0"
+issueTrackerURL="https://github.com/TONG-Industries/Crustal-Incursion"
 
 [[mods]]
 modId="cim"
 version="0.0.1-alpha"
-displayName="Substractum Necrosis"
-authors="razchexlitiel"
+displayName="Crustal Incursion Mod"
+authors="TONG Industries"
 description='''
     A dark, necrotic expansion for Minecraft.
     Master the forbidden arts and explore the cim.

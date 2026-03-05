@@ -1,7 +1,7 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "razchexlitiel.cim.mixin",
+  "package": "com.cim.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [],
   "client": [],
