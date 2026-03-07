@@ -57,6 +57,18 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(ModItems.TURRET_CHIP);
         simpleItem(ModItems.TURRET_LIGHT_PORTATIVE_PLACER);
 
+        simpleItem(ModItems.GRENADE);
+        simpleItem(ModItems.GRENADESMART);
+        simpleItem(ModItems.GRENADESLIME);
+        simpleItem(ModItems.GRENADEHE);
+        simpleItem(ModItems.GRENADEFIRE);
+
+        simpleItem(ModItems.GRENADE_NUC);
+        simpleItem(ModItems.GRENADE_IF_HE);
+        simpleItem(ModItems.GRENADE_IF_FIRE);
+        simpleItem(ModItems.GRENADE_IF_SLIME);
+        simpleItem(ModItems.GRENADE_IF);
+
         // Пример регистрации блоков как предметов (если это обычный куб)
         // complexBlockItem(ModBlocks.NECROTIC_ORE);
 

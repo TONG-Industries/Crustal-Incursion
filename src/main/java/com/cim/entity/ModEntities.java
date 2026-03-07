@@ -1,5 +1,8 @@
 package com.cim.entity;
 
+import com.cim.entity.weapons.grenades.GrenadeIfProjectileEntity;
+import com.cim.entity.weapons.grenades.GrenadeNucProjectileEntity;
+import com.cim.entity.weapons.grenades.GrenadeProjectileEntity;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -42,4 +45,70 @@ public class ModEntities {
                             .sized(0.6f, 0.6f) // Размер хитбокса (сделаем его поменьше для лучшего пути)
                             .build(new ResourceLocation(CrustalIncursionMod.MOD_ID, "depth_worm").toString()));
 
+    public static final RegistryObject<EntityType<GrenadeProjectileEntity>> GRENADE_PROJECTILE =
+            ENTITY_TYPES.register("grenade_projectile",
+                    () -> EntityType.Builder.<GrenadeProjectileEntity>of(GrenadeProjectileEntity::new, MobCategory.MISC)
+                            .sized(0.5f, 0.5f)
+                            .build("grenade_projectile"));
+
+    public static final RegistryObject<EntityType<GrenadeProjectileEntity>> GRENADEHE_PROJECTILE =
+            ENTITY_TYPES.register("grenadehe_projectile",
+                    () -> EntityType.Builder.<GrenadeProjectileEntity>of(GrenadeProjectileEntity::new, MobCategory.MISC)
+                            .sized(0.5f, 0.5f)
+                            .build("grenadehe_projectile"));
+
+    public static final RegistryObject<EntityType<GrenadeProjectileEntity>> GRENADEFIRE_PROJECTILE =
+            ENTITY_TYPES.register("grenadefire_projectile",
+                    () -> EntityType.Builder.<GrenadeProjectileEntity>of(GrenadeProjectileEntity::new, MobCategory.MISC)
+                            .sized(0.5f, 0.5f)
+                            .build("grenadefire_projectile"));
+
+    public static final RegistryObject<EntityType<GrenadeProjectileEntity>> GRENADESMART_PROJECTILE =
+            ENTITY_TYPES.register("grenadesmart_projectile",
+                    () -> EntityType.Builder.<GrenadeProjectileEntity>of(GrenadeProjectileEntity::new, MobCategory.MISC)
+                            .sized(0.5f, 0.5f)
+                            .build("grenadesmart_projectile"));
+
+    public static final RegistryObject<EntityType<GrenadeProjectileEntity>> GRENADESLIME_PROJECTILE =
+            ENTITY_TYPES.register("grenadeslime_projectile",
+                    () -> EntityType.Builder.<GrenadeProjectileEntity>of(GrenadeProjectileEntity::new, MobCategory.MISC)
+                            .sized(0.5f, 0.5f)
+                            .build("grenadeslime_projectile"));
+
+    public static final RegistryObject<EntityType<GrenadeIfProjectileEntity>> GRENADE_IF_PROJECTILE =
+            ENTITY_TYPES.register("grenade_if_projectile",
+                    () -> EntityType.Builder.<GrenadeIfProjectileEntity>of(GrenadeIfProjectileEntity::new, MobCategory.MISC)
+                            .sized(0.25F, 0.25F)
+                            .clientTrackingRange(4)
+                            .updateInterval(10)
+                            .build("grenade_if_projectile"));
+
+    public static final RegistryObject<EntityType<GrenadeIfProjectileEntity>> GRENADE_IF_FIRE_PROJECTILE =
+            ENTITY_TYPES.register("grenade_if_fire_projectile",
+                    () -> EntityType.Builder.<GrenadeIfProjectileEntity>of(GrenadeIfProjectileEntity::new, MobCategory.MISC)
+                            .sized(0.5f, 0.5f)
+                            .build("grenade_if_fire_projectile"));
+
+    public static final RegistryObject<EntityType<GrenadeIfProjectileEntity>> GRENADE_IF_SLIME_PROJECTILE =
+            ENTITY_TYPES.register("grenade_if_slime_projectile",
+                    () -> EntityType.Builder.<GrenadeIfProjectileEntity>of(GrenadeIfProjectileEntity::new, MobCategory.MISC)
+                            .sized(0.25F, 0.25F)
+                            .clientTrackingRange(4)
+                            .updateInterval(10)
+                            .build("grenade_if_slime_projectile"));
+
+    public static final RegistryObject<EntityType<GrenadeIfProjectileEntity>> GRENADE_IF_HE_PROJECTILE =
+            ENTITY_TYPES.register("grenade_if_he_projectile",
+                    () -> EntityType.Builder.<GrenadeIfProjectileEntity>of(GrenadeIfProjectileEntity::new, MobCategory.MISC)
+                            .sized(0.5f, 0.5f)
+                            .build("grenade_if_he_projectile"));
+
+
+    public static final RegistryObject<EntityType<GrenadeNucProjectileEntity>> GRENADE_NUC_PROJECTILE =
+            ENTITY_TYPES.register("grenade_nuc_projectile",
+                    () -> EntityType.Builder.<GrenadeNucProjectileEntity>of(GrenadeNucProjectileEntity::new, MobCategory.MISC)
+                            .sized(0.25F, 0.25F)
+                            .clientTrackingRange(4)
+                            .updateInterval(10)
+                            .build("grenade_nuc_projectile"));
 }

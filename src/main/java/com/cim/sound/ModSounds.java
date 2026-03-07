@@ -29,6 +29,8 @@ public class ModSounds {
     public static final RegistryObject<SoundEvent> TOOL_TECH_BLEEP = registerSoundEvents("techbleep");
     public static final RegistryObject<SoundEvent> TOOL_TECH_BOOP = registerSoundEvents("techboop");
 
+    public static final RegistryObject<SoundEvent> MUKE_EXPLOSION = registerSoundEvents("mukeexplosion");
+    public static final RegistryObject<SoundEvent> BOUNCE_RANDOM = registerSoundEvents("item.bounce_random");
     // Вспомогательный метод
     private static RegistryObject<SoundEvent> registerSoundEvents(String name) {
         // В 1.20.1 используем обычный конструктор ResourceLocation
