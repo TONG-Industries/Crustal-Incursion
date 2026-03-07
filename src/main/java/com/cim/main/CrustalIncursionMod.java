@@ -1,5 +1,6 @@
 package com.cim.main;
 
+
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -183,6 +184,17 @@ public class CrustalIncursionMod {
             event.accept(ModItems.AMMO_TURRET_PIERCING);
             event.accept(ModItems.AMMO_TURRET_FIRE);
             event.accept(ModItems.AMMO_TURRET_RADIO);
+
+            event.accept(ModItems.GRENADE);
+            event.accept(ModItems.GRENADEHE);
+            event.accept(ModItems.GRENADEFIRE);
+            event.accept(ModItems.GRENADESMART);
+            event.accept(ModItems.GRENADESLIME);
+            event.accept(ModItems.GRENADE_IF);
+            event.accept(ModItems.GRENADE_IF_HE);
+            event.accept(ModItems.GRENADE_IF_SLIME);
+            event.accept(ModItems.GRENADE_IF_FIRE);
+            event.accept(ModItems.GRENADE_NUC);
 
         }
 

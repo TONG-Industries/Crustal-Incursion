@@ -5,6 +5,7 @@ import com.cim.client.overlay.gui.*;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.client.renderer.entity.EntityRenderers;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
@@ -68,7 +69,26 @@ public class ClientModEvents {
         BlockEntityRenderers.register(ModBlockEntities.MACHINE_BATTERY_BE.get(), MachineBatteryRenderer::new);
 
 
-
+        ModEntities.GRENADE_NUC_PROJECTILE.ifPresent(entityType ->
+                EntityRenderers.register(entityType, ThrownItemRenderer::new));
+        ModEntities.GRENADE_IF_FIRE_PROJECTILE.ifPresent(entityType ->
+                EntityRenderers.register(entityType, ThrownItemRenderer::new));
+        ModEntities.GRENADE_IF_SLIME_PROJECTILE.ifPresent(entityType ->
+                EntityRenderers.register(entityType, ThrownItemRenderer::new));
+        ModEntities.GRENADE_IF_HE_PROJECTILE.ifPresent(entityType ->
+                EntityRenderers.register(entityType, ThrownItemRenderer::new));
+        ModEntities.GRENADE_PROJECTILE.ifPresent(entityType ->
+                EntityRenderers.register(entityType, ThrownItemRenderer::new));
+        ModEntities.GRENADEHE_PROJECTILE.ifPresent(entityType ->
+                EntityRenderers.register(entityType, ThrownItemRenderer::new));
+        ModEntities.GRENADEFIRE_PROJECTILE.ifPresent(entityType ->
+                EntityRenderers.register(entityType, ThrownItemRenderer::new));
+        ModEntities.GRENADESMART_PROJECTILE.ifPresent(entityType ->
+                EntityRenderers.register(entityType, ThrownItemRenderer::new));
+        ModEntities.GRENADESLIME_PROJECTILE.ifPresent(entityType ->
+                EntityRenderers.register(entityType, ThrownItemRenderer::new));
+        ModEntities.GRENADE_IF_PROJECTILE.ifPresent(entityType ->
+                EntityRenderers.register(entityType, ThrownItemRenderer::new));
     }
 
     @SubscribeEvent

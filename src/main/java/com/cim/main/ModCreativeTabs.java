@@ -29,7 +29,7 @@ public class ModCreativeTabs {
     public static final RegistryObject<CreativeModeTab> CIM_WEAPONS_TAB = CREATIVE_MODE_TABS.register("cim_weapons_tab",
             () -> CreativeModeTab.builder()
                     .title(Component.translatable("itemGroup." + CrustalIncursionMod.MOD_ID + ".cim_weapons_tab"))
-                    .icon(() -> new ItemStack(ModBlocks.DET_MINER.get()))
+                    .icon(()  -> new ItemStack(ModItems.GRENADE_NUC.get()))
                     .build());
 
     public static final RegistryObject<CreativeModeTab> CIM_TOOLS_TAB = CREATIVE_MODE_TABS.register("cim_tools_tab",

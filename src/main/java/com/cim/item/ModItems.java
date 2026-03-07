@@ -1,7 +1,13 @@
 package com.cim.item;
 
+import com.cim.entity.ModEntities;
+import com.cim.entity.weapons.grenades.GrenadeIfType;
+import com.cim.entity.weapons.grenades.GrenadeType;
 import com.cim.item.energy.EnergyCellItem;
 import com.cim.item.rotation.*;
+import com.cim.item.weapons.grenades.GrenadeIfItem;
+import com.cim.item.weapons.grenades.GrenadeItem;
+import com.cim.item.weapons.grenades.GrenadeNucItem;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -78,14 +84,34 @@ public class ModItems {
             () -> new AmmoTurretItem(new Item.Properties(), 9.0f, 3.0f, false));
 
 
-    //БАТАРЕИ
+    //ГРАНАТЫ
+    public static final RegistryObject<Item> GRENADE = ITEMS.register("grenade",
+            () -> new GrenadeItem(new Item.Properties(), GrenadeType.STANDARD, ModEntities.GRENADE_PROJECTILE));
+    public static final RegistryObject<Item> GRENADEHE = ITEMS.register("grenadehe",
+            () -> new GrenadeItem(new Item.Properties(), GrenadeType.HE, ModEntities.GRENADEHE_PROJECTILE));
+    public static final RegistryObject<Item> GRENADEFIRE = ITEMS.register("grenadefire",
+            () -> new GrenadeItem(new Item.Properties(), GrenadeType.FIRE, ModEntities.GRENADEFIRE_PROJECTILE));
+    public static final RegistryObject<Item> GRENADESLIME = ITEMS.register("grenadeslime",
+            () -> new GrenadeItem(new Item.Properties(), GrenadeType.SLIME, ModEntities.GRENADESLIME_PROJECTILE));
+    public static final RegistryObject<Item> GRENADESMART = ITEMS.register("grenadesmart",
+            () -> new GrenadeItem(new Item.Properties(), GrenadeType.SMART, ModEntities.GRENADESMART_PROJECTILE));
+    public static final RegistryObject<Item> GRENADE_IF = ITEMS.register("grenade_if",
+            () -> new GrenadeIfItem(new Item.Properties(), GrenadeIfType.GRENADE_IF, ModEntities.GRENADE_IF_PROJECTILE));
+    public static final RegistryObject<Item> GRENADE_IF_HE = ITEMS.register("grenade_if_he",
+            () -> new GrenadeIfItem(new Item.Properties(), GrenadeIfType.GRENADE_IF_HE, ModEntities.GRENADE_IF_HE_PROJECTILE));
+    public static final RegistryObject<Item> GRENADE_IF_SLIME = ITEMS.register("grenade_if_slime",
+            () -> new GrenadeIfItem(new Item.Properties(), GrenadeIfType.GRENADE_IF_SLIME, ModEntities.GRENADE_IF_SLIME_PROJECTILE));
+    public static final RegistryObject<Item> GRENADE_IF_FIRE = ITEMS.register("grenade_if_fire",
+            () -> new GrenadeIfItem(new Item.Properties(), GrenadeIfType.GRENADE_IF_FIRE, ModEntities.GRENADE_IF_FIRE_PROJECTILE));
+    public static final RegistryObject<Item> GRENADE_NUC = ITEMS.register("grenade_nuc",
+            () -> new GrenadeNucItem(new Item.Properties(), ModEntities.GRENADE_NUC_PROJECTILE));
 
+    //БАТАРЕИ
     public static final RegistryObject<Item> ENERGY_CELL_BASIC = ITEMS.register("energy_cell_basic",
             () -> new EnergyCellItem(new Item.Properties().stacksTo(1),
                     1_000_000L,     // capacity
                     5_000L,         // chargingSpeed
                     5_000L));       // unchargingSpeed
-
     public static final RegistryObject<Item> CREATIVE_BATTERY = ITEMS.register("battery_creative",
             () -> new ItemCreativeBattery(new Item.Properties()));
     public static final RegistryObject<Item> BATTERY = ITEMS.register("battery",

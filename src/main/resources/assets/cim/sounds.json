@@ -29,6 +29,21 @@
       "cim:impact/bullet_impact9"
     ]
   },
+  "mukeexplosion": {
+    "category": "block",
+    "subtitle": "sounds.cim.mukeexplosion",
+    "sounds": [
+      "cim:mukeexplosion"
+    ]
+  },
+  "item.bounce_random": {
+    "subtitle": "sounds.cim.subtitle.bounce",
+    "sounds": [
+      "cim:item/bounce1",
+      "cim:item/bounce2",
+      "cim:item/bounce3"
+    ]
+  },
   "crate_break": {
     "category": "block",
     "subtitle": "cim.subtitle.crate_break",
