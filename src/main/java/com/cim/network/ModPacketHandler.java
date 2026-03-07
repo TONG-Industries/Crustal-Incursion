@@ -136,6 +136,12 @@ public class ModPacketHandler {
                 SyncPointPacket::handle
         );
 
+        INSTANCE.registerMessage(id++,
+                PacketToggleShaftPlacer.class,
+                PacketToggleShaftPlacer::encode,
+                PacketToggleShaftPlacer::decode,
+                PacketToggleShaftPlacer::handle
+        );
 
     }
 }

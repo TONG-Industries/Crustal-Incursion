@@ -1,40 +1,134 @@
 {
+  "credit": "Made with Blockbench",
   "parent": "builtin/entity",
-  "texture_size": [128, 128],
+  "texture_size": [
+    128,
+    128
+  ],
   "display": {
     "thirdperson_righthand": {
-      "rotation": [75, 45, 0],
-      "translation": [0, 2.5, 0],
-      "scale": [0.375, 0.375, 0.375]
+      "rotation": [
+        -119.99,
+        -45.1,
+        -179.96
+      ],
+      "translation": [
+        0,
+        2.5,
+        0
+      ],
+      "scale": [
+        0.375,
+        0.375,
+        0.375
+      ]
     },
     "thirdperson_lefthand": {
-      "translation": [0, 0, 2],
-      "scale": [0.25, 0.25, 0.25]
+      "rotation": [
+        -120,
+        -44.99,
+        179.99
+      ],
+      "translation": [
+        0,
+        2.5,
+        0
+      ],
+      "scale": [
+        0.375,
+        0.375,
+        0.375
+      ]
     },
     "firstperson_righthand": {
-      "translation": [-1.25, 2, 1.25],
-      "scale": [0.25, 0.25, 0.25]
+      "rotation": [
+        0,
+        -45,
+        0
+      ],
+      "scale": [
+        0.4,
+        0.4,
+        0.4
+      ]
     },
     "firstperson_lefthand": {
-      "translation": [-1, 2.5, 1.75],
-      "scale": [0.25, 0.25, 0.25]
+      "rotation": [
+        0,
+        -45,
+        0
+      ],
+      "scale": [
+        0.4,
+        0.4,
+        0.4
+      ]
     },
     "ground": {
-      "scale": [0.25, 0.25, 0.25]
+      "translation": [
+        0,
+        3,
+        0
+      ],
+      "scale": [
+        0.25,
+        0.25,
+        0.25
+      ]
     },
     "gui": {
-      "rotation": [22.5, 135, 0],
-      "translation": [0, -2.5, 0],
-      "scale": [0.55, 0.55, 0.55]
+      "rotation": [
+        13.1,
+        -45.66,
+        -0.37
+      ],
+      "translation": [
+        -0.25,
+        -5.25,
+        0
+      ],
+      "scale": [
+        0.625,
+        0.625,
+        0.625
+      ]
     },
     "head": {
-      "translation": [0, 6.25, 0]
+      "rotation": [
+        180,
+        0,
+        180
+      ],
+      "translation": [
+        0,
+        6.5,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
     },
     "fixed": {
-      "translation": [0, -8, 0]
+      "rotation": [
+        180,
+        0,
+        180
+      ],
+      "translation": [
+        0,
+        -3.5,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
     }
   },
   "textures": {
-    "particle": "cim:block/machine_battery"
+    "particle": "cim:item/machine_battery"
   }
 }
