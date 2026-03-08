@@ -86,32 +86,23 @@ public class GUIMachineBattery extends AbstractContainerScreen<MachineBatteryMen
 
     private void renderSpeedPanels(GuiGraphics graphics, int x, int y) {
         int filledCells = menu.getFilledCellCount();
-        if (filledCells <= 0) return; // Не рендерим если нет ячеек
+        if (filledCells <= 0) return;
 
-        // Левая панель (IN) - координаты рендера: x8, y7, размер 76x16
-        // Текстура панели на атласе: x177, y117
+        // Левая панель (OUT)
         graphics.blit(TEXTURE, x + 8, y + 7, 177, 117, 76, 16);
-
-        // Правая панель (OUT) - координаты рендера: x92, y7, размер 76x16
+        // Правая панель (IN)
         graphics.blit(TEXTURE, x + 92, y + 7, 177, 117, 76, 16);
 
-        // Текст скоростей поверх панелей
         long chargingSpeed = menu.getChargingSpeed();
         long unchargingSpeed = menu.getUnchargingSpeed();
 
-        // IN: скорость зарядки в JE/S (тик * 20)
-        String inText = "IN: " + EnergyFormatter.format(chargingSpeed * 20) + " JE/S";
-        // OUT: скорость разрядки в JE/S
         String outText = "OUT: " + EnergyFormatter.format(unchargingSpeed * 20) + " JE/S";
+        String inText  = "IN: " + EnergyFormatter.format(chargingSpeed * 20) + " JE/S";
 
-        // Рендер текста по центру панелей
-        int inTextWidth = this.font.width(inText);
-        int outTextWidth = this.font.width(outText);
-
-        // Панель IN: x8..x84 (ширина 76)
-        graphics.drawString(this.font, inText, x + 8 + (76 - inTextWidth) / 2, y + 7 + 4, SPEED_TEXT_COLOR, false);
-        // Панель OUT: x92..x168 (ширина 76)
-        graphics.drawString(this.font, outText, x + 93 + (76 - outTextWidth) / 2, y + 7 + 4, SPEED_TEXT_COLOR, false);
+        // Левая панель (OUT)
+        graphics.drawString(this.font, outText, x + 8 + 1, y + 7 + 4, SPEED_TEXT_COLOR, false);
+        // Правая панель (IN)
+        graphics.drawString(this.font, inText, x + 92 + 1, y + 7 + 4, SPEED_TEXT_COLOR, false);
     }
 
     // --- 4. ШКАЛА БУФЕРА ЭНЕРГИИ ---
@@ -125,8 +116,8 @@ public class GUIMachineBattery extends AbstractContainerScreen<MachineBatteryMen
             int barHeight = (int) (totalHeight * ((double) energy / maxEnergy));
             if (barHeight > totalHeight) barHeight = totalHeight;
 
-            // Рендер: x62, y37. Текстура шкалы как раньше: u=176, v=(52-barHeight)
-            graphics.blit(TEXTURE, x + 62, y + 37 + (totalHeight - barHeight), 176, totalHeight - barHeight, 52, barHeight);
+            // Рендер: x62, y37. Текстура шкалы как раньше: u=177, v=(52-barHeight)
+            graphics.blit(TEXTURE, x + 62, y + 37 + (totalHeight - barHeight), 177, totalHeight - barHeight, 52, barHeight);
         }
     }
 
@@ -252,25 +243,25 @@ public class GUIMachineBattery extends AbstractContainerScreen<MachineBatteryMen
             pGuiGraphics.renderTooltip(this.font, tooltip, Optional.empty(), pMouseX, pMouseY);
         }
 
-        // Тултип для панели IN (x8, y7, 76x16)
+        // Тултип для левой панели (OUT) – теперь координаты x8, y7
         if (isMouseOver(pMouseX, pMouseY, 8, 7, 76, 16)) {
             int filledCells = menu.getFilledCellCount();
             if (filledCells > 0) {
                 List<Component> tooltip = new ArrayList<>();
-                long speed = menu.getChargingSpeed();
-                tooltip.add(Component.literal("§aСкорость зарядки: " + EnergyFormatter.format(speed) + " HE/t"));
+                long speed = menu.getUnchargingSpeed(); // скорость разрядки
+                tooltip.add(Component.literal("§cСкорость разрядки: " + EnergyFormatter.format(speed) + " HE/t"));
                 tooltip.add(Component.literal("§7(" + EnergyFormatter.format(speed * 20) + " HE/s)").withStyle(ChatFormatting.GRAY));
                 pGuiGraphics.renderTooltip(this.font, tooltip, Optional.empty(), pMouseX, pMouseY);
             }
         }
 
-        // Тултип для панели OUT (x92, y7, 76x16)
+// Тултип для правой панели (IN) – теперь координаты x92, y7
         if (isMouseOver(pMouseX, pMouseY, 92, 7, 76, 16)) {
             int filledCells = menu.getFilledCellCount();
             if (filledCells > 0) {
                 List<Component> tooltip = new ArrayList<>();
-                long speed = menu.getUnchargingSpeed();
-                tooltip.add(Component.literal("§cСкорость разрядки: " + EnergyFormatter.format(speed) + " HE/t"));
+                long speed = menu.getChargingSpeed(); // скорость зарядки
+                tooltip.add(Component.literal("§aСкорость зарядки: " + EnergyFormatter.format(speed) + " HE/t"));
                 tooltip.add(Component.literal("§7(" + EnergyFormatter.format(speed * 20) + " HE/s)").withStyle(ChatFormatting.GRAY));
                 pGuiGraphics.renderTooltip(this.font, tooltip, Optional.empty(), pMouseX, pMouseY);
             }
