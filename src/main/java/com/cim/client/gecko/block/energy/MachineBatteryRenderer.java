@@ -49,23 +49,6 @@ public class MachineBatteryRenderer extends GeoBlockRenderer<MachineBatteryBlock
         // Центрируем модель
         poseStack.translate(0.5f, 0.0f, 0.5f);
 
-        // Поворачиваем в зависимости от FACING
-        // В .geo.json лицевая сторона (порты/батареи) смотрит по -Z (NORTH)
-        // Поэтому:
-        //   NORTH = 0°  (по умолчанию)
-        //   EAST  = 270° (или -90°)
-        //   SOUTH = 180°
-        //   WEST  = 90°
-        float yRot = switch (facing) {
-            case SOUTH -> 180f;
-            case WEST -> 90f;
-            case EAST -> -90f;
-            default -> 0f; // NORTH
-        };
-
-        if (yRot != 0f) {
-            poseStack.mulPose(Axis.YP.rotationDegrees(yRot));
-        }
 
         // Возвращаем обратно
         poseStack.translate(-0.5f, 0.0f, -0.5f);
