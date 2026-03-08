@@ -26,10 +26,9 @@ public class GUIShaftPlacer extends AbstractContainerScreen<ShaftPlacerMenu> {
         int x = (width - imageWidth) / 2;
         int y = (height - imageHeight) / 2;
 
-        // Фон
         guiGraphics.blit(TEXTURE, x, y, 0, 0, imageWidth, imageHeight);
 
-        // Энергобар (вертикальный снизу вверх)
+        // Энергобар (без изменений)
         int energy = menu.getEnergy();
         int maxEnergy = menu.getMaxEnergy();
         if (maxEnergy > 0) {
@@ -44,6 +43,14 @@ public class GUIShaftPlacer extends AbstractContainerScreen<ShaftPlacerMenu> {
         // Кнопка включения
         if (menu.isSwitchedOn()) {
             guiGraphics.blit(TEXTURE, x + 45, y + 43, 177, 0, 10, 32);
+        }
+
+        // Светодиоды
+        if (menu.canPlaceNext()) {
+            guiGraphics.blit(TEXTURE, x + 64, y + 34, 177, 86, 6, 6);
+        }
+        if (menu.hasDrillHead()) {
+            guiGraphics.blit(TEXTURE, x + 72, y + 34, 177, 86, 6, 6);
         }
     }
 

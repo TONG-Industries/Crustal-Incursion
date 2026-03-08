@@ -22,6 +22,11 @@ public class GUIMiningPort extends AbstractContainerScreen<MiningPortMenu> {
         int x = (width - imageWidth) / 2;
         int y = (height - imageHeight) / 2;
         guiGraphics.blit(TEXTURE, x, y, 0, 0, imageWidth, imageHeight);
+
+        // Светодиод
+        if (menu.hasDrillHead()) {
+            guiGraphics.blit(TEXTURE, x + 64, y + 19, 177, 0, 6, 6);
+        }
     }
 
     @Override

@@ -13,22 +13,22 @@ import com.cim.block.entity.rotation.MiningPortBlockEntity;
 
 public class MiningPortMenu extends AbstractContainerMenu {
     private final MiningPortBlockEntity blockEntity;
+    private final ContainerData data;
 
     // Клиент
     public MiningPortMenu(int containerId, Inventory inv, FriendlyByteBuf extraData) {
-        this(containerId, inv, inv.player.level().getBlockEntity(extraData.readBlockPos()));
+        this(containerId, inv, inv.player.level().getBlockEntity(extraData.readBlockPos()), new SimpleContainerData(1));
     }
 
     // Сервер
-    public MiningPortMenu(int containerId, Inventory inv, BlockEntity entity) {
+    public MiningPortMenu(int containerId, Inventory inv, BlockEntity entity, ContainerData data) {
         super(ModMenuTypes.MINING_PORT_MENU.get(), containerId);
         this.blockEntity = (MiningPortBlockEntity) entity;
+        this.data = data;
 
-        // Инвентарь игрока
         addPlayerInventory(inv);
         addPlayerHotbar(inv);
 
-        // Слоты буфера (3x3)
         IItemHandler handler = blockEntity.getInventory();
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 3; ++col) {
@@ -36,6 +36,11 @@ public class MiningPortMenu extends AbstractContainerMenu {
             }
         }
 
+        addDataSlots(data);
+    }
+
+    public boolean hasDrillHead() {
+        return data.get(0) == 1;
     }
 
     public BlockPos getPos() { return blockEntity.getBlockPos(); }

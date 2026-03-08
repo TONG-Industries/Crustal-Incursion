@@ -17,7 +17,15 @@ public class ShaftPlacerMenu extends AbstractContainerMenu {
 
     // Клиент
     public ShaftPlacerMenu(int containerId, Inventory inv, FriendlyByteBuf extraData) {
-        this(containerId, inv, inv.player.level().getBlockEntity(extraData.readBlockPos()), new SimpleContainerData(5));
+        this(containerId, inv, inv.player.level().getBlockEntity(extraData.readBlockPos()), new SimpleContainerData(7));
+    }
+
+    public boolean canPlaceNext() {
+        return data.get(5) == 1;
+    }
+
+    public boolean hasDrillHead() {
+        return data.get(6) == 1;
     }
 
     // Сервер

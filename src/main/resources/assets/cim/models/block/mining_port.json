@@ -4,8 +4,8 @@
     "particle": "cim:block/cargo_port",
     "top": "cim:block/adder_side_alt",
     "bottom": "cim:block/adder_side_alt",
-    "front": "cim:block/gear_port_open",
-    "back": "cim:block/gear_port_open",
+    "front": "cim:block/gear_port_green",
+    "back": "cim:block/gear_port_red",
     "side": "cim:block/cargo_port"
   },
   "elements": [
@@ -21,11 +21,5 @@
         "east":  { "texture": "#side",   "cullface": "east" }
       }
     }
-  ],
-  "display": {
-    "gui": {
-      "rotation": [ 30, 135, 0 ],
-      "scale": [ 0.625, 0.625, 0.625 ]
-    }
-  }
+  ]
 }

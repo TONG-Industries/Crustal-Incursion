@@ -1,12 +1,16 @@
 package com.cim.block.entity.rotation;
 
+import com.cim.block.basic.rotation.MiningPortBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.Capability;
@@ -40,7 +44,45 @@ public class MiningPortBlockEntity extends BlockEntity implements RotationalNode
     public MiningPortBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.MINING_PORT_BE.get(), pos, state);
     }
+    @Nullable
+    private BlockPos placerPos;
 
+    // Геттер и сеттер для placerPos
+    public void setPlacerPos(@Nullable BlockPos pos) {
+        this.placerPos = pos;
+        setChanged();
+        sync();
+    }
+
+    @Nullable
+    public BlockPos getPlacerPos() {
+        return placerPos;
+    }
+
+    // Добавить метод для получения данных
+    public ContainerData getDataAccess() {
+        return data;
+    }
+
+    public static void tick(Level level, BlockPos pos, BlockState state, MiningPortBlockEntity be) {
+        if (level.isClientSide) return;
+
+        // Обновляем флаг наличия головки
+        boolean hasDrill = false;
+        if (be.placerPos != null) {
+            BlockEntity placerBe = level.getBlockEntity(be.placerPos);
+            if (placerBe instanceof ShaftPlacerBlockEntity placer) {
+                hasDrill = placer.hasDrillHead();
+            } else {
+                // Разместитель исчез – сбрасываем связь
+                be.placerPos = null;
+                be.setChanged();
+            }
+        }
+        be.data.set(0, hasDrill ? 1 : 0);
+    }
+
+    protected final ContainerData data = new SimpleContainerData(1);
     // Rotational
     @Override public long getSpeed() { return speed; }
     @Override public long getTorque() { return torque; }
@@ -75,12 +117,7 @@ public class MiningPortBlockEntity extends BlockEntity implements RotationalNode
             }
         }
     }
-    @Override
-    public Direction[] getPropagationDirections(@Nullable Direction fromDir) {
-        return new Direction[0];
-    }
 
-    // Метод для добавления предметов (вызывается из головки)
     public ItemStack addItem(ItemStack stack) {
         ItemStack remainder = stack.copy();
         for (int i = 0; i < inventory.getSlots(); i++) {
@@ -92,6 +129,18 @@ public class MiningPortBlockEntity extends BlockEntity implements RotationalNode
             sync();
         }
         return remainder;
+    }
+
+    @Override
+    public Direction[] getPropagationDirections(@Nullable Direction fromDir) {
+        Direction facing = getBlockState().getValue(MiningPortBlock.FACING);
+        if (fromDir == facing.getOpposite()) {
+            return new Direction[]{facing};      // со стороны входа – на выход
+        } else if (fromDir == facing) {
+            return new Direction[]{facing.getOpposite()}; // со стороны выхода – на вход
+        } else {
+            return new Direction[0];              // с других сторон не передаём
+        }
     }
 
     public IItemHandler getInventory() { return inventory; }

@@ -66,6 +66,10 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
             LazyOptional.of(() -> new LongEnergyWrapper(this, LongEnergyWrapper.BitMode.LOW));
     @Nullable
     private BlockPos headPos;
+
+    // В классе ShaftPlacerBlockEntity
+
+    // Изменить объявление data:
     protected final ContainerData data = new ContainerData() {
         @Override
         public int get(int index) {
@@ -75,6 +79,8 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
                 case 2 -> isSwitchedOn ? 1 : 0;
                 case 3 -> shaftsAfterLastPort;
                 case 4 -> totalChainLength;
+                case 5 -> canPlaceNext() ? 1 : 0;
+                case 6 -> hasDrillHead ? 1 : 0;
                 default -> 0;
             };
         }
@@ -85,10 +91,41 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
                 case 2 -> isSwitchedOn = value == 1;
                 case 3 -> shaftsAfterLastPort = value;
                 case 4 -> totalChainLength = value;
+                // case 5 и 6 только для чтения
             }
         }
-        @Override public int getCount() { return 5; }
+        @Override public int getCount() { return 7; }
     };
+
+    // Добавить метод получения следующей позиции
+    private BlockPos getNextPlacePos() {
+        Direction facing = getBlockState().getValue(ShaftPlacerBlock.FACING);
+        return worldPosition.relative(facing, totalChainLength + 1);
+    }
+
+    // Добавить метод проверки возможности установки
+    public boolean canPlaceNext() {
+        if (!isSwitchedOn) return false;
+        if (totalChainLength >= 25) return false; // лимит
+
+        Direction facing = getBlockState().getValue(ShaftPlacerBlock.FACING);
+        BlockPos nextPos = getNextPlacePos();
+        if (!level.isEmptyBlock(nextPos) && !level.getBlockState(nextPos).canBeReplaced()) {
+            return false; // место занято
+        }
+
+        boolean needPort = (shaftsAfterLastPort >= 5);
+        int slotIndex = needPort ? findPortSlot() : findShaftSlot();
+        if (slotIndex == -1) return false;
+
+        long energyCost = needPort ? ENERGY_PER_PORT : ENERGY_PER_SHAFT;
+        return energyStored >= energyCost;
+    }
+
+    // Добавить геттер для hasDrillHead (если ещё нет)
+    public boolean hasDrillHead() {
+        return hasDrillHead;
+    }
 
     public ShaftPlacerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.SHAFT_PLACER_BE.get(), pos, state);
@@ -129,18 +166,42 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
         }
     }
 
+    public boolean hasResourcesForNext() {
+        if (!isSwitchedOn) return false;
+        boolean needPort = (shaftsAfterLastPort >= 5);
+        int slotIndex = needPort ? findPortSlot() : findShaftSlot();
+        if (slotIndex == -1) return false;
+        long energyCost = needPort ? ENERGY_PER_PORT : ENERGY_PER_SHAFT;
+        return energyStored >= energyCost;
+    }
+
+
     private void updateMiningPortPos(Level level) {
         Direction facing = getBlockState().getValue(ShaftPlacerBlock.FACING);
-        // Проверяем блок ПРЯМО перед собой (дрель будет за ним)
         BlockPos frontPos = worldPosition.relative(facing);
         BlockEntity be = level.getBlockEntity(frontPos);
 
-        if (be instanceof MiningPortBlockEntity) {
-            this.miningPortPos = frontPos;
+        if (be instanceof MiningPortBlockEntity port) {
+            if (!port.getBlockPos().equals(this.miningPortPos)) {
+                // Сброс старого порта, если был
+                if (this.miningPortPos != null && level.getBlockEntity(this.miningPortPos) instanceof MiningPortBlockEntity oldPort) {
+                    oldPort.setPlacerPos(null);
+                }
+                this.miningPortPos = frontPos;
+                port.setPlacerPos(this.worldPosition);
+            }
         } else {
+            if (this.miningPortPos != null) {
+                BlockEntity oldPort = level.getBlockEntity(this.miningPortPos);
+                if (oldPort instanceof MiningPortBlockEntity port) {
+                    port.setPlacerPos(null);
+                }
+            }
             this.miningPortPos = null;
         }
     }
+
+
 
     @Override
     public Direction[] getPropagationDirections(@Nullable Direction fromDir) {
@@ -493,6 +554,7 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
     }
     public void handleHeadMoved(BlockPos oldHeadPos, BlockPos newHeadPos) {
         if (level == null || level.isClientSide) return;
+        if (!isSwitchedOn) return;
         if (!oldHeadPos.equals(this.headPos)) return;
 
         Direction facing = getBlockState().getValue(ShaftPlacerBlock.FACING);
@@ -500,8 +562,7 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
             return;
         }
 
-        // Определяем, нужен ли порт (каждые 5 валов)
-        boolean needPort = (shaftsAfterLastPort >= 5); // было 4
+        boolean needPort = (shaftsAfterLastPort >= 5);
         int slotIndex;
         long energyCost;
 
@@ -516,6 +577,11 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
         if (slotIndex == -1) return;
         if (energyStored < energyCost) return;
 
+        // СПИСАНИЕ РЕСУРСОВ
+        energyStored -= energyCost;
+        inventory.extractItem(slotIndex, 1, false);
+
+        // УСТАНОВКА БЛОКА
         if (needPort) {
             BlockState portState = ModBlocks.GEAR_PORT.get().defaultBlockState();
             level.setBlock(oldHeadPos, portState, 3);
@@ -524,7 +590,6 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
                 gear.setupPorts(facing.getOpposite(), facing);
             }
             shaftsAfterLastPort = 0;
-            // Сразу обновляем позицию порта, если он сзади
             updateMiningPortPos(level);
         } else {
             BlockState shaftState = ModBlocks.SHAFT_IRON.get().defaultBlockState()
@@ -532,9 +597,6 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
             level.setBlock(oldHeadPos, shaftState, 3);
             shaftsAfterLastPort++;
         }
-
-        energyStored -= energyCost;
-        inventory.extractItem(slotIndex, 1, false);
 
         this.headPos = newHeadPos;
         this.totalChainLength++;

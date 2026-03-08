@@ -134,6 +134,26 @@ public class ShaftBlock extends BaseEntityBlock {
                 shaftFacing = clickedFace;
             }
         }
+        else if (targetBlock instanceof ShaftPlacerBlock) {
+            Direction placerFacing = targetState.getValue(ShaftPlacerBlock.FACING);
+            if (clickedFace == placerFacing) {
+                canPlace = true;
+                shaftFacing = placerFacing;               // вал смотрит в ту же сторону
+            } else if (clickedFace == placerFacing.getOpposite()) {
+                canPlace = true;
+                shaftFacing = placerFacing.getOpposite(); // вал смотрит назад
+            }
+        }
+        else if (targetBlock instanceof MiningPortBlock) {
+            Direction portFacing = targetState.getValue(MiningPortBlock.FACING);
+            if (clickedFace == portFacing) {
+                canPlace = true;
+                shaftFacing = portFacing;
+            } else if (clickedFace == portFacing.getOpposite()) {
+                canPlace = true;
+                shaftFacing = portFacing.getOpposite();
+            }
+        }
 
         if (!canPlace) {
             if (level.isClientSide) {
