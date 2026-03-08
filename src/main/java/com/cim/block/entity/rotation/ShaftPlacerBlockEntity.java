@@ -142,6 +142,15 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
         }
     }
 
+    public boolean canPlaceNext() {
+        if (!isSwitchedOn) return false;
+        boolean needPort = (shaftsAfterLastPort >= 5);
+        int slotIndex = needPort ? findPortSlot() : findShaftSlot();
+        if (slotIndex == -1) return false;
+        long energyCost = needPort ? ENERGY_PER_PORT : ENERGY_PER_SHAFT;
+        return energyStored >= energyCost;
+    }
+
     @Override
     public Direction[] getPropagationDirections(@Nullable Direction fromDir) {
         Direction facing = getBlockState().getValue(ShaftPlacerBlock.FACING);
@@ -493,6 +502,7 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
     }
     public void handleHeadMoved(BlockPos oldHeadPos, BlockPos newHeadPos) {
         if (level == null || level.isClientSide) return;
+        if (!isSwitchedOn) return;
         if (!oldHeadPos.equals(this.headPos)) return;
 
         Direction facing = getBlockState().getValue(ShaftPlacerBlock.FACING);
@@ -500,8 +510,7 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
             return;
         }
 
-        // Определяем, нужен ли порт (каждые 5 валов)
-        boolean needPort = (shaftsAfterLastPort >= 5); // было 4
+        boolean needPort = (shaftsAfterLastPort >= 5);
         int slotIndex;
         long energyCost;
 
@@ -516,6 +525,11 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
         if (slotIndex == -1) return;
         if (energyStored < energyCost) return;
 
+        // СПИСАНИЕ РЕСУРСОВ
+        energyStored -= energyCost;
+        inventory.extractItem(slotIndex, 1, false);
+
+        // УСТАНОВКА БЛОКА
         if (needPort) {
             BlockState portState = ModBlocks.GEAR_PORT.get().defaultBlockState();
             level.setBlock(oldHeadPos, portState, 3);
@@ -524,7 +538,6 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
                 gear.setupPorts(facing.getOpposite(), facing);
             }
             shaftsAfterLastPort = 0;
-            // Сразу обновляем позицию порта, если он сзади
             updateMiningPortPos(level);
         } else {
             BlockState shaftState = ModBlocks.SHAFT_IRON.get().defaultBlockState()
@@ -532,9 +545,6 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
             level.setBlock(oldHeadPos, shaftState, 3);
             shaftsAfterLastPort++;
         }
-
-        energyStored -= energyCost;
-        inventory.extractItem(slotIndex, 1, false);
 
         this.headPos = newHeadPos;
         this.totalChainLength++;

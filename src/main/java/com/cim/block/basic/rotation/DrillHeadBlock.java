@@ -1,7 +1,11 @@
 package com.cim.block.basic.rotation;
 
+import com.cim.api.rotation.RotationNetworkHelper;
+import com.cim.api.rotation.RotationSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -26,6 +30,24 @@ public class DrillHeadBlock extends BaseEntityBlock {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (!level.isClientSide) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof DrillHeadBlockEntity drill) {
+                // Принудительно обновляем источник вращения
+                long currentTime = level.getGameTime();
+                RotationSource source = RotationNetworkHelper.findSource(drill, null);
+                drill.setCachedSource(source, currentTime);
+                drill.setSpeed(source != null ? source.speed() : 0);
+                drill.setTorque(source != null ? source.torque() : 0);
+            }
+        }
+    }
+
+
 
     @Nullable
     @Override

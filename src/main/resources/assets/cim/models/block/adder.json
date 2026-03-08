@@ -5,8 +5,8 @@
     "top": "cim:block/adder_top",
     "bottom": "cim:block/rotation_meter_top",
     "front": "cim:block/adder_side",
-    "back": "cim:block/gear_port_open",
-    "side": "cim:block/gear_port_open"
+    "back": "cim:block/gear_port_green",
+    "side": "cim:block/gear_port_red"
   },
   "elements": [
     {

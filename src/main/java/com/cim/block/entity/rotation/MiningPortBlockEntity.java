@@ -1,5 +1,6 @@
 package com.cim.block.entity.rotation;
 
+import com.cim.block.basic.rotation.MiningPortBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -75,12 +76,7 @@ public class MiningPortBlockEntity extends BlockEntity implements RotationalNode
             }
         }
     }
-    @Override
-    public Direction[] getPropagationDirections(@Nullable Direction fromDir) {
-        return new Direction[0];
-    }
 
-    // Метод для добавления предметов (вызывается из головки)
     public ItemStack addItem(ItemStack stack) {
         ItemStack remainder = stack.copy();
         for (int i = 0; i < inventory.getSlots(); i++) {
@@ -92,6 +88,18 @@ public class MiningPortBlockEntity extends BlockEntity implements RotationalNode
             sync();
         }
         return remainder;
+    }
+
+    @Override
+    public Direction[] getPropagationDirections(@Nullable Direction fromDir) {
+        Direction facing = getBlockState().getValue(MiningPortBlock.FACING);
+        if (fromDir == facing.getOpposite()) {
+            return new Direction[]{facing};      // со стороны входа – на выход
+        } else if (fromDir == facing) {
+            return new Direction[]{facing.getOpposite()}; // со стороны выхода – на вход
+        } else {
+            return new Direction[0];              // с других сторон не передаём
+        }
     }
 
     public IItemHandler getInventory() { return inventory; }

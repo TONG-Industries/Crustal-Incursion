@@ -5,7 +5,7 @@
     "top": "cim:block/rconverter_top",
     "bottom": "cim:block/adder_top",
     "front": "cim:block/rconverter_front",
-    "back": "cim:block/gear_port_open",
+    "back": "cim:block/gear_port_red",
     "side": "cim:block/adder_side"
   },
   "elements": [
