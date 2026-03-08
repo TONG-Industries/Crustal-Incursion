@@ -40,33 +40,51 @@ import javax.annotation.Nullable;
 /**
  * Энергохранилище-каркас с настраиваемыми режимами работы и слотами для энергоячеек.
  * Базовые параметры каркаса = 0. Все характеристики зависят от вставленных ячеек.
+ *
+ * 16 слотов для батареек:
+ *   Слоты 0-3: CHARGE INPUT (незаряженные предметы кладут сюда)
+ *   Слоты 4-7: CHARGE OUTPUT (заряженные перемещаются сюда)
+ *   Слоты 8-11: DISCHARGE INPUT (заряженные предметы для разрядки)
+ *   Слоты 12-15: DISCHARGE OUTPUT (разряженные перемещаются сюда)
+ *
  * Режимы: 0 = BOTH, 1 = INPUT, 2 = OUTPUT, 3 = DISABLED
  */
 public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvider, IEnergyProvider, IEnergyReceiver, GeoBlockEntity
 {
 
     // ====================== КАРКАС: базовые параметры = 0 ======================
-    private long capacity = 0;          // Суммарная ёмкость из ячеек
-    private long chargingSpeed = 0;     // Среднее арифметическое скоростей зарядки
-    private long unchargingSpeed = 0;   // Среднее арифметическое скоростей разрядки
+    private long capacity = 0;
+    private long chargingSpeed = 0;
+    private long unchargingSpeed = 0;
     private long energy = 0;
     private long lastEnergy = 0;
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
-    // Режимы работы (0 = BOTH, 1 = INPUT, 2 = OUTPUT, 3 = DISABLED)
-    public int modeOnNoSignal = 0;
-    public int modeOnSignal = 0;
+    // Один режим работы (без редстоун-сигнала)
+    // 0 = BOTH, 1 = INPUT, 2 = OUTPUT, 3 = DISABLED
+    public int mode = 0;
     private Priority priority = Priority.LOW;
     private long energyDelta = 0;
 
     // ====================== СЛОТЫ ДЛЯ ЭНЕРГОЯЧЕЕК (4 штуки, 2x2) ======================
     public static final int CELL_SLOT_COUNT = 4;
     private final ItemStack[] cellSlots = new ItemStack[CELL_SLOT_COUNT];
-    private final boolean[] cellEmpty = new boolean[CELL_SLOT_COUNT]; // true = пустой
+    private final boolean[] cellEmpty = new boolean[CELL_SLOT_COUNT];
 
-    // ====================== СЛОТЫ ДЛЯ БАТАРЕЕК (зарядка/разрядка) — как было ======================
-    private final ItemStackHandler itemHandler = new ItemStackHandler(2) {
+    // ====================== СЛОТЫ ДЛЯ БАТАРЕЕК (16 слотов) ======================
+    // 0-3: charge input, 4-7: charge output, 8-11: discharge input, 12-15: discharge output
+    public static final int TOTAL_ITEM_SLOTS = 16;
+    public static final int CHARGE_INPUT_START = 0;
+    public static final int CHARGE_INPUT_END = 4;
+    public static final int CHARGE_OUTPUT_START = 4;
+    public static final int CHARGE_OUTPUT_END = 8;
+    public static final int DISCHARGE_INPUT_START = 8;
+    public static final int DISCHARGE_INPUT_END = 12;
+    public static final int DISCHARGE_OUTPUT_START = 12;
+    public static final int DISCHARGE_OUTPUT_END = 16;
+
+    private final ItemStackHandler itemHandler = new ItemStackHandler(TOTAL_ITEM_SLOTS) {
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
@@ -74,11 +92,19 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
 
         @Override
         public boolean isItemValid(int slot, @NotNull ItemStack stack) {
-            return stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
+            // Только предметы с энергией допускаются в input-слоты
+            // Output-слоты не принимают предметы напрямую от игрока
+            if (slot >= CHARGE_INPUT_START && slot < CHARGE_INPUT_END) {
+                return stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
+            }
+            if (slot >= DISCHARGE_INPUT_START && slot < DISCHARGE_INPUT_END) {
+                return stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
+            }
+            // Output-слоты: предметы попадают только программно
+            return false;
         }
     };
 
-    // [ИСПРАВЛЕНИЕ] Убрали final и инициализацию в конструкторе (кроме empty)
     private LazyOptional<IItemHandler> lazyItemHandler = LazyOptional.empty();
     private LazyOptional<IEnergyProvider> hbmProvider = LazyOptional.empty();
     private LazyOptional<IEnergyReceiver> hbmReceiver = LazyOptional.empty();
@@ -91,12 +117,10 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
     public MachineBatteryBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.MACHINE_BATTERY_BE.get(), pos, state);
 
-        // Каркас: базовые параметры = 0
         this.capacity = 0;
         this.chargingSpeed = 0;
         this.unchargingSpeed = 0;
 
-        // Инициализируем слоты ячеек как пустые
         for (int i = 0; i < CELL_SLOT_COUNT; i++) {
             cellSlots[i] = ItemStack.EMPTY;
             cellEmpty[i] = true;
@@ -104,13 +128,13 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
 
         this.feCapabilityProvider = new PackedEnergyCapabilityProvider(this);
 
+        // ContainerData: 2 поля (mode, priority)
         this.data = new ContainerData() {
             @Override
             public int get(int index) {
                 return switch (index) {
-                    case 0 -> modeOnNoSignal;
-                    case 1 -> modeOnSignal;
-                    case 2 -> priority.ordinal();
+                    case 0 -> mode;
+                    case 1 -> priority.ordinal();
                     default -> 0;
                 };
             }
@@ -118,15 +142,14 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
             @Override
             public void set(int index, int value) {
                 switch (index) {
-                    case 0 -> modeOnNoSignal = value;
-                    case 1 -> modeOnSignal = value;
-                    case 2 -> priority = Priority.values()[Math.max(0, Math.min(value, Priority.values().length - 1))];
+                    case 0 -> mode = value;
+                    case 1 -> priority = Priority.values()[Math.max(0, Math.min(value, Priority.values().length - 1))];
                 }
             }
 
             @Override
             public int getCount() {
-                return 3;
+                return 2;
             }
         };
     }
@@ -140,24 +163,19 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
         if (!(stack.getItem() instanceof EnergyCellItem cell)) return false;
         if (!cell.isValidCell(stack)) return false;
 
-        // Берём 1 ячейку из стака
         ItemStack cellStack = stack.split(1);
 
-        // Ячейка отдаёт свою энергию в каркас
         long cellEnergy = EnergyCellItem.getStoredEnergy(cellStack);
         if (cellEnergy > 0) {
             this.energy += cellEnergy;
             EnergyCellItem.setStoredEnergy(cellStack, 0);
         }
 
-        // Вставляем ячейку
         cellSlots[slot] = cellStack;
         cellEmpty[slot] = false;
 
-        // Пересчитываем параметры (capacity может вырасти)
         recalculateCellStats();
 
-        // Обрезаем энергию если она вдруг больше нового буфера
         if (energy > capacity) {
             energy = capacity;
         }
@@ -169,43 +187,28 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
         return true;
     }
 
-    /**
-     * Извлечь энергоячейку из указанного слота (0-3).
-     * При извлечении ячейка ВСАСЫВАЕТ столько энергии из каркаса,
-     * сколько может вместить.
-     *
-     * Пример: 2.5M в каркасе, 4 ячейки по 1M.
-     *   Вытаскиваем 1ю → забирает 1M, остаётся 1.5M
-     *   Вытаскиваем 2ю → забирает 1M, остаётся 0.5M
-     *   Вытаскиваем 3ю → забирает 0.5M (сколько есть), остаётся 0
-     *   Вытаскиваем 4ю → забирает 0, пустая
-     */
     public ItemStack extractCell(int slot) {
         if (slot < 0 || slot >= CELL_SLOT_COUNT) return ItemStack.EMPTY;
         if (cellEmpty[slot]) return ItemStack.EMPTY;
 
         ItemStack extracted = cellSlots[slot].copy();
 
-        // === ЯЧЕЙКА ВСАСЫВАЕТ ЭНЕРГИЮ ИЗ КАРКАСА ===
         long cellMax = EnergyCellItem.getMaxEnergy(extracted);
         long cellCurrent = EnergyCellItem.getStoredEnergy(extracted);
-        long cellSpace = cellMax - cellCurrent;        // сколько может принять
-        long available = this.energy;                   // сколько есть в каркасе
-        long toAbsorb = Math.min(cellSpace, available); // сколько реально заберёт
+        long cellSpace = cellMax - cellCurrent;
+        long available = this.energy;
+        long toAbsorb = Math.min(cellSpace, available);
 
         if (toAbsorb > 0) {
             EnergyCellItem.setStoredEnergy(extracted, cellCurrent + toAbsorb);
             this.energy -= toAbsorb;
         }
 
-        // Очищаем слот
         cellSlots[slot] = ItemStack.EMPTY;
         cellEmpty[slot] = true;
 
-        // Пересчитываем параметры каркаса
         recalculateCellStats();
 
-        // Защита: энергия не может быть больше нового буфера
         if (energy > capacity) {
             energy = capacity;
         }
@@ -217,13 +220,6 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
         return extracted;
     }
 
-    /**
-     * Пересчитать все параметры каркаса на основе вставленных ячеек.
-     *
-     * capacity = СУММА capacity всех ячеек
-     * chargingSpeed = СРЕДНЕЕ АРИФМЕТИЧЕСКОЕ chargingSpeed заполненных слотов
-     * unchargingSpeed = СРЕДНЕЕ АРИФМЕТИЧЕСКОЕ unchargingSpeed заполненных слотов
-     */
     private void recalculateCellStats() {
         long totalCapacity = 0;
         long totalChargingSpeed = 0;
@@ -240,35 +236,20 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
         }
 
         this.capacity = totalCapacity;
-
-        if (filledCount > 0) {
-            this.chargingSpeed = totalChargingSpeed / filledCount;
-            this.unchargingSpeed = totalUnchargingSpeed / filledCount;
-        } else {
-            this.chargingSpeed = 0;
-            this.unchargingSpeed = 0;
-        }
+        this.chargingSpeed = totalChargingSpeed;
+        this.unchargingSpeed = totalUnchargingSpeed;
     }
 
-    /**
-     * Проверить, пустой ли слот ячейки.
-     */
     public boolean isCellEmpty(int slot) {
         if (slot < 0 || slot >= CELL_SLOT_COUNT) return true;
         return cellEmpty[slot];
     }
 
-    /**
-     * Получить ItemStack ячейки в слоте (для рендера или проверки).
-     */
     public ItemStack getCellStack(int slot) {
         if (slot < 0 || slot >= CELL_SLOT_COUNT) return ItemStack.EMPTY;
         return cellSlots[slot];
     }
 
-    /**
-     * Количество заполненных слотов.
-     */
     public int getFilledCellCount() {
         int count = 0;
         for (int i = 0; i < CELL_SLOT_COUNT; i++) {
@@ -287,7 +268,6 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
         hbmReceiver = LazyOptional.of(() -> this);
         hbmConnector = LazyOptional.of(() -> this);
 
-        // Пересчитываем параметры при загрузке (ячейки уже десериализованы из NBT)
         recalculateCellStats();
     }
 
@@ -318,17 +298,12 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
             be.lastEnergy = be.energy;
         }
 
-        // Проверяем консистентность флагов ячеек (на случай десинка)
         be.validateCellFlags();
 
-        be.chargeFromItem();
-        be.dischargeToItem();
+        be.chargeItems();
+        be.dischargeItems();
     }
 
-    /**
-     * Проверяем, что флаги isEmpty соответствуют реальному содержимому слотов.
-     * Вызывается в tick() для надёжности.
-     */
     private void validateCellFlags() {
         boolean needRecalc = false;
         for (int i = 0; i < CELL_SLOT_COUNT; i++) {
@@ -348,83 +323,172 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
         }
     }
 
-    // ====================== ЗАРЯДКА / РАЗРЯДКА БАТАРЕЕК (без изменений) ======================
+    // ====================== ЗАРЯДКА / РАЗРЯДКА (4+4 слоты) ======================
 
-    private void chargeFromItem() {
-        var stack = itemHandler.getStackInSlot(0);
-        if (stack.isEmpty()) return;
+    /**
+     * Зарядка предметов из слотов 0-3 (charge input).
+     * Когда предмет полностью заряжен, перемещаем в слоты 4-7 (charge output).
+     */
+    private void chargeItems() {
+        for (int i = CHARGE_INPUT_START; i < CHARGE_INPUT_END; i++) {
+            ItemStack stack = itemHandler.getStackInSlot(i);
+            if (stack.isEmpty()) continue;
 
-        long spaceAvailable = capacity - energy;
-        if (spaceAvailable <= 0) return;
+            long spaceAvailable = capacity - energy;
+            if (energy <= 0 && spaceAvailable <= 0) continue; // нет энергии для зарядки
 
-        var hbmCap = stack.getCapability(ModCapabilities.ENERGY_PROVIDER);
-        if (hbmCap.isPresent()) {
-            hbmCap.ifPresent(source -> {
-                if (!source.canExtract()) return;
-                long toExtract = Math.min(chargingSpeed, spaceAvailable);
-                if (toExtract <= 0) return;
-                long extracted = source.extractEnergy(toExtract, false);
-                if (extracted > 0) {
-                    this.energy += extracted;
-                    setChanged();
-                }
-            });
-            return;
-        }
+            boolean charged = false;
 
-        stack.getCapability(ForgeCapabilities.ENERGY).ifPresent(source -> {
-            if (!source.canExtract()) return;
-            long wanted = Math.min(chargingSpeed, spaceAvailable);
-            if (wanted <= 0) return;
-            int maxTransfer = (int) Math.min(wanted, Integer.MAX_VALUE);
-            int extracted = source.extractEnergy(maxTransfer, false);
-            if (extracted > 0) {
-                this.energy += extracted;
-                setChanged();
+            // Попро��уем HBM capability
+            var hbmCap = stack.getCapability(ModCapabilities.ENERGY_RECEIVER);
+            if (hbmCap.isPresent()) {
+                hbmCap.ifPresent(target -> {
+                    if (!target.canReceive()) return;
+                    long toTransfer = Math.min(unchargingSpeed, energy);
+                    if (toTransfer <= 0) return;
+                    long accepted = target.receiveEnergy(toTransfer, false);
+                    if (accepted > 0) {
+                        this.energy -= accepted;
+                        setChanged();
+                    }
+                });
+            } else {
+                // Forge Energy
+                stack.getCapability(ForgeCapabilities.ENERGY).ifPresent(target -> {
+                    if (!target.canReceive()) return;
+                    long wanted = Math.min(unchargingSpeed, energy);
+                    if (wanted <= 0) return;
+                    int maxTransfer = (int) Math.min(wanted, Integer.MAX_VALUE);
+                    int accepted = target.receiveEnergy(maxTransfer, false);
+                    if (accepted > 0) {
+                        this.energy -= accepted;
+                        setChanged();
+                    }
+                });
             }
-        });
+
+            // Проверяем, полностью ли заряжен предмет
+            if (isItemFullyCharged(stack)) {
+                // Пробуем переместить в output
+                int outputSlot = findFreeOutputSlot(CHARGE_OUTPUT_START, CHARGE_OUTPUT_END, stack);
+                if (outputSlot >= 0) {
+                    moveItem(i, outputSlot);
+                }
+            }
+        }
     }
 
-    private void dischargeToItem() {
-        var stack = itemHandler.getStackInSlot(1);
-        if (stack.isEmpty()) return;
+    /**
+     * Разрядка предметов из слотов 8-11 (discharge input).
+     * Когда предмет полностью разряжен, перемещаем в слоты 12-15 (discharge output).
+     */
+    private void dischargeItems() {
+        for (int i = DISCHARGE_INPUT_START; i < DISCHARGE_INPUT_END; i++) {
+            ItemStack stack = itemHandler.getStackInSlot(i);
+            if (stack.isEmpty()) continue;
 
-        long availableEnergy = energy;
-        if (availableEnergy <= 0) return;
+            long spaceAvailable = capacity - energy;
+            if (spaceAvailable <= 0) continue;
 
+            // Попробуем HBM capability
+            var hbmCap = stack.getCapability(ModCapabilities.ENERGY_PROVIDER);
+            if (hbmCap.isPresent()) {
+                hbmCap.ifPresent(source -> {
+                    if (!source.canExtract()) return;
+                    long toExtract = Math.min(chargingSpeed, capacity - energy);
+                    if (toExtract <= 0) return;
+                    long extracted = source.extractEnergy(toExtract, false);
+                    if (extracted > 0) {
+                        this.energy += extracted;
+                        setChanged();
+                    }
+                });
+            } else {
+                // Forge Energy
+                stack.getCapability(ForgeCapabilities.ENERGY).ifPresent(source -> {
+                    if (!source.canExtract()) return;
+                    long wanted = Math.min(chargingSpeed, capacity - energy);
+                    if (wanted <= 0) return;
+                    int maxTransfer = (int) Math.min(wanted, Integer.MAX_VALUE);
+                    int extracted = source.extractEnergy(maxTransfer, false);
+                    if (extracted > 0) {
+                        this.energy += extracted;
+                        setChanged();
+                    }
+                });
+            }
+
+            // Проверяем, полностью ли разряжен предмет
+            if (isItemFullyDischarged(stack)) {
+                int outputSlot = findFreeOutputSlot(DISCHARGE_OUTPUT_START, DISCHARGE_OUTPUT_END, stack);
+                if (outputSlot >= 0) {
+                    moveItem(i, outputSlot);
+                }
+            }
+        }
+    }
+
+    private boolean isItemFullyCharged(ItemStack stack) {
+        // HBM check
         var hbmCap = stack.getCapability(ModCapabilities.ENERGY_RECEIVER);
         if (hbmCap.isPresent()) {
-            hbmCap.ifPresent(target -> {
-                if (!target.canReceive()) return;
-                long toTransfer = Math.min(unchargingSpeed, availableEnergy);
-                if (toTransfer <= 0) return;
-                long accepted = target.receiveEnergy(toTransfer, false);
-                if (accepted > 0) {
-                    this.energy -= accepted;
-                    setChanged();
-                }
-            });
-            return;
+            return hbmCap.map(r -> r.getEnergyStored() >= r.getMaxEnergyStored()).orElse(false);
         }
+        // Forge check
+        return stack.getCapability(ForgeCapabilities.ENERGY)
+                .map(s -> s.getEnergyStored() >= s.getMaxEnergyStored())
+                .orElse(false);
+    }
 
-        stack.getCapability(ForgeCapabilities.ENERGY).ifPresent(target -> {
-            if (!target.canReceive()) return;
-            long wanted = Math.min(unchargingSpeed, availableEnergy);
-            if (wanted <= 0) return;
-            int maxTransfer = (int) Math.min(wanted, Integer.MAX_VALUE);
-            int accepted = target.receiveEnergy(maxTransfer, false);
-            if (accepted > 0) {
-                this.energy -= accepted;
-                setChanged();
+    private boolean isItemFullyDischarged(ItemStack stack) {
+        // HBM check
+        var hbmCap = stack.getCapability(ModCapabilities.ENERGY_PROVIDER);
+        if (hbmCap.isPresent()) {
+            return hbmCap.map(p -> p.getEnergyStored() <= 0).orElse(false);
+        }
+        // Forge check
+        return stack.getCapability(ForgeCapabilities.ENERGY)
+                .map(s -> s.getEnergyStored() <= 0)
+                .orElse(false);
+    }
+
+    private int findFreeOutputSlot(int start, int end, ItemStack stack) {
+        for (int i = start; i < end; i++) {
+            ItemStack existing = itemHandler.getStackInSlot(i);
+            if (existing.isEmpty()) {
+                return i;
             }
-        });
+            // Стакаемые предметы
+            if (ItemStack.isSameItemSameTags(existing, stack) && existing.getCount() < existing.getMaxStackSize()) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private void moveItem(int fromSlot, int toSlot) {
+        ItemStack source = itemHandler.getStackInSlot(fromSlot);
+        if (source.isEmpty()) return;
+
+        ItemStack existing = itemHandler.getStackInSlot(toSlot);
+        if (existing.isEmpty()) {
+            itemHandler.setStackInSlot(toSlot, source.copy());
+            itemHandler.setStackInSlot(fromSlot, ItemStack.EMPTY);
+        } else if (ItemStack.isSameItemSameTags(existing, source)) {
+            int space = existing.getMaxStackSize() - existing.getCount();
+            int toMove = Math.min(source.getCount(), space);
+            if (toMove > 0) {
+                existing.grow(toMove);
+                source.shrink(toMove);
+            }
+        }
+        setChanged();
     }
 
     // ====================== ГЕТТЕРЫ ======================
 
     public int getCurrentMode() {
-        if (level == null) return modeOnNoSignal;
-        return level.hasNeighborSignal(this.worldPosition) ? modeOnSignal : modeOnNoSignal;
+        return this.mode;
     }
 
     public long getEnergyDelta() {
@@ -458,12 +522,12 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
 
     @Override
     public long getProvideSpeed() {
-        return this.unchargingSpeed; // Скорость отдачи = скорость разрядки
+        return this.unchargingSpeed;
     }
 
     @Override
     public long getReceiveSpeed() {
-        return this.chargingSpeed; // Скорость приёма = скорость зарядки
+        return this.chargingSpeed;
     }
 
     @Override
@@ -493,8 +557,8 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
 
     @Override
     public boolean canExtract() {
-        int mode = getCurrentMode();
-        return (mode == 0 || mode == 2) && this.energy > 0 && this.unchargingSpeed > 0;
+        int m = getCurrentMode();
+        return (m == 0 || m == 2) && this.energy > 0 && this.unchargingSpeed > 0;
     }
 
     @Override
@@ -509,8 +573,8 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
 
     @Override
     public boolean canReceive() {
-        int mode = getCurrentMode();
-        return (mode == 0 || mode == 1) && this.energy < this.capacity && this.chargingSpeed > 0;
+        int m = getCurrentMode();
+        return (m == 0 || m == 1) && this.energy < this.capacity && this.chargingSpeed > 0;
     }
 
     // --- Capabilities ---
@@ -524,13 +588,13 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
             return hbmConnector.cast();
         }
 
-        int mode = getCurrentMode();
+        int m = getCurrentMode();
 
-        if (cap == ModCapabilities.ENERGY_PROVIDER && (mode == 0 || mode == 2)) {
+        if (cap == ModCapabilities.ENERGY_PROVIDER && (m == 0 || m == 2)) {
             return hbmProvider.cast();
         }
 
-        if (cap == ModCapabilities.ENERGY_RECEIVER && (mode == 0 || mode == 1)) {
+        if (cap == ModCapabilities.ENERGY_RECEIVER && (m == 0 || m == 1)) {
             return hbmReceiver.cast();
         }
 
@@ -548,8 +612,7 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
         this.energy = tag.getLong("Energy");
         this.lastEnergy = tag.getLong("lastEnergy");
         this.energyDelta = tag.getLong("energyDelta");
-        this.modeOnNoSignal = tag.getInt("modeOnNoSignal");
-        this.modeOnSignal = tag.getInt("modeOnSignal");
+        this.mode = tag.getInt("mode");
         if (tag.contains("priority")) {
             int priorityIndex = tag.getInt("priority");
             this.priority = Priority.values()[Math.max(0, Math.min(priorityIndex, Priority.values().length - 1))];
@@ -558,7 +621,6 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
             itemHandler.deserializeNBT(tag.getCompound("Inventory"));
         }
 
-        // Загрузка энергоячеек
         for (int i = 0; i < CELL_SLOT_COUNT; i++) {
             String key = "Cell_" + i;
             if (tag.contains(key)) {
@@ -570,9 +632,7 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
             }
         }
 
-        // Пересчитываем параметры после загрузки ячеек
         recalculateCellStats();
-        // Защита: обрезаем энергию если буфер уменьшился
         if (energy > capacity) energy = capacity;
     }
 
@@ -580,14 +640,12 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         tag.putLong("Energy", this.energy);
-        tag.putInt("modeOnNoSignal", this.modeOnNoSignal);
+        tag.putInt("mode", this.mode);
         tag.putLong("lastEnergy", this.lastEnergy);
         tag.putLong("energyDelta", this.energyDelta);
-        tag.putInt("modeOnSignal", this.modeOnSignal);
         tag.putInt("priority", this.priority.ordinal());
         tag.put("Inventory", itemHandler.serializeNBT());
 
-        // Сохранение энергоячеек
         for (int i = 0; i < CELL_SLOT_COUNT; i++) {
             if (!cellSlots[i].isEmpty()) {
                 tag.put("Cell_" + i, cellSlots[i].save(new CompoundTag()));
@@ -608,15 +666,19 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
         return new MachineBatteryMenu(windowId, playerInventory, this, this.data);
     }
 
+    /**
+     * Обработка нажатия кнопок в GUI.
+     * buttonId 0 = переключение режима
+     * buttonId 1 = переключение приоритета
+     */
     public void handleButtonPress(int buttonId) {
         switch (buttonId) {
-            case 0 -> this.data.set(0, (this.modeOnNoSignal + 1) % 4);
-            case 1 -> this.data.set(1, (this.modeOnSignal + 1) % 4);
-            case 2 -> {
+            case 0 -> this.data.set(0, (this.mode + 1) % 4);
+            case 1 -> {
                 Priority[] priorities = Priority.values();
                 int currentIndex = this.priority.ordinal();
                 int nextIndex = (currentIndex + 1) % priorities.length;
-                this.data.set(2, nextIndex);
+                this.data.set(1, nextIndex);
             }
         }
         setChanged();
@@ -636,14 +698,10 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
     @Override
     public CompoundTag getUpdateTag() {
         CompoundTag tag = super.getUpdateTag();
-        saveAdditional(tag); // Сохраняем ВСЕ данные, включая ячейки
+        saveAdditional(tag);
         return tag;
     }
 
-    /**
-     * Пакет, который отправляется клиенту при вызове
-     * level.sendBlockUpdated() (после вставки/извлечения ячейки).
-     */
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
@@ -651,8 +709,6 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        // Анимаций нет — только показ/скрытие костей в рендерере.
-        // Метод обязателен, но оставляем пустым.
     }
 
     @Override

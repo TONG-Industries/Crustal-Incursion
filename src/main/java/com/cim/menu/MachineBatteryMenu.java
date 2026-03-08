@@ -29,24 +29,39 @@ public class MachineBatteryMenu extends AbstractContainerMenu implements ILongEn
 
     private static final int PLAYER_INVENTORY_START = 0;
     private static final int PLAYER_INVENTORY_END = 36;
-    private static final int TE_INPUT_SLOT = 36;
-    private static final int TE_OUTPUT_SLOT = 37;
-    private final Player player; // 2. Добавляем поле игрока
+    private static final int TE_CHARGE_INPUT_START = 36;
+    private static final int TE_CHARGE_INPUT_END = 40;
+    private static final int TE_CHARGE_OUTPUT_START = 40;
+    private static final int TE_CHARGE_OUTPUT_END = 44;
+    private static final int TE_DISCHARGE_INPUT_START = 44;
+    private static final int TE_DISCHARGE_INPUT_END = 48;
+    private static final int TE_DISCHARGE_OUTPUT_START = 48;
+    private static final int TE_DISCHARGE_OUTPUT_END = 52;
 
-    // 3. Поля для клиентской энергии
+    // Смещение инвентаря игрока вниз на 28 пикселей
+    private static final int PLAYER_INV_Y_OFFSET = 30;
+
+    private final Player player;
+
     private long clientEnergy;
     private long clientMaxEnergy;
     private long clientDelta;
+    private long clientChargingSpeed;
+    private long clientUnchargingSpeed;
+    private int clientFilledCellCount;
 
     private long lastSyncedEnergy = -1;
     private long lastSyncedMaxEnergy = -1;
-    private long lastSyncedDelta = -1; // [NEW]
+    private long lastSyncedDelta = -1;
+    private long lastSyncedChargingSpeed = -1;
+    private long lastSyncedUnchargingSpeed = -1;
+    private int lastSyncedFilledCellCount = -1;
 
     // Серверный конструктор
     public MachineBatteryMenu(int pContainerId, Inventory inv, BlockEntity entity, ContainerData data) {
         super(ModMenuTypes.MACHINE_BATTERY_MENU.get(), pContainerId);
-        checkContainerSize(inv, 2);
-        checkContainerDataCount(data, 3);
+        checkContainerSize(inv, MachineBatteryBlockEntity.TOTAL_ITEM_SLOTS);
+        checkContainerDataCount(data, 2);
 
         if (!(entity instanceof MachineBatteryBlockEntity)) {
             throw new IllegalArgumentException("Wrong BlockEntity type!");
@@ -55,14 +70,35 @@ public class MachineBatteryMenu extends AbstractContainerMenu implements ILongEn
         blockEntity = (MachineBatteryBlockEntity) entity;
         this.level = inv.player.level();
         this.data = data;
-        this.player = inv.player; // Сохраняем игрока
+        this.player = inv.player;
 
         addPlayerInventory(inv);
         addPlayerHotbar(inv);
 
         this.blockEntity.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(handler -> {
-            this.addSlot(new SlotItemHandler(handler, 0, 26, 17));  // INPUT
-            this.addSlot(new SlotItemHandler(handler, 1, 26, 53));  // OUTPUT
+            // 4 слота charge input: x=8, y=37,55,73,91
+            this.addSlot(new SlotItemHandler(handler, 0, 8, 37));
+            this.addSlot(new SlotItemHandler(handler, 1, 8, 55));
+            this.addSlot(new SlotItemHandler(handler, 2, 8, 73));
+            this.addSlot(new SlotItemHandler(handler, 3, 8, 91));
+
+            // 4 слота charge output: x=42, y=37,55,73,91
+            this.addSlot(new SlotItemHandler(handler, 4, 42, 37));
+            this.addSlot(new SlotItemHandler(handler, 5, 42, 55));
+            this.addSlot(new SlotItemHandler(handler, 6, 42, 73));
+            this.addSlot(new SlotItemHandler(handler, 7, 42, 91));
+
+            // 4 слота discharge input: x=152, y=37,55,73,91
+            this.addSlot(new SlotItemHandler(handler, 8, 152, 37));
+            this.addSlot(new SlotItemHandler(handler, 9, 152, 55));
+            this.addSlot(new SlotItemHandler(handler, 10, 152, 73));
+            this.addSlot(new SlotItemHandler(handler, 11, 152, 91));
+
+            // 4 слота discharge output: x=118, y=37,55,73,91
+            this.addSlot(new SlotItemHandler(handler, 12, 118, 37));
+            this.addSlot(new SlotItemHandler(handler, 13, 118, 55));
+            this.addSlot(new SlotItemHandler(handler, 14, 118, 73));
+            this.addSlot(new SlotItemHandler(handler, 15, 118, 91));
         });
 
         addDataSlots(data);
@@ -72,14 +108,20 @@ public class MachineBatteryMenu extends AbstractContainerMenu implements ILongEn
     public MachineBatteryMenu(int pContainerId, Inventory inv, FriendlyByteBuf extraData) {
         this(pContainerId, inv,
                 inv.player.level().getBlockEntity(extraData.readBlockPos()),
-                new SimpleContainerData(3));
+                new SimpleContainerData(2));
     }
 
     @Override
-    public void setEnergy(long energy, long maxEnergy, long delta) { // <--- Добавили delta в аргументы
+    public void setEnergy(long energy, long maxEnergy, long delta) {
         this.clientEnergy = energy;
         this.clientMaxEnergy = maxEnergy;
-        this.clientDelta = delta; // <--- Сохраняем полученную дельту
+        this.clientDelta = delta;
+    }
+
+    public void setExtraData(long chargingSpeed, long unchargingSpeed, int filledCellCount) {
+        this.clientChargingSpeed = chargingSpeed;
+        this.clientUnchargingSpeed = unchargingSpeed;
+        this.clientFilledCellCount = filledCellCount;
     }
 
     @Override
@@ -97,48 +139,54 @@ public class MachineBatteryMenu extends AbstractContainerMenu implements ILongEn
         return blockEntity.getEnergyDelta();
     }
 
-     // Если используется интерфейсом
-    public long getEnergyLong() {
+    public long getEnergy() {
         if (blockEntity != null && !level.isClientSide) {
             return blockEntity.getEnergyStored();
         }
         return clientEnergy;
     }
 
-    public long getMaxEnergyLong() {
+    public long getMaxEnergy() {
         if (blockEntity != null && !level.isClientSide) {
             return blockEntity.getMaxEnergyStored();
         }
         return clientMaxEnergy;
     }
-    public long getEnergy() {
-        return getEnergyLong();
-    }
-
-    public long getMaxEnergy() {
-        return getMaxEnergyLong();
-    }
 
     public long getEnergyDelta() {
         if (blockEntity != null && !level.isClientSide) {
-            return blockEntity.getEnergyDelta(); // Берем напрямую из BE
+            return blockEntity.getEnergyDelta();
         }
-        return clientDelta; // Берем из пакета
+        return clientDelta;
     }
 
-
-    // --- Геттеры ---
-
-    public int getModeOnNoSignal() {
-        return this.data.get(0); // Было 5
+    public long getChargingSpeed() {
+        if (blockEntity != null && !level.isClientSide) {
+            return blockEntity.getChargingSpeed();
+        }
+        return clientChargingSpeed;
     }
 
-    public int getModeOnSignal() {
-        return this.data.get(1); // Было 6
+    public long getUnchargingSpeed() {
+        if (blockEntity != null && !level.isClientSide) {
+            return blockEntity.getUnchargingSpeed();
+        }
+        return clientUnchargingSpeed;
+    }
+
+    public int getFilledCellCount() {
+        if (blockEntity != null && !level.isClientSide) {
+            return blockEntity.getFilledCellCount();
+        }
+        return clientFilledCellCount;
+    }
+
+    public int getMode() {
+        return this.data.get(0);
     }
 
     public int getPriorityOrdinal() {
-        return this.data.get(2); // Было 7
+        return this.data.get(1);
     }
 
     @Override
@@ -149,11 +197,16 @@ public class MachineBatteryMenu extends AbstractContainerMenu implements ILongEn
             long currentEnergy = blockEntity.getEnergyStored();
             long currentMax = blockEntity.getMaxEnergyStored();
             long currentDelta = blockEntity.getEnergyDelta();
+            long currentChargingSpeed = blockEntity.getChargingSpeed();
+            long currentUnchargingSpeed = blockEntity.getUnchargingSpeed();
+            int currentFilledCellCount = blockEntity.getFilledCellCount();
 
-            // Отправляем пакет только если значения изменились
             if (currentEnergy != lastSyncedEnergy ||
                     currentMax != lastSyncedMaxEnergy ||
-                    currentDelta != lastSyncedDelta) {
+                    currentDelta != lastSyncedDelta ||
+                    currentChargingSpeed != lastSyncedChargingSpeed ||
+                    currentUnchargingSpeed != lastSyncedUnchargingSpeed ||
+                    currentFilledCellCount != lastSyncedFilledCellCount) {
 
                 ModPacketHandler.INSTANCE.send(
                         PacketDistributor.PLAYER.with(() -> (ServerPlayer) this.player),
@@ -161,18 +214,23 @@ public class MachineBatteryMenu extends AbstractContainerMenu implements ILongEn
                                 this.containerId,
                                 currentEnergy,
                                 currentMax,
-                                currentDelta // [NEW] Отправляем long дельту
+                                currentDelta,
+                                currentChargingSpeed,
+                                currentUnchargingSpeed,
+                                currentFilledCellCount
                         )
                 );
 
                 lastSyncedEnergy = currentEnergy;
                 lastSyncedMaxEnergy = currentMax;
                 lastSyncedDelta = currentDelta;
+                lastSyncedChargingSpeed = currentChargingSpeed;
+                lastSyncedUnchargingSpeed = currentUnchargingSpeed;
+                lastSyncedFilledCellCount = currentFilledCellCount;
             }
         }
     }
 
-    // --- Shift-Click ---
     @Override
     public ItemStack quickMoveStack(Player playerIn, int index) {
         Slot sourceSlot = slots.get(index);
@@ -181,7 +239,6 @@ public class MachineBatteryMenu extends AbstractContainerMenu implements ILongEn
         ItemStack sourceStack = sourceSlot.getItem();
         ItemStack copyOfSourceStack = sourceStack.copy();
 
-        // Из инвентаря игрока в машину
         if (index >= PLAYER_INVENTORY_START && index < PLAYER_INVENTORY_END) {
             Optional<IEnergyStorage> energyCapability = sourceStack.getCapability(ForgeCapabilities.ENERGY).resolve();
 
@@ -189,16 +246,14 @@ public class MachineBatteryMenu extends AbstractContainerMenu implements ILongEn
                 IEnergyStorage itemEnergy = energyCapability.get();
                 boolean moved = false;
 
-                // Если предмет может ОТДАВАТЬ энергию -> INPUT
-                if (itemEnergy.canExtract()) {
-                    if (moveItemStackTo(sourceStack, TE_INPUT_SLOT, TE_INPUT_SLOT + 1, false)) {
+                if (itemEnergy.canExtract() && itemEnergy.getEnergyStored() > 0) {
+                    if (moveItemStackTo(sourceStack, TE_DISCHARGE_INPUT_START, TE_DISCHARGE_INPUT_END, false)) {
                         moved = true;
                     }
                 }
 
-                // Если предмет может ПРИНИМАТЬ энергию -> OUTPUT
                 if (!moved && itemEnergy.canReceive()) {
-                    if (moveItemStackTo(sourceStack, TE_OUTPUT_SLOT, TE_OUTPUT_SLOT + 1, false)) {
+                    if (moveItemStackTo(sourceStack, TE_CHARGE_INPUT_START, TE_CHARGE_INPUT_END, false)) {
                         moved = true;
                     }
                 }
@@ -210,8 +265,7 @@ public class MachineBatteryMenu extends AbstractContainerMenu implements ILongEn
                 return ItemStack.EMPTY;
             }
 
-            // Из машины в инвентарь игрока
-        } else if (index == TE_INPUT_SLOT || index == TE_OUTPUT_SLOT) {
+        } else if (index >= TE_CHARGE_INPUT_START && index < TE_DISCHARGE_OUTPUT_END) {
             if (!moveItemStackTo(sourceStack, PLAYER_INVENTORY_START, PLAYER_INVENTORY_END, false)) {
                 return ItemStack.EMPTY;
             }
@@ -231,32 +285,28 @@ public class MachineBatteryMenu extends AbstractContainerMenu implements ILongEn
 
     @Override
     public boolean stillValid(Player pPlayer) {
-        // Создаем доступ к уровню
         return ContainerLevelAccess.create(level, blockEntity.getBlockPos()).evaluate((level, pos) -> {
-            // Получаем блок, на который смотрит игрок
             Block block = level.getBlockState(pos).getBlock();
-
-            // ПРОВЕРКА: Является ли этот блок батарейкой (любой: обычной, литиевой и т.д.)
             if (!(block instanceof MachineBatteryBlock)) {
                 return false;
             }
-
-            // Стандартная проверка дистанции (64 блока)
             return pPlayer.distanceToSqr((double)pos.getX() + 0.5D, (double)pos.getY() + 0.5D, (double)pos.getZ() + 0.5D) <= 64.0D;
         }, true);
     }
 
+    // Инвентарь игрока сдвинут на +28 по Y (было 84, стало 112)
     private void addPlayerInventory(Inventory playerInventory) {
         for (int i = 0; i < 3; ++i) {
             for (int l = 0; l < 9; ++l) {
-                this.addSlot(new Slot(playerInventory, l + i * 9 + 9, 8 + l * 18, 84 + i * 18));
+                this.addSlot(new Slot(playerInventory, l + i * 9 + 9, 8 + l * 18, 84 + i * 18 + PLAYER_INV_Y_OFFSET));
             }
         }
     }
 
+    // Хотбар сдвинут на +28 по Y (было 142, стало 170)
     private void addPlayerHotbar(Inventory playerInventory) {
         for (int i = 0; i < 9; ++i) {
-            this.addSlot(new Slot(playerInventory, i, 8 + i * 18, 142));
+            this.addSlot(new Slot(playerInventory, i, 8 + i * 18, 142 + PLAYER_INV_Y_OFFSET));
         }
     }
 }

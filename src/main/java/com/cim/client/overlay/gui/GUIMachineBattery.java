@@ -1,7 +1,5 @@
 package com.cim.client.overlay.gui;
 
-// Используем импорты из твоих файлов
-
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
@@ -22,37 +20,45 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * [ФИКС] GUI для энергохранилища.
- * Объединяет старый дизайн (тултипы, координаты)
- * с новым бэкендом (ContainerData из MachineBatteryMenu).
+ * Полностью переделанный GUI для энергохранилища.
+ *
+ * Элементы:
+ * 1. Панели IN/OUT скоростей (отображаются если есть хотя бы 1 ячейка)
+ * 2. 8 слотов зарядки (4 input + 4 output)
+ * 3. 8 слотов разрядки (4 input + 4 output)
+ * 4. Шкала буфера энергии
+ * 5. Светодиоды заполненных ячеек
+ * 6. Кнопка режима (1 кнопка, без редстоуна)
+ * 7. Кнопка приоритета
  */
 public class GUIMachineBattery extends AbstractContainerScreen<MachineBatteryMenu> {
 
-    // Используем современный .fromNamespaceAndPath()
     private static final ResourceLocation TEXTURE =
             new ResourceLocation(CrustalIncursionMod.MOD_ID, "textures/gui/storage/gui_battery.png");
+
+    // Цвет надписей скоростей
+    private static final int SPEED_TEXT_COLOR = 0xAEC6CF;
 
     public GUIMachineBattery(MachineBatteryMenu pMenu, Inventory pPlayerInventory, Component pTitle) {
         super(pMenu, pPlayerInventory, pTitle);
 
-        // Размеры из старого GUI
+        // Увеличиваем высоту GUI на 28 пикселей (инвентарь сдвинут вниз)
         this.imageWidth = 176;
-        this.imageHeight = 166;
+        this.imageHeight = 194; // было 166, +28
     }
 
     @Override
     protected void init() {
         super.init();
-        // Убираем рендеринг стандартного заголовка
+        // Убираем рендеринг заголовка и плашки "Инвентарь"
         this.titleLabelX = -9999;
-        this.inventoryLabelY = this.imageHeight - 94;
+        this.inventoryLabelX = -9999; // Убираем плашку "Инвентарь"
     }
 
     // --- ОСНОВНОЙ РЕНДЕР ---
 
     @Override
     public void render(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY, float pPartialTick) {
-        // Используем renderBackground() здесь, как в новом GUI
         this.renderBackground(pGuiGraphics);
         super.render(pGuiGraphics, pMouseX, pMouseY, pPartialTick);
         this.renderTooltip(pGuiGraphics, pMouseX, pMouseY);
@@ -64,81 +70,131 @@ public class GUIMachineBattery extends AbstractContainerScreen<MachineBatteryMen
         int x = this.leftPos;
         int y = this.topPos;
 
+        // Основная текстура GUI
         pGuiGraphics.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight);
 
-        // Вызываем методы рендера из старого GUI
+        // Рендерим элементы
+        renderSpeedPanels(pGuiGraphics, x, y);
         renderEnergyBar(pGuiGraphics, x, y);
-        renderButtons(pGuiGraphics, x, y);
+        renderCellLEDs(pGuiGraphics, x, y);
+        renderModeButton(pGuiGraphics, x, y);
+        renderPriorityButton(pGuiGraphics, x, y);
     }
 
-    @Override
-    protected void renderLabels(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY) {
-        // --- Динамический заголовок из старого GUI ---
 
-        // Геттеры menu.getEnergy() и т.д. совпа
-        String formattedEnergy = EnergyFormatter.formatFE(menu.getEnergy()); // Используем getEnergy() из нового меню
-        String titleText = this.title.getString() + " (" + formattedEnergy + ")";
+    // --- 1. ПАНЕЛИ СКОРОСТЕЙ IN / OUT ---
 
-        pGuiGraphics.drawString(this.font, titleText, (this.imageWidth - this.font.width(titleText)) / 2, 6, 4210752, false);
+    private void renderSpeedPanels(GuiGraphics graphics, int x, int y) {
+        int filledCells = menu.getFilledCellCount();
+        if (filledCells <= 0) return; // Не рендерим если нет ячеек
 
-        // --- Стандартная надпись "Инвентарь" ---
-        pGuiGraphics.drawString(this.font, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, 4210752, false);
+        // Левая панель (IN) - координаты рендера: x8, y7, размер 76x16
+        // Текстура панели на атласе: x177, y117
+        graphics.blit(TEXTURE, x + 8, y + 7, 177, 117, 76, 16);
+
+        // Правая панель (OUT) - координаты рендера: x92, y7, размер 76x16
+        graphics.blit(TEXTURE, x + 92, y + 7, 177, 117, 76, 16);
+
+        // Текст скоростей поверх панелей
+        long chargingSpeed = menu.getChargingSpeed();
+        long unchargingSpeed = menu.getUnchargingSpeed();
+
+        // IN: скорость зарядки в JE/S (тик * 20)
+        String inText = "IN: " + EnergyFormatter.format(chargingSpeed * 20) + " JE/S";
+        // OUT: скорость разрядки в JE/S
+        String outText = "OUT: " + EnergyFormatter.format(unchargingSpeed * 20) + " JE/S";
+
+        // Рендер текста по центру панелей
+        int inTextWidth = this.font.width(inText);
+        int outTextWidth = this.font.width(outText);
+
+        // Панель IN: x8..x84 (ширина 76)
+        graphics.drawString(this.font, inText, x + 8 + (76 - inTextWidth) / 2, y + 7 + 4, SPEED_TEXT_COLOR, false);
+        // Панель OUT: x92..x168 (ширина 76)
+        graphics.drawString(this.font, outText, x + 93 + (76 - outTextWidth) / 2, y + 7 + 4, SPEED_TEXT_COLOR, false);
     }
 
-    // --- РЕНДЕР КОМПОНЕНТОВ (из GUIMachineBattery old.java) ---
+    // --- 4. ШКАЛА БУФЕРА ЭНЕРГИИ ---
 
     private void renderEnergyBar(GuiGraphics graphics, int x, int y) {
-        // Используем getEnergy() и getMaxEnergy() из нового меню
         long energy = menu.getEnergy();
         long maxEnergy = menu.getMaxEnergy();
 
-        if (energy > 0 && maxEnergy > 0) { // Добавил maxEnergy > 0 для защиты от деления на ноль
+        if (energy > 0 && maxEnergy > 0) {
             int totalHeight = 52;
-            int barHeight = (int) (totalHeight * ((double)energy / maxEnergy)); // Используем double для точности
+            int barHeight = (int) (totalHeight * ((double) energy / maxEnergy));
             if (barHeight > totalHeight) barHeight = totalHeight;
 
-            // Координаты (x, y, u, v, w, h) из старого GUI
-            graphics.blit(TEXTURE, x + 62, y + 17 + (totalHeight - barHeight), 176, totalHeight - barHeight, 52, barHeight);
+            // Рендер: x62, y37. Текстура шкалы как раньше: u=176, v=(52-barHeight)
+            graphics.blit(TEXTURE, x + 62, y + 37 + (totalHeight - barHeight), 176, totalHeight - barHeight, 52, barHeight);
         }
     }
 
-    // [🔥 ИЗМЕНЕННЫЙ ХЕЛПЕР 🔥]
-    private int getVForMode(int mode) {
+    // --- 5. СВЕТОДИОДЫ ЯЧЕЕК ---
+
+    private void renderCellLEDs(GuiGraphics graphics, int x, int y) {
+        // Координаты рендера 4-х светодиодов (размер 6x6)
+        int[][] ledPositions = {
+                {67, 29},  // Слот 0
+                {75, 29},  // Слот 1
+                {97, 29},  // Слот 2
+                {105, 29}  // Слот 3
+        };
+
+        // Текстура зелёного светодиода: x177, y141, размер 6x6
+        for (int i = 0; i < 4; i++) {
+            if (!menu.blockEntity.isCellEmpty(i)) {
+                graphics.blit(TEXTURE, x + ledPositions[i][0], y + ledPositions[i][1], 177, 141, 6, 6);
+            }
+            // Красные уже нарисованы на фоновой текстуре
+        }
+    }
+
+    // --- 6. КНОПКА РЕЖИМА ---
+
+    private void renderModeButton(GuiGraphics graphics, int x, int y) {
+        int mode = menu.getMode();
+        int vForMode = getModeTextureV(mode);
+        // Рендер: x64, y94, размер 15x15
+        graphics.blit(TEXTURE, x + 64, y + 94, 177, vForMode, 15, 15);
+    }
+
+    private int getModeTextureV(int mode) {
         return switch (mode) {
-            case 0 -> 70;  // BOTH (Теперь V=70)
-            case 1 -> 52;  // INPUT (Теперь V=52)
-            case 2 -> 88;  // OUTPUT
-            case 3 -> 106; // DISABLED
-            default -> 70; // По умолчанию BOTH
+            case 0 -> 69;  // BOTH: x177, y69
+            case 1 -> 53;  // INPUT: x177, y53
+            case 2 -> 85;  // OUTPUT: x177, y85
+            case 3 -> 101; // DISABLED: x177, y101
+            default -> 69;
         };
     }
 
-    // [🔥 ИЗМЕНЕННЫЙ МЕТОД 🔥]
-    private void renderButtons(GuiGraphics graphics, int x, int y) {
-        // Верхняя кнопка (Нет сигнала)
-        int modeNoSignal = menu.getModeOnNoSignal();
-        int vOnNoSignal = getVForMode(modeNoSignal); // <-- Используем хелпер
-        graphics.blit(TEXTURE, x + 133, y + 16, 176, vOnNoSignal, 18, 18);
+    // --- 7. КНОПКА ПРИОРИТЕТА ---
 
-        // Нижняя кнопка (Есть сигнал)
-        int modeSignal = menu.getModeOnSignal();
-        int vOnSignal = getVForMode(modeSignal); // <-- Используем хелпер
-        graphics.blit(TEXTURE, x + 133, y + 52, 176, vOnSignal, 18, 18);
-
-        // Кнопка приоритета
+    private void renderPriorityButton(GuiGraphics graphics, int x, int y) {
         int priorityOrdinal = menu.getPriorityOrdinal();
-        int priorityV = 52 + priorityOrdinal * 16;
-        graphics.blit(TEXTURE, x + 152, y + 35, 194, priorityV, 16, 16);
+        int vForPriority = getPriorityTextureV(priorityOrdinal);
+        // Рендер: x97, y94, размер 15x15
+        graphics.blit(TEXTURE, x + 97, y + 94, 193, vForPriority, 15, 15);
     }
 
-    // --- ТУЛТИПЫ (из GUIMachineBattery old.java) ---
+    private int getPriorityTextureV(int ordinal) {
+        return switch (ordinal) {
+            case 0 -> 53;  // LOW: x193, y53
+            case 1 -> 69;  // NORMAL: x193, y69
+            case 2 -> 85;  // HIGH: x193, y85
+            default -> 53;
+        };
+    }
+
+    // --- ТУЛТИПЫ ---
 
     @Override
     protected void renderTooltip(GuiGraphics pGuiGraphics, int pMouseX, int pMouseY) {
         super.renderTooltip(pGuiGraphics, pMouseX, pMouseY);
 
-        // Тултип для энергии (полностью из старого GUI)
-        if (isMouseOver(pMouseX, pMouseY, 62, 17, 52, 52)) {
+        // Тултип для шкалы энергии (x62, y37, 52x52)
+        if (isMouseOver(pMouseX, pMouseY, 62, 37, 52, 52)) {
             List<Component> tooltip = new ArrayList<>();
 
             long energy = menu.getEnergy();
@@ -153,7 +209,6 @@ public class GUIMachineBattery extends AbstractContainerScreen<MachineBatteryMen
             ChatFormatting deltaColor = delta > 0 ? ChatFormatting.GREEN : (delta < 0 ? ChatFormatting.RED : ChatFormatting.YELLOW);
             tooltip.add(Component.literal(deltaText).withStyle(deltaColor));
 
-            // Расчет дельты в секунду (HE/t * 20)
             long deltaPerSecond = delta * 20;
             String deltaPerSecondText = (deltaPerSecond >= 0 ? "+" : "") + EnergyFormatter.formatWithUnit(deltaPerSecond, "HE/s");
             tooltip.add(Component.literal(deltaPerSecondText).withStyle(deltaColor));
@@ -161,10 +216,32 @@ public class GUIMachineBattery extends AbstractContainerScreen<MachineBatteryMen
             pGuiGraphics.renderTooltip(this.font, tooltip, Optional.empty(), pMouseX, pMouseY);
         }
 
-        // Тултип для Priority (полностью из старого GUI)
-        if (isMouseOver(pMouseX, pMouseY, 152, 35, 16, 16)) {
+        // Тултип для кнопки режима (x64, y94, 15x15)
+        if (isMouseOver(pMouseX, pMouseY, 64, 94, 15, 15)) {
             List<Component> tooltip = new ArrayList<>();
-            // Мы убрали VERY_LOW/VERY_HIGH, поэтому ординалы 0, 1, 2 (LOW, NORMAL, HIGH)
+
+            int mode = menu.getMode();
+            String modeKey = switch (mode) {
+                case 0 -> "both";
+                case 1 -> "input";
+                case 2 -> "output";
+                case 3 -> "locked";
+                default -> "both";
+            };
+
+            String titleKey = "gui.smogline.battery.mode." + modeKey;
+            String descKey = "gui.smogline.battery.mode." + modeKey + ".desc";
+
+            tooltip.add(Component.translatable(titleKey).withStyle(ChatFormatting.AQUA));
+            tooltip.add(Component.translatable(descKey).withStyle(ChatFormatting.GRAY));
+
+            pGuiGraphics.renderTooltip(this.font, tooltip, Optional.empty(), pMouseX, pMouseY);
+        }
+
+        // Тултип для кнопки приоритета (x97, y94, 15x15)
+        if (isMouseOver(pMouseX, pMouseY, 97, 94, 15, 15)) {
+            List<Component> tooltip = new ArrayList<>();
+
             int priorityOrdinal = menu.getPriorityOrdinal();
             String priorityKey = "gui.smogline.battery.priority." + priorityOrdinal;
 
@@ -175,68 +252,53 @@ public class GUIMachineBattery extends AbstractContainerScreen<MachineBatteryMen
             pGuiGraphics.renderTooltip(this.font, tooltip, Optional.empty(), pMouseX, pMouseY);
         }
 
-        // Тултип для кнопки БЕЗ сигнала (из старого GUI)
-        if (isMouseOver(pMouseX, pMouseY, 133, 16, 18, 18)) {
-            renderRedstoneTooltip(pGuiGraphics, pMouseX, pMouseY, menu.getModeOnNoSignal(), "no_signal");
+        // Тултип для панели IN (x8, y7, 76x16)
+        if (isMouseOver(pMouseX, pMouseY, 8, 7, 76, 16)) {
+            int filledCells = menu.getFilledCellCount();
+            if (filledCells > 0) {
+                List<Component> tooltip = new ArrayList<>();
+                long speed = menu.getChargingSpeed();
+                tooltip.add(Component.literal("§aСкорость зарядки: " + EnergyFormatter.format(speed) + " HE/t"));
+                tooltip.add(Component.literal("§7(" + EnergyFormatter.format(speed * 20) + " HE/s)").withStyle(ChatFormatting.GRAY));
+                pGuiGraphics.renderTooltip(this.font, tooltip, Optional.empty(), pMouseX, pMouseY);
+            }
         }
 
-        // Тултип для кнопки С сигналом (из старого GUI)
-        if (isMouseOver(pMouseX, pMouseY, 133, 52, 18, 18)) {
-            renderRedstoneTooltip(pGuiGraphics, pMouseX, pMouseY, menu.getModeOnSignal(), "with_signal");
+        // Тултип для панели OUT (x92, y7, 76x16)
+        if (isMouseOver(pMouseX, pMouseY, 92, 7, 76, 16)) {
+            int filledCells = menu.getFilledCellCount();
+            if (filledCells > 0) {
+                List<Component> tooltip = new ArrayList<>();
+                long speed = menu.getUnchargingSpeed();
+                tooltip.add(Component.literal("§cСкорость разрядки: " + EnergyFormatter.format(speed) + " HE/t"));
+                tooltip.add(Component.literal("§7(" + EnergyFormatter.format(speed * 20) + " HE/s)").withStyle(ChatFormatting.GRAY));
+                pGuiGraphics.renderTooltip(this.font, tooltip, Optional.empty(), pMouseX, pMouseY);
+            }
         }
     }
 
-    // --- ОБРАБОТКА КЛИКОВ (из GUIMachineBattery old.java) ---
-
-    // Хелпер для тултипов редстоуна
-    private void renderRedstoneTooltip(GuiGraphics graphics, int mouseX, int mouseY, int mode, String conditionKey) {
-        List<Component> tooltip = new ArrayList<>();
-
-        tooltip.add(Component.translatable("gui.smogline.battery.condition." + conditionKey));
-
-        String modeKey = switch (mode) {
-            case 0 -> "both";
-            case 1 -> "input";
-            case 2 -> "output";
-            case 3 -> "locked";
-            default -> "both";
-        };
-
-        String titleKey = "gui.smogline.battery.mode." + modeKey;
-        String descKey = "gui.smogline.battery.mode." + modeKey + ".desc";
-
-        tooltip.add(Component.translatable(titleKey).withStyle(ChatFormatting.AQUA));
-        tooltip.add(Component.translatable(descKey).withStyle(ChatFormatting.GRAY));
-
-        graphics.renderTooltip(this.font, tooltip, Optional.empty(), mouseX, mouseY);
-    }
+    // --- ОБРАБОТКА КЛИКОВ ---
 
     @Override
     public boolean mouseClicked(double pMouseX, double pMouseY, int pButton) {
-        if (pButton == 0) { // Только левая кнопка мыши
-            // Кнопка "Без сигнала"
-            if (isMouseOver(pMouseX, pMouseY, 133, 16, 18, 18)) {
+        if (pButton == 0) {
+            // Кнопка режима (x64, y94, 15x15) -> buttonId = 0
+            if (isMouseOver(pMouseX, pMouseY, 64, 94, 15, 15)) {
                 playSound();
                 ModPacketHandler.INSTANCE.sendToServer(new UpdateBatteryC2SPacket(this.menu.blockEntity.getBlockPos(), 0));
                 return true;
             }
-            // Кнопка "С сигналом"
-            if (isMouseOver(pMouseX, pMouseY, 133, 52, 18, 18)) {
+            // Кнопка приоритета (x97, y94, 15x15) -> buttonId = 1
+            if (isMouseOver(pMouseX, pMouseY, 97, 94, 15, 15)) {
                 playSound();
                 ModPacketHandler.INSTANCE.sendToServer(new UpdateBatteryC2SPacket(this.menu.blockEntity.getBlockPos(), 1));
-                return true;
-            }
-            // Кнопка "Приоритет"
-            if (isMouseOver(pMouseX, pMouseY, 152, 35, 16, 16)) {
-                playSound();
-                ModPacketHandler.INSTANCE.sendToServer(new UpdateBatteryC2SPacket(this.menu.blockEntity.getBlockPos(), 2));
                 return true;
             }
         }
         return super.mouseClicked(pMouseX, pMouseY, pButton);
     }
 
-    // --- ХЕЛПЕРЫ (из GUIMachineBattery old.java) ---
+    // --- ХЕЛПЕРЫ ---
 
     private boolean isMouseOver(double mouseX, double mouseY, int x, int y, int sizeX, int sizeY) {
         return (mouseX >= this.leftPos + x && mouseX <= this.leftPos + x + sizeX &&

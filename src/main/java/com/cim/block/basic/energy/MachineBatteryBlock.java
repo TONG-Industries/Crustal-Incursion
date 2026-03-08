@@ -31,6 +31,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.network.NetworkHooks;
 import com.cim.api.energy.EnergyNetworkManager;
 import com.cim.block.entity.ModBlockEntities;
@@ -95,15 +96,28 @@ public class MachineBatteryBlock extends BaseEntityBlock {
         if (!state.is(newState.getBlock()) && !level.isClientSide()) {
             EnergyNetworkManager.get((ServerLevel) level).removeNode(pos);
 
-            // Дропаем все ячейки при разрушении блока
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof MachineBatteryBlockEntity battery) {
+                // Извлекаем ячейки через extractCell — каждая впитает энергию из каркаса,
+                // точно так же как при извлечении отвёрткой
                 for (int i = 0; i < MachineBatteryBlockEntity.CELL_SLOT_COUNT; i++) {
-                    ItemStack cell = battery.getCellStack(i);
-                    if (!cell.isEmpty()) {
-                        popResource(level, pos, cell.copy());
+                    if (!battery.isCellEmpty(i)) {
+                        ItemStack cell = battery.extractCell(i);
+                        if (!cell.isEmpty()) {
+                            popResource(level, pos, cell);
+                        }
                     }
                 }
+
+                // Дропаем все предметы из слотов батареек (зарядка/разрядка)
+                battery.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(handler -> {
+                    for (int slot = 0; slot < handler.getSlots(); slot++) {
+                        ItemStack stack = handler.getStackInSlot(slot);
+                        if (!stack.isEmpty()) {
+                            popResource(level, pos, stack.copy());
+                        }
+                    }
+                });
             }
         }
         super.onRemove(state, level, pos, newState, isMoving);
