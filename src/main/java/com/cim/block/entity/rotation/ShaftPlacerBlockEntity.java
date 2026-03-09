@@ -9,6 +9,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Containers;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
@@ -45,6 +46,9 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
     private static final int MAX_CHAIN_LENGTH = 10;
     private static final int PILLAR_BLOCK_DELAY = 10; // 0.5 секунды
 
+    private boolean retracting = false;
+    private int retractTimer = 0;
+    private static final int RETRACT_DELAY = 20; // 1 секунда
     private boolean isSwitchedOn = false;
     private int shaftsAfterLastPort = 0;
     private int totalChainLength = 0;
@@ -55,7 +59,7 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
     private RotationSource cachedSource;
     private long cacheTimestamp;
     private static final long CACHE_LIFETIME = 10;
-
+    public boolean isRetracting() { return retracting; }
     private final ItemStackHandler inventory = new ItemStackHandler(18) {
         @Override
         protected void onContentsChanged(int slot) {
@@ -94,6 +98,7 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
                 case 4 -> totalChainLength;
                 case 5 -> canPlaceNext() ? 1 : 0;
                 case 6 -> hasDrillHead ? 1 : 0;
+                case 7 -> retracting ? 1 : 0;
                 default -> 0;
             };
         }
@@ -106,11 +111,24 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
                 case 4 -> totalChainLength = value;
             }
         }
-        @Override public int getCount() { return 7; }
+        @Override public int getCount() { return 8; }
     };
 
     public ShaftPlacerBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.SHAFT_PLACER_BE.get(), pos, state);
+    }
+
+    private ItemStack addItemToInventory(ItemStack stack) {
+        ItemStack remainder = stack.copy();
+        for (int i = 0; i < inventory.getSlots(); i++) {
+            remainder = inventory.insertItem(i, remainder, false);
+            if (remainder.isEmpty()) break;
+        }
+        if (remainder.getCount() != stack.getCount()) {
+            setChanged();
+            sync();
+        }
+        return remainder;
     }
 
     // ========== Rotational ==========
@@ -225,6 +243,20 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
         return -1;
     }
 
+    public void toggleRetractMode() {
+        if (retracting) {
+            retracting = false;
+            retractTimer = 0;
+        } else {
+            retracting = true;
+            retractTimer = RETRACT_DELAY;
+            setSpeed(0);
+            setTorque(0);
+        }
+        setChanged();
+        sync();
+    }
+
     private int findPortSlot() {
         for (int i = 0; i < inventory.getSlots(); i++) {
             ItemStack stack = inventory.getStackInSlot(i);
@@ -261,6 +293,21 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
             }
         }
         return -1;
+    }
+
+    private void updateRetracting(Level level) {
+        if (!retracting) return;
+
+        if (retractTimer > 0) {
+            retractTimer--;
+            return;
+        }
+
+        if (!tryRemoveNextBlock(level)) {
+            retracting = false;
+            setChanged();
+            sync();
+        }
     }
 
     // ========== Placement logic ==========
@@ -537,9 +584,81 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
         }
     }
 
+    private boolean tryRemoveNextBlock(Level level) {
+        Direction facing = getBlockState().getValue(ShaftPlacerBlock.FACING);
+        BlockPos currentPos = worldPosition.relative(facing);
+        BlockPos lastBlockPos = null;
+        BlockState lastState = null;
+        int length = 0;
+        while (length < 9999) {
+            BlockState state = level.getBlockState(currentPos);
+            Block block = state.getBlock();
+            if (block instanceof ShaftBlock || block instanceof GearPortBlock || block instanceof DrillHeadBlock) {
+                lastBlockPos = currentPos;
+                lastState = state;
+                length++;
+                currentPos = currentPos.relative(facing);
+            } else if (block instanceof MiningPortBlock) {
+                // Пропускаем MiningPortBlock – он не должен удаляться, но не прерываем цикл
+                currentPos = currentPos.relative(facing);
+            } else {
+                break;
+            }
+        }
+        if (lastBlockPos == null) return false;
+
+        // Удаляем блок
+        BlockEntity be = level.getBlockEntity(lastBlockPos);
+        level.removeBlock(lastBlockPos, false);
+
+        // Добавляем предмет
+        ItemStack stack = new ItemStack(lastState.getBlock().asItem());
+        ItemStack remainder = addItemToInventory(stack);
+        if (!remainder.isEmpty()) {
+            BlockPos dropPos = worldPosition.relative(facing, 1);
+            Containers.dropItemStack(level, dropPos.getX(), dropPos.getY(), dropPos.getZ(), remainder);
+        }
+
+        // Обновляем цепочку
+        totalChainLength = length - 1;
+        if (totalChainLength == 0) {
+            headPos = null;
+            hasDrillHead = false;
+        } else {
+            BlockPos newHead = worldPosition.relative(facing, totalChainLength);
+            BlockState headState = level.getBlockState(newHead);
+            if (headState.getBlock() instanceof DrillHeadBlock) {
+                headPos = newHead;
+                hasDrillHead = true;
+                if (level.getBlockEntity(newHead) instanceof DrillHeadBlockEntity drill) {
+                    drill.setPlacerPos(worldPosition);
+                }
+            } else {
+                headPos = newHead;
+                hasDrillHead = false;
+            }
+        }
+
+        if (lastState.getBlock() instanceof GearPortBlock) {
+            if (miningPortPos != null && miningPortPos.equals(lastBlockPos)) {
+                miningPortPos = null;
+            }
+            updateChainInfo(level);
+        }
+
+        setChanged();
+        sync();
+        return true;
+    }
+
     // ========== Ticking ==========
     public static void tick(Level level, BlockPos pos, BlockState state, ShaftPlacerBlockEntity be) {
         if (level.isClientSide) return;
+
+        if (be.retracting) {
+            be.updateRetracting(level);
+            return;
+        }
 
         EnergyNetworkManager manager = EnergyNetworkManager.get((ServerLevel) level);
         if (!manager.hasNode(pos)) {
@@ -838,6 +957,8 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
                 tag.putString("PillarBlock", registryName.toString());
             }
         }
+        tag.putBoolean("Retracting", retracting);
+        tag.putInt("RetractTimer", retractTimer);
     }
 
     @Override
@@ -868,6 +989,8 @@ public class ShaftPlacerBlockEntity extends BlockEntity implements RotationalNod
                 pillarBlockItem = bi;
             }
         }
+        retracting = tag.getBoolean("Retracting");
+        retractTimer = tag.getInt("RetractTimer");
     }
 
     @Override

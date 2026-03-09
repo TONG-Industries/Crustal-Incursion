@@ -1,5 +1,6 @@
 package com.cim.client.overlay.gui;
 
+import com.cim.network.packet.rotation.PacketToggleRetractMode;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -45,6 +46,11 @@ public class GUIShaftPlacer extends AbstractContainerScreen<ShaftPlacerMenu> {
             guiGraphics.blit(TEXTURE, x + 13, y + 43, 177, 0, 10, 32);
         }
 
+        // Кнопка втягивания (отображается только в нажатом состоянии)
+        if (menu.isRetracting()) {
+            guiGraphics.blit(TEXTURE, x + 13, y + 77, 188, 15, 10, 17);
+        }
+
         // Светодиоды
         if (menu.canPlaceNext()) {
             guiGraphics.blit(TEXTURE, x + 32, y + 34, 177, 86, 6, 6);
@@ -87,6 +93,14 @@ public class GUIShaftPlacer extends AbstractContainerScreen<ShaftPlacerMenu> {
                 ModPacketHandler.INSTANCE.sendToServer(new PacketToggleShaftPlacer(menu.getPos()));
                 return true;
             }
+
+            // Клик по кнопке втягивания (x13, y77, размер 10x17)
+            if (relX >= 13 && relX < 23 && relY >= 77 && relY < 94) {
+                playClickSound();
+                ModPacketHandler.INSTANCE.sendToServer(new PacketToggleRetractMode(menu.getPos()));
+                return true;
+            }
+
         }
         return super.mouseClicked(mouseX, mouseY, button);
     }
