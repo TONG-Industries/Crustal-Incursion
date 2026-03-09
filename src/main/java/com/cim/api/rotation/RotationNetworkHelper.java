@@ -16,7 +16,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class RotationNetworkHelper {
-    private static final int MAX_SEARCH_DEPTH = 64;
+    private static final int MAX_SEARCH_DEPTH = 1024;
 
     @Nullable
     public static RotationSource findSource(@Nullable BlockEntity start, @Nullable Direction fromDir) {

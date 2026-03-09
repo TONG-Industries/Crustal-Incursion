@@ -11,6 +11,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
@@ -41,6 +42,20 @@ public class GearPortBlockEntity extends BlockEntity implements RotationalNode {
         sync();
         invalidateCache();
     }
+
+    public void attachChain(Level level) {
+        if (level.isClientSide) return;
+        BlockPos start = worldPosition.above();
+        for (int i = 0; i < 20; i++) {
+            BlockPos current = start.above(i);
+            BlockState state = level.getBlockState(current);
+            if (!state.isAir()) {
+                break; // встретили блок — прекращаем
+            }
+            level.setBlock(current, Blocks.CHAIN.defaultBlockState(), 3);
+        }
+    }
+
     /**
      * Логика отвертки:
      * ПКМ -> Установить/снять ПЕРВЫЙ порт

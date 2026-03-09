@@ -1,6 +1,7 @@
 package com.cim.network;
 
 
+import com.cim.network.packet.rotation.PacketToggleRetractMode;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
@@ -142,6 +143,10 @@ public class ModPacketHandler {
                 PacketToggleShaftPlacer::decode,
                 PacketToggleShaftPlacer::handle
         );
-
+        INSTANCE.registerMessage(id++,
+                PacketToggleRetractMode.class,
+                PacketToggleRetractMode::encode,
+                PacketToggleRetractMode::decode,
+                PacketToggleRetractMode::handle);
     }
 }

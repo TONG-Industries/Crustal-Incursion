@@ -17,7 +17,7 @@ public class ShaftPlacerMenu extends AbstractContainerMenu {
 
     // Клиент
     public ShaftPlacerMenu(int containerId, Inventory inv, FriendlyByteBuf extraData) {
-        this(containerId, inv, inv.player.level().getBlockEntity(extraData.readBlockPos()), new SimpleContainerData(7));
+        this(containerId, inv, inv.player.level().getBlockEntity(extraData.readBlockPos()), new SimpleContainerData(8));
     }
 
     public boolean canPlaceNext() {
@@ -31,7 +31,7 @@ public class ShaftPlacerMenu extends AbstractContainerMenu {
     // Сервер
     public ShaftPlacerMenu(int containerId, Inventory inv, BlockEntity entity, ContainerData data) {
         super(ModMenuTypes.SHAFT_PLACER_MENU.get(), containerId);
-        checkContainerDataCount(data, 5);
+        checkContainerDataCount(data, 8);
         this.blockEntity = (ShaftPlacerBlockEntity) entity;
         this.data = data;
 
@@ -42,8 +42,8 @@ public class ShaftPlacerMenu extends AbstractContainerMenu {
         // Слоты блока (3x3)
         IItemHandler handler = blockEntity.getInventory();
         for (int row = 0; row < 3; ++row) {
-            for (int col = 0; col < 3; ++col) {
-                this.addSlot(new SlotItemHandler(handler, col + row * 3, 62 + col * 18, 44 + row * 18));
+            for (int col = 0; col < 6; ++col) {  // 6 столбцов
+                this.addSlot(new SlotItemHandler(handler, col + row * 6, 30 + col * 18, 44 + row * 18));
             }
         }
 
@@ -101,5 +101,9 @@ public class ShaftPlacerMenu extends AbstractContainerMenu {
             }
         }
         return itemstack;
+    }
+
+    public boolean isRetracting() {
+        return data.get(7) == 1;
     }
 }

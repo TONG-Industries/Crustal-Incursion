@@ -33,7 +33,7 @@ public class MiningPortBlockEntity extends BlockEntity implements RotationalNode
     private long cacheTimestamp;
     private static final long CACHE_LIFETIME = 10;
 
-    private final ItemStackHandler inventory = new ItemStackHandler(9) {
+    private final ItemStackHandler inventory = new ItemStackHandler(27) {
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
@@ -176,7 +176,7 @@ public class MiningPortBlockEntity extends BlockEntity implements RotationalNode
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
     }
-    private void sync() {
+    public void sync() {
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }

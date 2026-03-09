@@ -5,6 +5,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
@@ -12,7 +13,10 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
@@ -23,13 +27,16 @@ import com.cim.block.entity.rotation.ShaftBlockEntity;
 
 public class ShaftBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.FACING;
+    public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED; // Добавлено
 
     private final ShaftType shaftType; // хранит все характеристики
 
     public ShaftBlock(Properties properties, ShaftType shaftType) {
         super(properties);
         this.shaftType = shaftType;
-        this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
+        this.registerDefaultState(this.stateDefinition.any()
+                .setValue(FACING, Direction.NORTH)
+                .setValue(WATERLOGGED, false)); // Добавлено
     }
 
     public ShaftType getShaftType() {
@@ -61,7 +68,7 @@ public class ShaftBlock extends BaseEntityBlock {
         boolean canPlace = false;
         Direction shaftFacing = clickedFace;
 
-        // (здесь все проверки на соседей, как в оригинале, только вместо ShaftIronBlock используем ShaftBlock)
+        // ... (все проверки на соседей, без изменений) ...
         if (targetBlock instanceof MotorElectroBlock) {
             Direction motorFacing = targetState.getValue(MotorElectroBlock.FACING);
             if (clickedFace == motorFacing) {
@@ -103,7 +110,6 @@ public class ShaftBlock extends BaseEntityBlock {
 
             Direction blockFacing = null;
 
-            // БЕЗОПАСНОЕ ПОЛУЧЕНИЕ НАПРАВЛЕНИЯ
             if (targetState.hasProperty(BlockStateProperties.FACING)) {
                 blockFacing = targetState.getValue(BlockStateProperties.FACING);
             } else if (targetState.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
@@ -112,7 +118,6 @@ public class ShaftBlock extends BaseEntityBlock {
 
             if (blockFacing != null) {
                 Direction[] sides = getPerpendicularSides(blockFacing);
-                // Проверяем, кликнули ли мы по бокам
                 if (clickedFace == sides[0] || clickedFace == sides[1]) {
                     canPlace = true;
                     shaftFacing = clickedFace;
@@ -138,10 +143,10 @@ public class ShaftBlock extends BaseEntityBlock {
             Direction placerFacing = targetState.getValue(ShaftPlacerBlock.FACING);
             if (clickedFace == placerFacing) {
                 canPlace = true;
-                shaftFacing = placerFacing;               // вал смотрит в ту же сторону
+                shaftFacing = placerFacing;
             } else if (clickedFace == placerFacing.getOpposite()) {
                 canPlace = true;
-                shaftFacing = placerFacing.getOpposite(); // вал смотрит назад
+                shaftFacing = placerFacing.getOpposite();
             }
         }
         else if (targetBlock instanceof MiningPortBlock) {
@@ -161,7 +166,29 @@ public class ShaftBlock extends BaseEntityBlock {
             }
             return null;
         }
-        return this.defaultBlockState().setValue(FACING, shaftFacing);
+
+        // Определяем водонасыщение
+        boolean waterlogged = level.getFluidState(placePos).getType() == Fluids.WATER;
+
+        return this.defaultBlockState()
+                .setValue(FACING, shaftFacing)
+                .setValue(WATERLOGGED, waterlogged);
+    }
+
+    // Добавляем метод для обработки обновлений соседей (вода)
+    @Override
+    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
+                                  LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+        if (state.getValue(WATERLOGGED)) {
+            level.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+        }
+        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+    }
+
+    // Добавляем метод для получения FluidState
+    @Override
+    public FluidState getFluidState(BlockState state) {
+        return state.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
     }
 
     // Вспомогательный метод для визуального фидбека
@@ -170,7 +197,6 @@ public class ShaftBlock extends BaseEntityBlock {
             double d0 = (double)pos.getX() + level.random.nextDouble();
             double d1 = (double)pos.getY() + level.random.nextDouble();
             double d2 = (double)pos.getZ() + level.random.nextDouble();
-            // Красные частицы (Redstone Dust параметризуется цветом)
             level.addParticle(net.minecraft.core.particles.ParticleTypes.SMOKE, d0, d1, d2, 0.0D, 0.0D, 0.0D);
         }
     }
@@ -191,9 +217,10 @@ public class ShaftBlock extends BaseEntityBlock {
         }
     }
 
-    private static final VoxelShape SHAPE_NORTH_SOUTH = Block.box(6.75, 6.75, 0, 9.25, 9.25, 16); // X/Z:2.5px→6.75-9.25, Y:2.5px
-    private static final VoxelShape SHAPE_EAST_WEST = Block.box(0, 6.75, 6.75, 16, 9.25, 9.25);   // X:16px, Y/Z:2.5px
-    private static final VoxelShape SHAPE_UP_DOWN = Block.box(6.75, 0, 6.75, 9.25, 16, 9.25);     // Y:16px, X/Z:2.5px
+    private static final VoxelShape SHAPE_NORTH_SOUTH = Block.box(6.75, 6.75, 0, 9.25, 9.25, 16);
+    private static final VoxelShape SHAPE_EAST_WEST = Block.box(0, 6.75, 6.75, 16, 9.25, 9.25);
+    private static final VoxelShape SHAPE_UP_DOWN = Block.box(6.75, 0, 6.75, 9.25, 16, 9.25);
+
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         Direction facing = state.getValue(FACING);
@@ -226,7 +253,7 @@ public class ShaftBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(FACING, WATERLOGGED); // Добавлено WATERLOGGED
     }
 
     @Nullable
@@ -244,10 +271,10 @@ public class ShaftBlock extends BaseEntityBlock {
             }
         }
     }
+
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!level.isClientSide && state.getBlock() != newState.getBlock()) {
-            // Инвалидируем кеш у всех соседей
             for (Direction dir : Direction.values()) {
                 BlockPos neighborPos = pos.relative(dir);
                 if (level.getBlockEntity(neighborPos) instanceof RotationalNode node) {
@@ -259,7 +286,6 @@ public class ShaftBlock extends BaseEntityBlock {
     }
 
     private void spawnErrorParticles(Level level, BlockPos pos, Direction side) {
-        // Спавним частицы на грани блока, куда тыкали
         double x = pos.getX() + 0.5 + side.getStepX() * 0.4;
         double y = pos.getY() + 0.5 + side.getStepY() * 0.4;
         double z = pos.getZ() + 0.5 + side.getStepZ() * 0.4;

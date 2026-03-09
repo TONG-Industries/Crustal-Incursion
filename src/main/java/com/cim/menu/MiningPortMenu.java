@@ -31,8 +31,8 @@ public class MiningPortMenu extends AbstractContainerMenu {
 
         IItemHandler handler = blockEntity.getInventory();
         for (int row = 0; row < 3; ++row) {
-            for (int col = 0; col < 3; ++col) {
-                this.addSlot(new SlotItemHandler(handler, col + row * 3, 62 + col * 18, 29 + row * 18));
+            for (int col = 0; col < 9; ++col) {  // было 3
+                this.addSlot(new SlotItemHandler(handler, col + row * 9, 8 + col * 18, 29 + row * 18));
             }
         }
 

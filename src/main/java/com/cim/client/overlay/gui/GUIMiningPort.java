@@ -25,7 +25,7 @@ public class GUIMiningPort extends AbstractContainerScreen<MiningPortMenu> {
 
         // Светодиод
         if (menu.hasDrillHead()) {
-            guiGraphics.blit(TEXTURE, x + 64, y + 19, 177, 0, 6, 6);
+            guiGraphics.blit(TEXTURE, x + 11, y + 19, 177, 0, 6, 6);
         }
     }
 
