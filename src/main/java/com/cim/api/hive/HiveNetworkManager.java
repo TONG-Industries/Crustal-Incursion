@@ -24,10 +24,21 @@ public class HiveNetworkManager {
         List<HiveNetwork> safeCopy = new ArrayList<>(networks.values());
 
         for (HiveNetwork network : safeCopy) {
-            if (network.isDead() || network.isAbandoned()) {
-                networks.remove(network.id);
-                System.out.println("[HiveManager] Removed network " + network.id +
-                        (network.isAbandoned() ? " (abandoned, no nests)" : " (dead)"));
+            // НЕ удаляем сразу, даём шанс на восстановление
+            if (network.isDead()) {
+                // Проверяем ещё раз через тик - может червяк вернулся
+                if (network.isDead()) {
+                    networks.remove(network.id);
+                    System.out.println("[HiveManager] Removed dead network " + network.id);
+                }
+                continue;
+            }
+
+            // Проверяем заброшенность только если нет активных червяков долгое время
+            if (network.isAbandoned()) {
+                System.out.println("[HiveManager] Network " + network.id + " is abandoned but keeping for now");
+                // НЕ удаляем сразу, просто логируем
+                // networks.remove(network.id);
                 continue;
             }
 

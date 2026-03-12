@@ -46,7 +46,19 @@ public class DepthWormEntity extends Monster implements GeoEntity {
     public int ignoreFallDamageTicks = 0;
     public BlockPos nestPos;
     private BlockPos homePos;
+    private Runnable onDeathCallback = null;
 
+    public void setOnDeathCallback(Runnable callback) {
+        this.onDeathCallback = callback;
+    }
+
+    @Override
+    public void die(DamageSource source) {
+        super.die(source);
+        if (onDeathCallback != null) {
+            onDeathCallback.run();
+        }
+    }
     public void setHomePos(BlockPos pos) {
         this.homePos = pos;
     }

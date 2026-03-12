@@ -236,11 +236,18 @@ public class ReturnToHiveGoal extends Goal {
         HiveNetwork network = manager.getNetwork(netId);
         if (network == null) return;
 
+        // НОВОЕ: Уменьшаем счётчик активных червяков
+        BlockPos boundNest = worm.getBoundNestPos();
+        if (boundNest != null) {
+            network.removeActiveWorm(boundNest);
+        }
+
         // Начисляем очки
         int kills = worm.getKills();
         network.killsPool = Math.min(50, network.killsPool + kills);
-        System.out.println("[Hive] Worm entered network via " + (targetIsSoil ? "soil" : "nest") +
-                ". Points: " + network.killsPool);
+        System.out.println("[Hive] Worm returned to network via " + (targetIsSoil ? "soil" : "nest") +
+                ". Points: " + network.killsPool + " | Active remaining: " +
+                network.activeWormCounts.getOrDefault(boundNest, 0));
 
         // Сохраняем данные червя
         CompoundTag tag = new CompoundTag();
