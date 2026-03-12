@@ -63,6 +63,10 @@ public class ModBlocks {
             () -> new DepthWormNestBlock(BlockBehaviour.Properties.copy(Blocks.MUD).sound(SoundType.MUD)));
     public static final RegistryObject<Block> HIVE_SOIL = registerBlock("hive_soil",
             () -> new HiveSoilBlock(BlockBehaviour.Properties.copy(Blocks.MUD).sound(SoundType.MUD)));
+    public static final RegistryObject<Block> DEPTH_WORM_NEST_DEAD = registerBlock("depth_worm_nest_dead",
+            () -> new DepthWormNestBlock(BlockBehaviour.Properties.copy(Blocks.MUD).sound(SoundType.MUD)));
+    public static final RegistryObject<Block> HIVE_SOIL_DEAD = registerBlock("hive_soil_dead",
+            () -> new HiveSoilBlock(BlockBehaviour.Properties.copy(Blocks.MUD).sound(SoundType.MUD)));
 
 
     //ОБЫЧНЫЕ БЛОКИ
@@ -120,6 +124,14 @@ public class ModBlocks {
                     .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
     public static final RegistryObject<Block> WASTE_LOG = registerBlock("waste_log",
             () -> new FullOBlock(BlockBehaviour.Properties.copy(Blocks.OAK_WOOD).sound(SoundType.WOOD)));
+
+    public static final RegistryObject<Block> DECO_LEAD = registerBlock("deco_lead",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops()));
+
+
+
+
 
     public static final RegistryObject<Block> DECO_LEAD = registerBlock("deco_lead",
             () -> new Block(BlockBehaviour.Properties.of()
@@ -259,6 +271,9 @@ public class ModBlocks {
                 public int getFireSpreadSpeed(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
                     return 30; // Шанс, что огонь перекинется на этот блок
                 }});
+
+
+
 
 
     // Вспомогательный метод: регистрирует блок И предмет для него

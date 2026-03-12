@@ -40,6 +40,8 @@ public class ModBlockStateProvider extends BlockStateProvider {
 
         cubeAllWithItem(ModBlocks.DEPTH_WORM_NEST);
         cubeAllWithItem(ModBlocks.HIVE_SOIL);
+        cubeAllWithItem(ModBlocks.HIVE_SOIL_DEAD);
+        cubeAllWithItem(ModBlocks.DEPTH_WORM_NEST_DEAD);
         cubeAllWithItem(ModBlocks.SWITCH);
         cubeAllWithItem(ModBlocks.CONVERTER_BLOCK);
         cubeAllWithItem(ModBlocks.GEAR_PORT);

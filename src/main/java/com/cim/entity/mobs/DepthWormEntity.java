@@ -1,12 +1,12 @@
 package com.cim.entity.mobs;
 
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -31,12 +31,17 @@ import software.bernie.geckolib.core.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.List;
+import java.util.UUID;
 
 public class DepthWormEntity extends Monster implements GeoEntity {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     private static final EntityDataAccessor<Boolean> IS_ATTACKING = SynchedEntityData.defineId(DepthWormEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> IS_FLYING = SynchedEntityData.defineId(DepthWormEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Integer> KILLS = SynchedEntityData.defineId(DepthWormEntity.class, EntityDataSerializers.INT);
+
+    // НОВОЕ: Привязка к гнезду
+    private static final EntityDataAccessor<String> BOUND_NEST_ID = SynchedEntityData.defineId(DepthWormEntity.class, EntityDataSerializers.STRING);
 
     public int ignoreFallDamageTicks = 0;
     public BlockPos nestPos;
@@ -50,21 +55,69 @@ public class DepthWormEntity extends Monster implements GeoEntity {
         return this.homePos;
     }
 
+    // НОВОЕ: Установка привязки к гнезду
+    public void bindToNest(BlockPos nestPos) {
+        if (nestPos != null) {
+            this.entityData.set(BOUND_NEST_ID, nestPos.asLong() + "");
+            this.nestPos = nestPos;
+        }
+    }
+
+    // НОВОЕ: Получение привязанного гнезда
+    public BlockPos getBoundNestPos() {
+        String id = this.entityData.get(BOUND_NEST_ID);
+        if (id == null || id.isEmpty()) return null;
+        try {
+            return BlockPos.of(Long.parseLong(id));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    // НОВОЕ: Очистка привязки
+    public void clearNestBinding() {
+        this.entityData.set(BOUND_NEST_ID, "");
+        this.nestPos = null;
+    }
+
+    // НОВОЕ: Проверка привязки к конкретному гнезду
+    public boolean isBoundToNest(BlockPos pos) {
+        BlockPos bound = getBoundNestPos();
+        return bound != null && bound.equals(pos);
+    }
+
+    @Override
+    public boolean removeWhenFarAway(double distanceToClosestPlayerSq) {
+        return false;
+    }
+
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
+        tag.putInt("Kills", this.getKills());
         if (homePos != null) {
             tag.putLong("HomePos", homePos.asLong());
+        }
+        // НОВОЕ: Сохраняем привязку
+        BlockPos boundNest = getBoundNestPos();
+        if (boundNest != null) {
+            tag.putLong("BoundNest", boundNest.asLong());
         }
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
+        this.entityData.set(KILLS, tag.getInt("Kills"));
         if (tag.contains("HomePos")) {
             homePos = BlockPos.of(tag.getLong("HomePos"));
         } else {
             homePos = null;
+        }
+        // НОВОЕ: Восстанавливаем привязку
+        if (tag.contains("BoundNest")) {
+            BlockPos bound = BlockPos.of(tag.getLong("BoundNest"));
+            bindToNest(bound);
         }
     }
 
@@ -74,8 +127,6 @@ public class DepthWormEntity extends Monster implements GeoEntity {
 
     private static final EntityDataAccessor<Boolean> IS_ANGRY =
             SynchedEntityData.defineId(DepthWormEntity.class, EntityDataSerializers.BOOLEAN);
-
-
 
     public boolean isAngry() {
         return this.entityData.get(IS_ANGRY);
@@ -95,6 +146,8 @@ public class DepthWormEntity extends Monster implements GeoEntity {
         this.entityData.define(IS_ATTACKING, false);
         this.entityData.define(IS_FLYING, false);
         this.entityData.define(IS_ANGRY, false);
+        this.entityData.define(KILLS, 0);
+        this.entityData.define(BOUND_NEST_ID, ""); // НОВОЕ
     }
 
     public void setAttacking(boolean attacking) {
@@ -107,6 +160,20 @@ public class DepthWormEntity extends Monster implements GeoEntity {
     public void setFlying(boolean flying) { this.entityData.set(IS_FLYING, flying); }
     public boolean isFlying() { return this.entityData.get(IS_FLYING); }
 
+    public void addKill() {
+        this.entityData.set(KILLS, this.getKills() + 1);
+    }
+
+    public int getKills() {
+        return this.entityData.get(KILLS);
+    }
+
+    @Override
+    public void awardKillScore(Entity killed, int score, DamageSource damageSource) {
+        super.awardKillScore(killed, score, damageSource);
+        this.addKill();
+    }
+
     @Override
     public void aiStep() {
         super.aiStep();
@@ -116,52 +183,34 @@ public class DepthWormEntity extends Monster implements GeoEntity {
                 this.setFlying(false);
                 this.setAttacking(false);
             }
-            // Увеличиваем хитбокс сканирования, чтобы "толпа" не мешала попадать
             List<LivingEntity> targets = this.level().getEntitiesOfClass(LivingEntity.class,
                     this.getBoundingBox().inflate(0.5D),
                     e -> e == this.getTarget() && e.isAlive());
 
             for (LivingEntity target : targets) {
-                // Наносим урон напрямую, игнорируя push
                 if (target.hurt(this.damageSources().mobAttack(this), 10.0F)) {
                     this.setFlying(false);
                     this.setAttacking(false);
-                    // Отлетаем чуть-чуть назад после успешного удара, чтобы дать место другим червям
                     this.setDeltaMovement(this.getDeltaMovement().multiply(-0.3, 0.2, -0.3));
                     break;
                 }
             }
         }
 
-
         if (this.ignoreFallDamageTicks > 0) this.ignoreFallDamageTicks--;
         if (!level().isClientSide) {
             this.entityData.set(IS_ANGRY, this.hurtTime > 0);
         }
-        // Поиск гнезда на сервере
-        if (!level().isClientSide) {
-            if (this.nestPos != null) {
-                if (!(level().getBlockEntity(this.nestPos) instanceof DepthWormNestBlockEntity nest) || nest.isFull()) {
-                    this.nestPos = null;
-                }
-            }
 
-            if (this.nestPos == null && level().getGameTime() % 100 == 0) {
-                Iterable<BlockPos> ps = BlockPos.betweenClosed(blockPosition().offset(-16, -8, -16), blockPosition().offset(16, 8, 16));
-                for (BlockPos p : ps) {
-                    if (level().getBlockEntity(p) instanceof DepthWormNestBlockEntity nest && !nest.isFull()) {
-                        this.nestPos = p.immutable();
-                        break;
-                    }
-                }
-            }
+        // Обновляем nestPos из привязки если нужно
+        if (!level().isClientSide && nestPos == null) {
+            nestPos = getBoundNestPos();
         }
     }
 
     @Override
     public void push(net.minecraft.world.entity.Entity entity) {
         super.push(entity);
-        // Дополнительная проверка на урон при столкновении
         if (this.isFlying() && entity instanceof LivingEntity target && target == this.getTarget()) {
             target.hurt(this.damageSources().mobAttack(this), 8.0F);
             this.setFlying(false);
@@ -169,40 +218,27 @@ public class DepthWormEntity extends Monster implements GeoEntity {
         }
     }
 
-
     @Override
     public boolean isPushable() {
-        // Проверяем, запущена ли сейчас цель возвращения домой
         boolean isReturning = this.goalSelector.getAvailableGoals().stream()
                 .anyMatch(wrappedGoal -> wrappedGoal.getGoal() instanceof ReturnToHiveGoal && wrappedGoal.isRunning());
 
         return super.isPushable() && !isReturning;
     }
 
-
-
     @Override
     protected void registerGoals() {
-        // Приоритет 0: Прыжок (боевой)
         this.goalSelector.addGoal(0, new DepthWormJumpGoal(this, 1.5D, 5.0F, 10.0F));
-
-        // Приоритет 1: Универсальный вход в улей (через почву или само гнездо)
         this.goalSelector.addGoal(1, new ReturnToHiveGoal(this));
-
-        // Приоритет 2: Обычная атака
         this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.2D, false));
-
-        // Остальные цели
         this.goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this, 0.8D));
         this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
 
-        // Цели выбора мишени
         this.targetSelector.addGoal(0, new NearestAttackableTargetGoal<>(this, Player.class, true));
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, LivingEntity.class, true,
                 (target) -> target.isAlive() && target.deathTime <= 0 && !(target instanceof DepthWormEntity)));
         this.targetSelector.addGoal(2, new HurtByTargetGoal(this).setAlertOthers());
     }
-
 
     @Override
     public boolean causeFallDamage(float distance, float multiplier, DamageSource source) {
@@ -226,25 +262,20 @@ public class DepthWormEntity extends Monster implements GeoEntity {
     }
 
     private PlayState predicate(software.bernie.geckolib.core.animation.AnimationState<DepthWormEntity> state) {
-        // 1. Приоритет смерти
         if (this.isDeadOrDying()) {
             return state.setAndContinue(RawAnimation.begin().thenPlayAndHold("death"));
         }
 
-        // 2. ПРИОРИТЕТ АТАКИ (Важно: используем setAndContinue, чтобы не перезапускать анимацию каждый тик)
         if (this.isAttacking()) {
             return state.setAndContinue(RawAnimation.begin().thenPlayAndHold("prepare"));
         }
 
-        // 3. Движение
         if (state.isMoving()) {
             return state.setAndContinue(RawAnimation.begin().thenLoop("slide"));
         }
 
-        // 4. Покой
         return state.setAndContinue(RawAnimation.begin().thenLoop("slide"));
     }
-
 
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() { return this.cache; }

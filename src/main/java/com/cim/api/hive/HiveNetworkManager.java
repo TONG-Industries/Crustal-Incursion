@@ -11,7 +11,6 @@ import net.minecraftforge.common.capabilities.CapabilityManager;
 import net.minecraftforge.common.capabilities.CapabilityToken;
 import com.cim.block.entity.hive.DepthWormNestBlockEntity;
 
-import javax.annotation.Nullable;
 import java.util.*;
 
 public class HiveNetworkManager {
@@ -19,117 +18,119 @@ public class HiveNetworkManager {
     private final Map<UUID, HiveNetwork> networks = new HashMap<>();
     private final Map<BlockPos, UUID> posToNetwork = new HashMap<>();
 
-    public boolean hasNests(UUID netId) {
-        HiveNetwork net = networks.get(netId);
-        return net != null && !net.wormCounts.isEmpty();
-    }
+    public void tick(Level level) {
+        if (networks.isEmpty()) return;
 
-    public void addNode(UUID networkId, BlockPos pos) {
-        networkNodes.computeIfAbsent(networkId, k -> new HashSet<>()).add(pos.immutable());
-    }
+        List<HiveNetwork> safeCopy = new ArrayList<>(networks.values());
 
-    public void mergeNetworks(UUID masterId, UUID targetId, Level level) {
-        if (masterId.equals(targetId)) return;
-
-        Set<BlockPos> targetNodes = networkNodes.remove(targetId);
-        if (targetNodes != null) {
-            for (BlockPos p : targetNodes) {
-                BlockEntity be = level.getBlockEntity(p);
-                if (be instanceof HiveNetworkMember member) {
-                    member.setNetworkId(masterId);
-                    this.addNode(masterId, p);
-                    be.setChanged();
-                }
+        for (HiveNetwork network : safeCopy) {
+            if (network.isDead() || network.isAbandoned()) {
+                networks.remove(network.id);
+                System.out.println("[HiveManager] Removed network " + network.id +
+                        (network.isAbandoned() ? " (abandoned, no nests)" : " (dead)"));
+                continue;
             }
+
+            if (!network.hasAnyLoadedChunk(level)) continue;
+            network.update(level);
+        }
+    }
+
+    public static HiveNetworkManager get(Level level) {
+        return level.getCapability(HiveNetworkManagerProvider.HIVE_NETWORK_MANAGER).orElse(null);
+    }
+
+    public HiveNetwork getNetwork(UUID id) {
+        if (id == null) return null;
+        return networks.computeIfAbsent(id, HiveNetwork::new);
+    }
+
+    public void addNode(UUID networkId, BlockPos pos, boolean isNest) {
+        HiveNetwork network = getNetwork(networkId);
+        network.addMember(pos, isNest);
+        posToNetwork.put(pos, networkId);
+        networkNodes.computeIfAbsent(networkId, k -> new HashSet<>()).add(pos);
+    }
+
+    public void mergeNetworks(UUID mainId, UUID secondId, Level level) {
+        if (mainId.equals(secondId)) return;
+
+        HiveNetwork mainNet = getNetwork(mainId);
+        HiveNetwork secondNet = networks.get(secondId);
+        if (secondNet == null) return;
+
+        System.out.println("[Hive] Merging networks! " + secondId + " absorbed into " + mainId);
+
+        mainNet.killsPool = Math.min(50, mainNet.killsPool + secondNet.killsPool);
+
+        for (BlockPos pos : new HashSet<>(secondNet.members)) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof HiveNetworkMember member) {
+                member.setNetworkId(mainId);
+            }
+
+            posToNetwork.put(pos, mainId);
+
+            if (secondNet.wormCounts.containsKey(pos)) {
+                mainNet.wormCounts.put(pos, secondNet.wormCounts.get(pos));
+                mainNet.nestWormData.put(pos, new ArrayList<>(secondNet.getNestWormData(pos)));
+            }
+            mainNet.members.add(pos);
         }
 
-        HiveNetwork targetNet = networks.remove(targetId);
-        if (targetNet != null) {
-            networks.computeIfAbsent(masterId, HiveNetwork::new);
-        }
+        networks.remove(secondId);
+        networkNodes.remove(secondId);
     }
 
     public void removeNode(UUID networkId, BlockPos pos, Level level) {
-        Set<BlockPos> nodes = networkNodes.get(networkId);
-        if (nodes != null) {
-            nodes.remove(pos);
-            if (nodes.isEmpty()) {
-                networkNodes.remove(networkId);
+        HiveNetwork network = networks.get(networkId);
+        if (network != null) {
+            network.removeMember(pos);
+            if (network.members.isEmpty()) {
                 networks.remove(networkId);
-            } else {
-                validateNetwork(networkId, level);
             }
         }
         posToNetwork.remove(pos);
+        Set<BlockPos> nodes = networkNodes.get(networkId);
+        if (nodes != null) nodes.remove(pos);
     }
 
-    public void validateNetwork(UUID networkId, Level level) {
-        if (level == null) return;
-        Set<BlockPos> nodes = networkNodes.get(networkId);
-        if (nodes == null) return;
+    public BlockPos findNearestNode(UUID networkId, Vec3 targetPos, Level level) {
+        HiveNetwork network = getNetwork(networkId);
+        if (network == null || network.members.isEmpty()) return null;
 
-        boolean hasNest = nodes.stream()
-                .anyMatch(p -> level.getBlockEntity(p) instanceof DepthWormNestBlockEntity);
+        BlockPos targetBlockPos = BlockPos.containing(targetPos);
+        BlockPos closest = null;
+        double minDistance = Double.MAX_VALUE;
 
-        if (!hasNest) {
-            for (BlockPos p : nodes) {
-                BlockEntity be = level.getBlockEntity(p);
-                if (be instanceof HiveNetworkMember member) {
-                    member.setNetworkId(null);
-                    be.setChanged();
-                }
-            }
-            networkNodes.remove(networkId);
-            networks.remove(networkId);
-        }
-    }
-
-    @Nullable
-    public BlockPos findNearestNode(UUID networkId, Vec3 pos, Level level) {
-        Set<BlockPos> nodes = networkNodes.get(networkId);
-        if (nodes == null) return null;
-        BlockPos best = null;
-        double bestDistSq = Double.MAX_VALUE;
-        for (BlockPos nodePos : nodes) {
-            double distSq = pos.distanceToSqr(nodePos.getX() + 0.5, nodePos.getY() + 0.5, nodePos.getZ() + 0.5);
-            if (distSq < bestDistSq) {
-                bestDistSq = distSq;
-                best = nodePos;
+        for (BlockPos pos : network.members) {
+            double dist = pos.distSqr(targetBlockPos);
+            if (dist < minDistance) {
+                minDistance = dist;
+                closest = pos;
             }
         }
-        return best;
-    }
-
-    public boolean hasFreeNest(UUID networkId, Level level) {
-        Set<BlockPos> nodes = networkNodes.get(networkId);
-        if (nodes == null) return false;
-
-        for (BlockPos p : nodes) {
-            if (level.getBlockEntity(p) instanceof DepthWormNestBlockEntity nest) {
-                if (!nest.isFull()) return true;
-            }
-        }
-        return false;
+        return closest;
     }
 
     public boolean addWormToNetwork(UUID networkId, CompoundTag wormData, BlockPos entryPos, Level level) {
-        Set<BlockPos> nodes = networkNodes.get(networkId);
-        if (nodes == null) return false;
+        HiveNetwork network = getNetwork(networkId);
+        if (network == null) return false;
 
-        for (BlockPos pos : nodes) {
-            if (level.getBlockEntity(pos) instanceof DepthWormNestBlockEntity nest) {
+        for (BlockPos pos : network.members) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof DepthWormNestBlockEntity nest) {
                 if (!nest.isFull()) {
                     nest.addWormTag(wormData);
+                    network.updateWormCount(pos, 1);
+                    network.addWormDataToNest(pos, wormData);
+                    System.out.println("[Hive] Worm bound to nest at " + pos + ". Total in nest: " +
+                            network.getNestWormData(pos).size());
                     return true;
                 }
             }
         }
         return false;
-    }
-
-    public void updateWormCount(UUID netId, BlockPos nestPos, int delta) {
-        HiveNetwork net = networks.get(netId);
-        if (net != null) net.updateWormCount(nestPos, delta);
     }
 
     public CompoundTag serializeNBT() {
@@ -146,20 +147,24 @@ public class HiveNetworkManager {
         networks.clear();
         posToNetwork.clear();
         networkNodes.clear();
+
         ListTag networksList = tag.getList("Networks", 10);
         for (int i = 0; i < networksList.size(); i++) {
             HiveNetwork net = HiveNetwork.fromNBT(networksList.getCompound(i));
             networks.put(net.id, net);
-            for (BlockPos p : net.members) {
-                posToNetwork.put(p, net.id);
-                this.addNode(net.id, p);
+
+            for (BlockPos pos : net.members) {
+                posToNetwork.put(pos, net.id);
+                networkNodes.computeIfAbsent(net.id, k -> new HashSet<>()).add(pos);
             }
         }
     }
-
-    public static final Capability<HiveNetworkManager> HIVE_NETWORK_MANAGER = CapabilityManager.get(new CapabilityToken<>(){});
-
-    public static HiveNetworkManager get(Level level) {
-        return level.getCapability(HIVE_NETWORK_MANAGER).orElse(null);
+    public void updateWormCount(UUID networkId, BlockPos pos, int delta) {
+        HiveNetwork network = getNetwork(networkId);
+        if (network != null) {
+            network.updateWormCount(pos, delta);
+        }
     }
+    public static final Capability<HiveNetworkManager> HIVE_NETWORK_MANAGER =
+            CapabilityManager.get(new CapabilityToken<>(){});
 }
