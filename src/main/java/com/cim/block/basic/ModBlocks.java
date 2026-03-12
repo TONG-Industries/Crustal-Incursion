@@ -125,6 +125,11 @@ public class ModBlocks {
     public static final RegistryObject<Block> WASTE_LOG = registerBlock("waste_log",
             () -> new FullOBlock(BlockBehaviour.Properties.copy(Blocks.OAK_WOOD).sound(SoundType.WOOD)));
 
+    public static final RegistryObject<Block> DECO_LEAD = registerBlock("deco_lead",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops()));
+
+
 
 
 
