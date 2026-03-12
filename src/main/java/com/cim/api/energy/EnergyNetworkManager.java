@@ -241,8 +241,19 @@ public class EnergyNetworkManager extends SavedData {
             Iterator<EnergyNetwork> it = adjacentNetworks.iterator();
             EnergyNetwork main = it.next();
             main.addNode(newNode);
+
             while (it.hasNext()) {
-                main.merge(it.next());
+                EnergyNetwork next = it.next();
+
+                // ИСПРАВЛЕНИЕ: Безопасное слияние, предотвращающее появление сетей-призраков!
+                // Если соседняя сеть больше, она поглощает нашу, и МЫ ДОЛЖНЫ обновить ссылку main,
+                // чтобы продолжить впитывать остальные блоки в выжившую сеть.
+                if (next.getNodeCount() > main.getNodeCount()) {
+                    next.merge(main);
+                    main = next; // <-- Эта строчка спасает всю сеть
+                } else {
+                    main.merge(next);
+                }
             }
         }
         setDirty();

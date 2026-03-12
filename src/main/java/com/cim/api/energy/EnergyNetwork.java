@@ -526,5 +526,9 @@ public class EnergyNetwork {
 
     public UUID getId() { return id; }
 
+    public int getNodeCount() {
+        return nodes.size();
+    }
+
 
 }

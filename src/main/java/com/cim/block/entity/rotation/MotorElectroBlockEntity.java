@@ -124,6 +124,17 @@ public class MotorElectroBlockEntity extends BlockEntity implements
             return;
         }
 
+        // === СЕРДЦЕБИЕНИЕ СЕТИ (Дефибриллятор) ===
+        // Гарантирует, что мотор НИКОГДА не выпадет из энергосети,
+        // даже если чанки загрузились криво или сеть перестроилась.
+        if (level.getGameTime() % 20 == 0) {
+            com.cim.api.energy.EnergyNetworkManager manager = com.cim.api.energy.EnergyNetworkManager.get((net.minecraft.server.level.ServerLevel) level);
+            if (!manager.hasNode(pos)) {
+                manager.addNode(pos);
+            }
+        }
+        // =========================================
+
         if (!be.isSwitchedOn) {
             if (be.speed != 0) {
                 be.stopMotor();
@@ -375,6 +386,16 @@ public class MotorElectroBlockEntity extends BlockEntity implements
     };
 
     public ContainerData getDataAccess() { return data; }
+
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        // При загрузке блока или установке заставляем его крикнуть: "Я ТУТ!"
+        if (level != null && !level.isClientSide) {
+            com.cim.api.energy.EnergyNetworkManager.get(
+                    (net.minecraft.server.level.ServerLevel) level).addNode(worldPosition);
+        }
+    }
 
     // ========== GeckoLib ==========
     private void handleClientAnimation() {
