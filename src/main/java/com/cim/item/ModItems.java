@@ -6,6 +6,7 @@ import com.cim.entity.weapons.grenades.GrenadeType;
 import com.cim.item.energy.EnergyCellItem;
 import com.cim.item.energy.WireCoilItem;
 import com.cim.item.rotation.*;
+import com.cim.item.tools.BeamPlacerItem;
 import com.cim.item.weapons.grenades.GrenadeIfItem;
 import com.cim.item.weapons.grenades.GrenadeItem;
 import com.cim.item.weapons.grenades.GrenadeNucItem;
@@ -51,6 +52,9 @@ public class ModItems {
 
     public static final RegistryObject<Item> WIRE_COIL = ITEMS.register("wire_coil",
             () -> new WireCoilItem(new Item.Properties().stacksTo(64)));
+
+    public static final RegistryObject<Item> BEAM_PLACER = ITEMS.register("beam_placer",
+            () -> new BeamPlacerItem(new Item.Properties().stacksTo(1)));
 
     //ОРУЖИЕ
     public static final RegistryObject<Item> MACHINEGUN = ITEMS.register("machinegun",

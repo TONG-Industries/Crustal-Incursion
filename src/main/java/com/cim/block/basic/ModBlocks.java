@@ -1,6 +1,8 @@
 package com.cim.block.basic;
 
 import com.cim.api.energy.ConnectorTier;
+import com.cim.block.basic.deco.BeamBlock;
+import com.cim.block.basic.deco.BeamCollisionBlock;
 import com.cim.block.basic.energy.*;
 import com.cim.block.basic.rotation.*;
 import net.minecraft.core.BlockPos;
@@ -142,7 +144,6 @@ public class ModBlocks {
             () -> new Block(BlockBehaviour.Properties.of()
                     .strength(0.5F, 6.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops()));
 
-    
 
     //СТУПЕНИ И ПОЛУБЛОКИ
     public static final RegistryObject<StairBlock> CONCRETE_STAIRS = registerBlock("concrete_stairs",
@@ -239,6 +240,17 @@ public class ModBlocks {
     public static final RegistryObject<Block> MINING_PORT = registerBlock("mining_port",
             () -> new MiningPortBlock(BlockBehaviour.Properties.copy(Blocks.STONE)
                     .strength(5.0f, 4.0f).requiresCorrectToolForDrops()));
+
+    //декоративные блоки
+    public static final RegistryObject<Block> BEAM_BLOCK = registerBlock("beam_block",
+            () -> new BeamBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)
+                    .strength(5.0f, 6.0f).noOcclusion().requiresCorrectToolForDrops()));
+
+    public static final RegistryObject<Block> BEAM_COLLISION = BLOCKS.register("beam_collision",
+            () -> new BeamCollisionBlock(BlockBehaviour.Properties.of()
+                    .strength(-1.0f, 3600000.0f) // Делает блок неломаемым в выживании (как бедрок)
+                    .noOcclusion()               // Обязательно для прозрачных/неполных блоков
+                    .noLootTable()));              // Предотвращает краш датагенератора лут//
 
 
     //СЕКВОЯ

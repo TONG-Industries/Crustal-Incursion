@@ -1,5 +1,6 @@
 package com.cim.block.entity;
 
+import com.cim.block.entity.deco.BeamCollisionBlockEntity;
 import com.cim.block.entity.energy.*;
 import com.cim.block.entity.rotation.*;
 import net.minecraft.world.level.block.Block;
@@ -11,7 +12,6 @@ import net.minecraftforge.registries.RegistryObject;
 
 import com.cim.block.entity.hive.DepthWormNestBlockEntity;
 import com.cim.block.entity.hive.HiveSoilBlockEntity;
-import com.cim.block.entity.rotation.*;
 import com.cim.block.entity.weapons.TurretLightPlacerBlockEntity;
 import com.cim.main.CrustalIncursionMod;
 import com.cim.block.basic.ModBlocks;
@@ -111,6 +111,12 @@ public class ModBlockEntities {
     public static final RegistryObject<BlockEntityType<MotorElectroBlockEntity>> MOTOR_ELECTRO_BE =
             BLOCK_ENTITIES.register("motor_electro_be",
                     () -> BlockEntityType.Builder.of(MotorElectroBlockEntity::new, ModBlocks.MOTOR_ELECTRO.get()).build(null));
+
+
+    public static final RegistryObject<BlockEntityType<BeamCollisionBlockEntity>> BEAM_COLLISION_BE =
+            BLOCK_ENTITIES.register("beam_collision_be", () ->
+                    BlockEntityType.Builder.of(BeamCollisionBlockEntity::new,
+                            ModBlocks.BEAM_COLLISION.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<ShaftBlockEntity>> SHAFT_BLOCK_BE =
             BLOCK_ENTITIES.register("shaft",

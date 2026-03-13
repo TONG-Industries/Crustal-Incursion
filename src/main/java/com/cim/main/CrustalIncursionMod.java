@@ -129,6 +129,8 @@ public class CrustalIncursionMod {
             // Другие строительные блоки
             event.accept(ModBlocks.CRATE.get());
             event.accept(ModBlocks.CRATE_AMMO.get());
+            event.accept(ModBlocks.BEAM_BLOCK.get());
+
         }
 
 
@@ -159,6 +161,8 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.CONNECTOR);
             event.accept(ModBlocks.MEDIUM_CONNECTOR);
             event.accept(ModBlocks.LARGE_CONNECTOR);
+            event.accept(ModItems.BEAM_PLACER);
+
 
 
 

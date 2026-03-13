@@ -55,6 +55,7 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(ModItems.BATTERY_LITHIUM);
         simpleItem(ModItems.BATTERY_TRIXITE);
         simpleItem(ModItems.WIRE_COIL);
+        simpleItem(ModItems.BEAM_PLACER);
 
 
 
