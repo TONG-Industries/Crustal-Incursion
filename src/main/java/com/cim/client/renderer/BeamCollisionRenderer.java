@@ -59,36 +59,40 @@ public class BeamCollisionRenderer implements BlockEntityRenderer<BeamCollisionB
 
         // --- НОВАЯ ЛОГИКА ОТРИСОВКИ ОТРЕЗКОВ ---
 
-        int fullBlocks = (int) distance; // Количество целых блоков
-        float remainder = (float) (distance - fullBlocks); // Остаточный кусочек в конце
+        // --- НОВАЯ ЛОГИКА ОТРИСОВКИ ОТРЕЗКОВ ---
+        int fullBlocks = (int) distance;
+        float remainder = (float) (distance - fullBlocks);
 
-        // Цикл <= fullBlocks, чтобы отрисовать и целые, и остаток
         for (int i = 0; i <= fullBlocks; i++) {
-            // Если остаток микроскопический, не рисуем лишний сегмент
             if (i == fullBlocks && remainder <= 0.001f) break;
 
             poseStack.pushPose();
-
-            // Сдвигаем каждый следующий кусок на 1 блок вперед по оси Z
             poseStack.translate(0, 0, i);
 
-            // Если это последний кусок, скейлим (плющим) только его
             if (i == fullBlocks) {
                 poseStack.scale(1.0f, 1.0f, remainder);
             }
 
-            // --- ДИНАМИЧЕСКОЕ ОСВЕЩЕНИЕ ---
+            // --- ИСПРАВЛЕННОЕ ДИНАМИЧЕСКОЕ ОСВЕЩЕНИЕ ---
             int segmentLight = packedLight;
             if (level != null) {
-                // Высчитываем реальные координаты текущего куска в мире
-                double ratio = (double) i / distance;
-                double lerpX = startPos.x + dx * ratio;
-                double lerpY = startPos.y + dy * ratio;
-                double lerpZ = startPos.z + dz * ratio;
+                // Берем координату для света со сдвигом в центр сегмента (+0.5 блока вперед)
+                // Так мы гарантированно вылезаем изнутри железного блока на свет!
+                double lightRatio = (i + 0.5) / distance;
+                if (lightRatio > 1.0) lightRatio = 1.0;
 
-                BlockPos segmentPos = BlockPos.containing(lerpX, lerpY, lerpZ);
-                // Получаем честный свет для этой точки (с учетом теней от деревьев, факелов и т.д.)
-                segmentLight = LevelRenderer.getLightColor(level, segmentPos);
+                double lightX = startPos.x + dx * lightRatio;
+                double lightY = startPos.y + dy * lightRatio;
+                double lightZ = startPos.z + dz * lightRatio;
+
+                BlockPos lightPos = BlockPos.containing(lightX, lightY, lightZ);
+
+                // Защита: если мы всё еще внутри плотного блока, берем дефолтный свет узла
+                if (level.getBlockState(lightPos).isSolidRender(level, lightPos)) {
+                    segmentLight = packedLight;
+                } else {
+                    segmentLight = LevelRenderer.getLightColor(level, lightPos);
+                }
             }
 
             blockRenderer.renderSingleBlock(beamState, poseStack, buffer, segmentLight, packedOverlay,
