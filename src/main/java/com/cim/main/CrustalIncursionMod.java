@@ -148,6 +148,10 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.SHAFT_PLACER);
             event.accept(ModBlocks.MINING_PORT);
 
+            event.accept(ModItems.WIRE_COIL);
+            event.accept(ModBlocks.CONNECTOR);
+            event.accept(ModBlocks.MEDIUM_CONNECTOR);
+            event.accept(ModBlocks.LARGE_CONNECTOR);
             event.accept(ModBlocks.WIRE_COATED);
             event.accept(ModBlocks.SWITCH);
             event.accept(ModBlocks.CONVERTER_BLOCK);
@@ -155,10 +159,6 @@ public class CrustalIncursionMod {
 
             event.accept(ModItems.ENERGY_CELL_BASIC);
 
-            event.accept(ModItems.WIRE_COIL);
-            event.accept(ModBlocks.CONNECTOR);
-            event.accept(ModBlocks.MEDIUM_CONNECTOR);
-            event.accept(ModBlocks.LARGE_CONNECTOR);
 
 
 
@@ -237,6 +237,12 @@ public class CrustalIncursionMod {
             event.accept(ModItems.DEPTH_WORM_SPAWN_EGG);
             event.accept(ModBlocks.DEPTH_WORM_NEST);
             event.accept(ModBlocks.HIVE_SOIL);
+            event.accept(ModBlocks.HIVE_ROOTS.get()); // Обычная версия
+
+            // Высокая версия (создаем стак с нужным состоянием)
+            ItemStack tallStack = new ItemStack(ModBlocks.HIVE_ROOTS.get());
+            tallStack.getOrCreateTag().putString("BlockStateTag", "half=upper");
+            event.accept(tallStack);
             event.accept(ModBlocks.DEPTH_WORM_NEST_DEAD);
             event.accept(ModBlocks.HIVE_SOIL_DEAD);
         }

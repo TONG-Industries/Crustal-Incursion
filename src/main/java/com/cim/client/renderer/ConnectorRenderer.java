@@ -14,13 +14,21 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class ConnectorRenderer implements BlockEntityRenderer<ConnectorBlockEntity> {
 
-    private static final int SEGMENTS = 16;
-    private static final float WIRE_RADIUS = 0.03125f;
+    private static final int SEGMENTS = 24; // увеличено для плавности
     private static final double SLACK = 1.03;
-    private static final float R = 0.12f, G = 0.12f, B = 0.12f, A = 1.0f;
+
+    // NEW: цвет провода #1e1c18
+    private static final float R = 0.1176f; // 30/255
+    private static final float G = 0.1098f; // 28/255
+    private static final float B = 0.0941f; // 24/255
+    private static final float A = 1.0f;
 
     public ConnectorRenderer(BlockEntityRendererProvider.Context context) {
     }
@@ -40,9 +48,7 @@ public class ConnectorRenderer implements BlockEntityRenderer<ConnectorBlockEnti
 
         poseStack.pushPose();
 
-        // Рисуем провод для каждого подключения
         for (BlockPos otherPos : animatable.getConnections()) {
-            // Чтобы провод не рисовался дважды (туда и обратно), рисуем только от блока с меньшими координатами
             if (animatable.getBlockPos().compareTo(otherPos) > 0) continue;
 
             BlockEntity otherBe = level.getBlockEntity(otherPos);
@@ -51,8 +57,9 @@ public class ConnectorRenderer implements BlockEntityRenderer<ConnectorBlockEnti
             Vec3 endWorld = otherConnector.getWireAttachmentPoint();
             Vec3 end = endWorld.subtract(renderOrigin);
 
-            // Передаем радиус из настроек блока
-            renderWire(poseStack, bufferSource, start, end, packedLight, packedOverlay, animatable.getTier().wireRadius());
+            // FIX: используем радиус из tier
+            renderWire(poseStack, bufferSource, start, end, packedLight, packedOverlay,
+                    animatable.getTier().wireRadius());
         }
 
         poseStack.popPose();
@@ -60,7 +67,7 @@ public class ConnectorRenderer implements BlockEntityRenderer<ConnectorBlockEnti
 
     @Override
     public boolean shouldRenderOffScreen(ConnectorBlockEntity be) {
-        return true; // Чтобы провод не исчезал, когда сам блок за спиной игрока
+        return true;
     }
 
     @Override
@@ -118,13 +125,87 @@ public class ConnectorRenderer implements BlockEntityRenderer<ConnectorBlockEnti
         return new CatenaryData(false, offsetX, offsetY, scale, delta, horLength, start);
     }
 
-    // ========== РЕНДЕР ПРОВОДА ==========
+    // ========== НОВЫЙ РЕНДЕР ПРОВОДА (гладкая труба) ==========
 
     private void renderWire(PoseStack poseStack, MultiBufferSource bufferSource,
                             Vec3 start, Vec3 end, int light, int overlay, float wireRadius) {
 
         CatenaryData catenary = computeCatenary(start, end);
 
+        // 1. Получаем все точки кривой
+        List<Vec3> points = new ArrayList<>(SEGMENTS + 1);
+        for (int i = 0; i <= SEGMENTS; i++) {
+            double t = (double) i / SEGMENTS;
+            points.add(catenary.getPoint(t));
+        }
+
+        // 2. Вычисляем направления (касательные векторы) в каждой точке
+        List<Vec3> tangents = new ArrayList<>(SEGMENTS + 1);
+        for (int i = 0; i <= SEGMENTS; i++) {
+            if (i == 0) {
+                // первая точка: направление к следующей
+                tangents.add(points.get(1).subtract(points.get(0)).normalize());
+            } else if (i == SEGMENTS) {
+                // последняя точка: направление от предыдущей
+                tangents.add(points.get(SEGMENTS).subtract(points.get(SEGMENTS - 1)).normalize());
+            } else {
+                // внутренняя точка: центральная разность
+                Vec3 prev = points.get(i - 1);
+                Vec3 next = points.get(i + 1);
+                tangents.add(next.subtract(prev).normalize());
+            }
+        }
+
+        // 3. Строим базисы (side, upDir) методом параллельного переноса
+        List<Vec3> sideVectors = new ArrayList<>(SEGMENTS + 1);
+        List<Vec3> upVectors = new ArrayList<>(SEGMENTS + 1);
+
+        // Начальный базис: выбираем up = глобальный вектор (0,1,0),
+        // а side получаем как tangent × up, затем нормализуем
+        Vec3 tangent0 = tangents.get(0);
+        Vec3 up0 = new Vec3(0, 1, 0);
+        // Если касательная почти вертикальна, используем другой up
+        if (Math.abs(tangent0.y) > 0.99) {
+            up0 = new Vec3(1, 0, 0);
+        }
+        Vec3 side0 = tangent0.cross(up0).normalize();
+        Vec3 upDir0 = tangent0.cross(side0).normalize(); // перпендикуляр к tangent и side
+        sideVectors.add(side0);
+        upVectors.add(upDir0);
+
+        // Переносим базис вдоль кривой
+        for (int i = 1; i <= SEGMENTS; i++) {
+            Vec3 tPrev = tangents.get(i - 1);
+            Vec3 tCurr = tangents.get(i);
+
+            // Находим ось вращения и угол между tPrev и tCurr
+            Vec3 rotAxis = tPrev.cross(tCurr);
+            double angle = Math.acos(tPrev.dot(tCurr) / (tPrev.length() * tCurr.length()));
+
+            if (rotAxis.lengthSqr() < 1e-6) {
+                // Направление не изменилось — оставляем базис без изменений
+                sideVectors.add(sideVectors.get(i - 1));
+                upVectors.add(upVectors.get(i - 1));
+            } else {
+                rotAxis = rotAxis.normalize();
+                // Поворачиваем предыдущие side и upDir вокруг rotAxis на угол angle
+                Vec3 sidePrev = sideVectors.get(i - 1);
+                Vec3 upPrev = upVectors.get(i - 1);
+
+                Vec3 sideCurr = rotate(sidePrev, rotAxis, angle);
+                Vec3 upCurr = rotate(upPrev, rotAxis, angle);
+
+                // Ортонормируем на всякий случай (из-за погрешностей)
+                sideCurr = sideCurr.normalize();
+                upCurr = tCurr.cross(sideCurr).normalize();
+                sideCurr = tCurr.cross(upCurr).normalize();
+
+                sideVectors.add(sideCurr);
+                upVectors.add(upCurr);
+            }
+        }
+
+        // 4. Рисуем сегменты
         VertexConsumer consumer = bufferSource.getBuffer(
                 RenderType.entityCutoutNoCull(
                         new ResourceLocation("minecraft", "textures/block/black_concrete.png")
@@ -132,42 +213,48 @@ public class ConnectorRenderer implements BlockEntityRenderer<ConnectorBlockEnti
         );
 
         Matrix4f matrix = poseStack.last().pose();
-        Matrix3f normal = poseStack.last().normal();
+        Matrix3f normalMatrix = poseStack.last().normal();
 
-        Vec3 prevPoint = catenary.getPoint(0);
+        for (int i = 0; i < SEGMENTS; i++) {
+            Vec3 p1 = points.get(i);
+            Vec3 p2 = points.get(i + 1);
 
-        for (int i = 1; i <= SEGMENTS; i++) {
-            double t = (double) i / SEGMENTS;
-            Vec3 point = catenary.getPoint(t);
+            Vec3 s1 = sideVectors.get(i).scale(wireRadius);
+            Vec3 u1 = upVectors.get(i).scale(wireRadius);
+            Vec3 s2 = sideVectors.get(i + 1).scale(wireRadius);
+            Vec3 u2 = upVectors.get(i + 1).scale(wireRadius);
 
-            Vec3 dir = point.subtract(prevPoint);
-            double len = dir.length();
-            if (len < 0.001) {
-                prevPoint = point;
-                continue;
-            }
-            dir = dir.scale(1.0 / len);
-
-            Vec3 up = Math.abs(dir.y) > 0.99 ? new Vec3(1, 0, 0) : new Vec3(0, 1, 0);
-            Vec3 side = dir.cross(up).normalize().scale(WIRE_RADIUS);
-            Vec3 upDir = dir.cross(side).normalize().scale(WIRE_RADIUS);
-
-            emitQuad(matrix, normal, consumer, prevPoint, point, side, light, overlay);
-            emitQuad(matrix, normal, consumer, prevPoint, point, side.scale(-1), light, overlay);
-            emitQuad(matrix, normal, consumer, prevPoint, point, upDir, light, overlay);
-            emitQuad(matrix, normal, consumer, prevPoint, point, upDir.scale(-1), light, overlay);
-
-            prevPoint = point;
+            // Четыре грани: +side, -side, +up, -up
+            // Для каждой грани используем соответствующие векторы в p1 и p2
+            emitQuad(matrix, normalMatrix, consumer, p1, p2, s1, s2, light, overlay); // +side
+            emitQuad(matrix, normalMatrix, consumer, p1, p2, s1.scale(-1), s2.scale(-1), light, overlay); // -side
+            emitQuad(matrix, normalMatrix, consumer, p1, p2, u1, u2, light, overlay); // +up
+            emitQuad(matrix, normalMatrix, consumer, p1, p2, u1.scale(-1), u2.scale(-1), light, overlay); // -up
         }
     }
 
+    // Вспомогательный поворот вектора вокруг оси
+    private Vec3 rotate(Vec3 vec, Vec3 axis, double angle) {
+        double cos = Math.cos(angle);
+        double sin = Math.sin(angle);
+        double dot = vec.dot(axis);
+        Vec3 cross = axis.cross(vec);
+        return vec.scale(cos)
+                .add(axis.scale(dot * (1 - cos)))
+                .add(cross.scale(sin));
+    }
+
+    // Новая версия emitQuad, принимающая разные смещения для начала и конца
     private void emitQuad(Matrix4f mat, Matrix3f norm, VertexConsumer consumer,
-                          Vec3 p1, Vec3 p2, Vec3 offset, int light, int overlay) {
-        Vec3 a = p1.add(offset);
-        Vec3 b = p1.subtract(offset);
-        Vec3 c = p2.subtract(offset);
-        Vec3 d = p2.add(offset);
-        Vec3 n = offset.normalize();
+                          Vec3 p1, Vec3 p2, Vec3 offset1, Vec3 offset2,
+                          int light, int overlay) {
+        Vec3 a = p1.add(offset1);
+        Vec3 b = p1.subtract(offset1);
+        Vec3 c = p2.subtract(offset2);
+        Vec3 d = p2.add(offset2);
+
+        // Нормаль берём как среднее направление offset (для простоты используем offset1)
+        Vec3 n = offset1.normalize();
         float nx = (float) n.x, ny = (float) n.y, nz = (float) n.z;
 
         vert(mat, norm, consumer, a, nx, ny, nz, 0, 0, light, overlay);

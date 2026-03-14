@@ -100,14 +100,15 @@ public class ConnectorBlockEntity extends BlockEntity implements IEnergyConnecto
 
     public Vec3 getWireAttachmentPoint() {
         Direction facing = getBlockState().getValue(ConnectorBlock.FACING);
-
-        // Динамический расчет высоты крепления в зависимости от Tier
         double heightOffset = getTier().height() / 16.0;
         double offsetFromCenter = 0.5 - heightOffset;
 
-        double lx = 0.5 - offsetFromCenter * facing.getStepX();
-        double ly = 0.5 - offsetFromCenter * facing.getStepY();
-        double lz = 0.5 - offsetFromCenter * facing.getStepZ();
+        // Добавляем смещение 0.01 по направлению фейса (наружу от блока)
+        double outwardOffset = 0.01;
+
+        double lx = 0.5 - offsetFromCenter * facing.getStepX() + outwardOffset * facing.getStepX();
+        double ly = 0.5 - offsetFromCenter * facing.getStepY() + outwardOffset * facing.getStepY();
+        double lz = 0.5 - offsetFromCenter * facing.getStepZ() + outwardOffset * facing.getStepZ();
 
         return new Vec3(
                 worldPosition.getX() + lx,
