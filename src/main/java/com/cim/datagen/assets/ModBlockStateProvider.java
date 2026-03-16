@@ -94,7 +94,11 @@ public class ModBlockStateProvider extends BlockStateProvider {
                 modLoc("block/det_miner_top"),
                 modLoc("block/det_miner_top")
         );
-
+        columnBlockWithItem(ModBlocks.DECO_BEAM,
+                modLoc("block/deco_beam_side"),
+                modLoc("block/deco_beam_top"),
+                modLoc("block/deco_beam_top")
+        );
 
 
         //ПОВОРОТ ДЛЯ 3Д МОДЕЛИ, ПРИМЕР:

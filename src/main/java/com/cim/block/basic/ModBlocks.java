@@ -3,6 +3,7 @@ package com.cim.block.basic;
 import com.cim.api.energy.ConnectorTier;
 import com.cim.block.basic.deco.BeamBlock;
 import com.cim.block.basic.deco.BeamCollisionBlock;
+import com.cim.block.basic.direction.SideOBlock;
 import com.cim.block.basic.energy.*;
 import com.cim.block.basic.necrosis.hive.HiveRootsBlock;
 import com.cim.block.basic.rotation.*;
@@ -144,6 +145,9 @@ public class ModBlocks {
             () -> new FullOBlock(BlockBehaviour.Properties.copy(Blocks.OAK_WOOD).sound(SoundType.WOOD)));
 
     public static final RegistryObject<Block> DECO_LEAD = registerBlock("deco_lead",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops()));
+    public static final RegistryObject<Block> DECO_BEAM = registerBlock("deco_beam",
             () -> new Block(BlockBehaviour.Properties.of()
                     .strength(0.5F, 6.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops()));
 

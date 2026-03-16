@@ -126,10 +126,11 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.DECO_STEEL_DARK.get());
             event.accept(ModBlocks.DECO_STEEL_SMOG.get());
             event.accept(ModBlocks.DECO_LEAD.get());
+            event.accept(ModBlocks.DECO_BEAM.get());
+            event.accept(ModBlocks.BEAM_BLOCK.get());
             // Другие строительные блоки
             event.accept(ModBlocks.CRATE.get());
             event.accept(ModBlocks.CRATE_AMMO.get());
-            event.accept(ModBlocks.BEAM_BLOCK.get());
 
         }
 
@@ -150,7 +151,6 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.SHAFT_PLACER);
             event.accept(ModBlocks.MINING_PORT);
 
-            event.accept(ModItems.WIRE_COIL);
             event.accept(ModBlocks.CONNECTOR);
             event.accept(ModBlocks.MEDIUM_CONNECTOR);
             event.accept(ModBlocks.LARGE_CONNECTOR);
@@ -188,7 +188,6 @@ public class CrustalIncursionMod {
         if (event.getTab() == ModCreativeTabs.CIM_WEAPONS_TAB.get()) {
 
             event.accept(ModBlocks.DET_MINER);
-            event.accept(ModItems.TURRET_CHIP);
             event.accept(ModItems.TURRET_LIGHT_PORTATIVE_PLACER);
             event.accept(ModItems.MACHINEGUN);
             event.accept(ModBlocks.TURRET_LIGHT_PLACER);
@@ -214,7 +213,11 @@ public class CrustalIncursionMod {
         if (event.getTab() == ModCreativeTabs.CIM_TOOLS_TAB.get()) {
 
             event.accept(ModItems.SCREWDRIVER.get());
+            event.accept(ModItems.BEAM_PLACER.get());
             event.accept(ModItems.CROWBAR.get());
+            event.accept(ModItems.WIRE_COIL);
+
+            event.accept(ModItems.TURRET_CHIP);
 
             event.accept(ModItems.DETONATOR);
             event.accept(ModItems.MULTI_DETONATOR);
