@@ -9,6 +9,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
@@ -24,14 +25,15 @@ import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
 public class HiveRootsBlock extends Block implements BonemealableBlock {
-    // AGE = 0, 1, 2... максимальная высота сегмента (0 = нижний/верхний конец)
-    public static final IntegerProperty AGE = BlockStateProperties.AGE_3; // 0-3, можно заменить на AGE_25 для большей высоты
-    // UP = true если есть продолжение сверху
+    public static final IntegerProperty AGE = BlockStateProperties.AGE_3;
     public static final BooleanProperty UP = BlockStateProperties.UP;
-    // DOWN = true если есть продолжение снизу
     public static final BooleanProperty DOWN = BlockStateProperties.DOWN;
-    // HANGING = true если растёт сверху вниз (как лианы)
     public static final BooleanProperty HANGING = BooleanProperty.create("hanging");
+
+    // ⭐ НАСТРОЙКИ РОСТА
+    private static final int GROWTH_CHANCE = 4; // 25% шанс (1/4) как у лиан
+    private static final int MAX_LENGTH = 25; // Как twisting/weeping vines
+    private static final int BONE_MEAL_GROWTH = 3; // Сколько блоков добавляет костная мука
 
     public HiveRootsBlock(Properties properties) {
         super(properties);
@@ -47,22 +49,17 @@ public class HiveRootsBlock extends Block implements BonemealableBlock {
         boolean hanging = state.getValue(HANGING);
 
         if (hanging) {
-            // Висячие корни: должны быть прикреплены к блоку СВЕРХУ или к другому висячему корню
             BlockPos abovePos = pos.above();
             BlockState above = level.getBlockState(abovePos);
-
-            // Либо к опорному блоку, либо к другому висячему корню с DOWN=true
             return above.is(ModBlocks.HIVE_SOIL.get())
                     || above.is(ModBlocks.DEPTH_WORM_NEST.get())
-                    || (above.is(this) && above.getValue(HANGING) && above.getValue(DOWN));
+                    || (above.is(this) && above.getValue(HANGING));
         } else {
-            // Растущие вверх корни: должны стоять на блоке СНИЗУ или на другом корне
             BlockPos belowPos = pos.below();
             BlockState below = level.getBlockState(belowPos);
-
             return below.is(ModBlocks.HIVE_SOIL.get())
                     || below.is(ModBlocks.DEPTH_WORM_NEST.get())
-                    || (below.is(this) && !below.getValue(HANGING) && below.getValue(UP));
+                    || (below.is(this) && !below.getValue(HANGING));
         }
     }
 
@@ -72,34 +69,25 @@ public class HiveRootsBlock extends Block implements BonemealableBlock {
         BlockPos pos = context.getClickedPos();
         Direction face = context.getClickedFace();
 
-        // Определяем, висячие это корни или растущие вверх
-        // Если кликаем по потолку (face == DOWN) или снизу в блок — висячие
         boolean hanging = false;
-        BlockPos supportPos;
 
         if (face == Direction.DOWN) {
-            // Кликнули по дну блока сверху — висячие корни
             hanging = true;
-            supportPos = pos.above();
         } else if (face == Direction.UP) {
-            // Кликнули по верху блока снизу — обычные корни
             hanging = false;
-            supportPos = pos.below();
         } else {
-            // Кликнули сбоку — определяем по ближайшему опорному блоку
             BlockState above = level.getBlockState(pos.above());
             BlockState below = level.getBlockState(pos.below());
 
-            if (above.is(ModBlocks.HIVE_SOIL.get()) || above.is(ModBlocks.DEPTH_WORM_NEST.get())) {
+            if (above.is(ModBlocks.HIVE_SOIL.get()) || above.is(ModBlocks.DEPTH_WORM_NEST.get()) ||
+                    (above.is(this) && above.getValue(HANGING))) {
                 hanging = true;
-                supportPos = pos.above();
             } else {
                 hanging = false;
-                supportPos = pos.below();
             }
         }
 
-        // Проверяем валидность опоры
+        BlockPos supportPos = hanging ? pos.above() : pos.below();
         BlockState support = level.getBlockState(supportPos);
         boolean validSupport = support.is(ModBlocks.HIVE_SOIL.get())
                 || support.is(ModBlocks.DEPTH_WORM_NEST.get())
@@ -112,73 +100,45 @@ public class HiveRootsBlock extends Block implements BonemealableBlock {
         return this.defaultBlockState().setValue(HANGING, hanging);
     }
 
-    // Добавление нового сегмента при клике
+    // ⭐ КОСТНАЯ МУКА: Клик мукой
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         ItemStack stack = player.getItemInHand(hand);
 
-        if (!stack.is(this.asItem())) {
-            return InteractionResult.PASS;
-        }
-
-        boolean hanging = state.getValue(HANGING);
-        Direction growDir = hanging ? Direction.DOWN : Direction.UP;
-        BlockPos newPos = pos.relative(growDir);
-
-        // Проверяем, можно ли расти дальше
-        if (!level.getBlockState(newPos).isAir()) {
-            return InteractionResult.PASS;
-        }
-
-        if (!level.isClientSide) {
-            // Ставим новый блок
-            BlockState newState = this.defaultBlockState()
-                    .setValue(HANGING, hanging)
-                    .setValue(AGE, Math.min(state.getValue(AGE) + 1, 3));
-
-            level.setBlock(newPos, newState, 3);
-
-            // Обновляем текущий блок — теперь у него есть продолжение
-            level.setBlock(pos, state.setValue(hanging ? DOWN : UP, true), 3);
-
-            if (!player.getAbilities().instabuild) {
-                stack.shrink(1);
+        if (stack.is(Items.BONE_MEAL)) {
+            if (!level.isClientSide) {
+                if (this.isValidBonemealTarget(level, pos, state, false)) {
+                    this.performBonemeal((ServerLevel) level, level.getRandom(), pos, state);
+                    if (!player.getAbilities().instabuild) {
+                        stack.shrink(1);
+                    }
+                    level.levelEvent(1505, pos, 0);
+                    return InteractionResult.SUCCESS;
+                }
             }
+            return InteractionResult.CONSUME;
         }
 
-        return InteractionResult.sidedSuccess(level.isClientSide);
+        return InteractionResult.PASS;
     }
 
-    // Случайный тик для роста (как лианы)
+    // ⭐ ЕСТЕСТВЕННЫЙ РОСТ: 25% шанс как у лиан
     @Override
     public void randomTick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
-        if (random.nextInt(5) != 0) return; // 20% шанс
+        // 25% шанс роста (1/4) — как у лиан в джунглях
+        if (random.nextInt(GROWTH_CHANCE) != 0) return;
 
-        boolean hanging = state.getValue(HANGING);
-        Direction growDir = hanging ? Direction.DOWN : Direction.UP;
-        BlockPos growPos = pos.relative(growDir);
+        if (isMaxLength(level, pos, state.getValue(HANGING))) return;
 
-        // Растём только если воздух и не слишком длинно
-        if (level.getBlockState(growPos).isAir() && state.getValue(AGE) < 3) {
-            // Проверяем длину цепочки
-            int length = getLength(level, pos, hanging);
-            if (length < 15) { // Максимальная длина 15 блоков
-                BlockState newState = this.defaultBlockState()
-                        .setValue(HANGING, hanging)
-                        .setValue(AGE, state.getValue(AGE) + 1);
-
-                level.setBlock(growPos, newState, 3);
-                level.setBlock(pos, state.setValue(hanging ? DOWN : UP, true), 3);
-            }
+        if (canGrowFurther(level, pos, state)) {
+            grow(level, pos, state, random);
         }
     }
 
     @Override
     public boolean isValidBonemealTarget(LevelReader level, BlockPos pos, BlockState state, boolean isClient) {
-        boolean hanging = state.getValue(HANGING);
-        Direction growDir = hanging ? Direction.DOWN : Direction.UP;
-        BlockPos growPos = pos.relative(growDir);
-        return level.getBlockState(growPos).isAir() && getLength(level, pos, hanging) < 15;
+        return canGrowFurther((Level) level, pos, state)
+                && !isMaxLength((Level) level, pos, state.getValue(HANGING));
     }
 
     @Override
@@ -186,23 +146,67 @@ public class HiveRootsBlock extends Block implements BonemealableBlock {
         return true;
     }
 
+    // ⭐ КОСТНАЯ МУКА: Мгновенный рост на 2-3 блока
     @Override
     public void performBonemeal(ServerLevel level, RandomSource random, BlockPos pos, BlockState state) {
+        // Растём на BONE_MEAL_GROWTH блоков сразу
+        BlockState currentState = state;
+        BlockPos currentPos = pos;
+
+        for (int i = 0; i < BONE_MEAL_GROWTH; i++) {
+            if (!canGrowFurther(level, currentPos, currentState)) break;
+            if (isMaxLength(level, currentPos, currentState.getValue(HANGING))) break;
+
+            grow(level, currentPos, currentState, random);
+
+            // Находим новый конец цепочки для следующей итерации
+            boolean hanging = currentState.getValue(HANGING);
+            Direction growDir = hanging ? Direction.DOWN : Direction.UP;
+            currentPos = currentPos.relative(growDir);
+            currentState = level.getBlockState(currentPos);
+
+            // Если не смогли поставить блок, прерываемся
+            if (!currentState.is(this)) break;
+        }
+    }
+
+    private boolean canGrowFurther(Level level, BlockPos pos, BlockState state) {
+        boolean hanging = state.getValue(HANGING);
+        Direction growDir = hanging ? Direction.DOWN : Direction.UP;
+        BlockPos growPos = pos.relative(growDir);
+        return level.getBlockState(growPos).isAir();
+    }
+
+    private boolean isMaxLength(Level level, BlockPos pos, boolean hanging) {
+        return getLength(level, pos, hanging) >= MAX_LENGTH;
+    }
+
+    private void grow(ServerLevel level, BlockPos pos, BlockState state, RandomSource random) {
         boolean hanging = state.getValue(HANGING);
         Direction growDir = hanging ? Direction.DOWN : Direction.UP;
         BlockPos growPos = pos.relative(growDir);
 
-        if (level.getBlockState(growPos).isAir()) {
-            BlockState newState = this.defaultBlockState()
-                    .setValue(HANGING, hanging)
-                    .setValue(AGE, Math.min(state.getValue(AGE) + 1, 3));
+        if (!level.getBlockState(growPos).isAir()) return;
+        if (isMaxLength(level, pos, hanging)) return;
 
-            level.setBlock(growPos, newState, 3);
-            level.setBlock(pos, state.setValue(hanging ? DOWN : UP, true), 3);
+        BlockState newState = this.defaultBlockState()
+                .setValue(HANGING, hanging)
+                .setValue(AGE, Math.min(state.getValue(AGE) + 1, 3));
+
+        level.setBlock(growPos, newState, 3);
+
+        // Обновляем текущий блок — теперь у него есть продолжение
+        if (hanging) {
+            level.setBlock(pos, state.setValue(DOWN, true), 3);
+        } else {
+            level.setBlock(pos, state.setValue(UP, true), 3);
         }
+
+        // Частицы роста
+        level.levelEvent(1505, growPos, 0);
     }
 
-    // Подсчёт длины цепочки корней
+    // Подсчёт длины цепочки в направлении роста
     private int getLength(LevelReader level, BlockPos pos, boolean hanging) {
         int length = 1;
         Direction dir = hanging ? Direction.DOWN : Direction.UP;
@@ -211,20 +215,18 @@ public class HiveRootsBlock extends Block implements BonemealableBlock {
         while (level.getBlockState(checkPos).is(this)) {
             length++;
             checkPos = checkPos.relative(dir);
-            if (length > 20) break; // Защита от бесконечного цикла
+            if (length > MAX_LENGTH + 5) break; // Защита
         }
 
         return length;
     }
 
-    // Разрушение цепочки
     @Override
     public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide) {
             boolean hanging = state.getValue(HANGING);
             Direction breakDir = hanging ? Direction.DOWN : Direction.UP;
 
-            // Ломаем всю цепочку ниже/выше
             BlockPos breakPos = pos.relative(breakDir);
             while (level.getBlockState(breakPos).is(this)) {
                 BlockState breakState = level.getBlockState(breakPos);
@@ -242,41 +244,30 @@ public class HiveRootsBlock extends Block implements BonemealableBlock {
     @Override
     public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
                                   LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
-
         boolean hanging = state.getValue(HANGING);
-
-        // Проверяем опору
         Direction supportDir = hanging ? Direction.UP : Direction.DOWN;
+
         if (direction == supportDir) {
             if (!canSurvive(state, level, pos)) {
                 return Blocks.AIR.defaultBlockState();
             }
         }
 
-        // Обновляем состояние UP/DOWN на основе соседей
         if (direction == Direction.UP && !hanging) {
             boolean hasUp = neighborState.is(this) && !neighborState.getValue(HANGING);
-            if (state.getValue(UP) != hasUp) {
-                return state.setValue(UP, hasUp);
-            }
+            return state.setValue(UP, hasUp);
         }
         if (direction == Direction.DOWN && !hanging) {
             boolean hasDown = neighborState.is(this) && !neighborState.getValue(HANGING);
-            if (state.getValue(DOWN) != hasDown) {
-                return state.setValue(DOWN, hasDown);
-            }
+            return state.setValue(DOWN, hasDown);
         }
         if (direction == Direction.UP && hanging) {
             boolean hasUp = neighborState.is(this) && neighborState.getValue(HANGING);
-            if (state.getValue(UP) != hasUp) {
-                return state.setValue(UP, hasUp);
-            }
+            return state.setValue(UP, hasUp);
         }
         if (direction == Direction.DOWN && hanging) {
             boolean hasDown = neighborState.is(this) && neighborState.getValue(HANGING);
-            if (state.getValue(DOWN) != hasDown) {
-                return state.setValue(DOWN, hasDown);
-            }
+            return state.setValue(DOWN, hasDown);
         }
 
         return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
