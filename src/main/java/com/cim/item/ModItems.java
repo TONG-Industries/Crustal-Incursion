@@ -130,4 +130,6 @@ public class ModItems {
             () -> new ModBatteryItem(new Item.Properties(), 250000, 1000, 1000));
     public static final RegistryObject<Item> BATTERY_TRIXITE = ITEMS.register("battery_trixite",
             () -> new ModBatteryItem(new Item.Properties(), 5000000, 40000, 200000));
+    public static final RegistryObject<Item> MORY_LAH = ITEMS.register("mory_lah",
+            () -> new Item(new Item.Properties()));
 }

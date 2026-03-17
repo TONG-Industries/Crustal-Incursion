@@ -73,6 +73,7 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(ModItems.GRENADE_IF_FIRE);
         simpleItem(ModItems.GRENADE_IF_SLIME);
         simpleItem(ModItems.GRENADE_IF);
+        simpleItem(ModItems.MORY_LAH);
 
         simpleBlockItem(ModBlocks.CONNECTOR);
         simpleBlockItem(ModBlocks.MEDIUM_CONNECTOR);

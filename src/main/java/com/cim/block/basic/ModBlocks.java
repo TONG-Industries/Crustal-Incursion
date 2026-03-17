@@ -296,6 +296,12 @@ public class ModBlocks {
                     return 30; // Шанс, что огонь перекинется на этот блок
                 }});
 
+    public static final RegistryObject<Block> MORY_BLOCK = registerBlock("mory_block",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
+    public static final RegistryObject<Block> ANTON_CHIGUR = registerBlock("anton_chigur",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.WOOD).requiresCorrectToolForDrops()));
 
 
 
