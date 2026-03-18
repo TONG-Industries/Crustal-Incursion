@@ -68,6 +68,9 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(ModItems.GRENADE_IF_FIRE);
         simpleItem(ModItems.GRENADE_IF_SLIME);
         simpleItem(ModItems.GRENADE_IF);
+        simpleItem(ModItems.MORY_FOOD);
+        simpleItem(ModItems.COFFEE);
+        simpleItem(ModItems.MORY_LAH);
 
         // Пример регистрации блоков как предметов (если это обычный куб)
         // complexBlockItem(ModBlocks.NECROTIC_ORE);

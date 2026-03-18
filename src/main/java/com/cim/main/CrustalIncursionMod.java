@@ -198,6 +198,7 @@ public class CrustalIncursionMod {
             event.accept(ModItems.GRENADE_IF_SLIME);
             event.accept(ModItems.GRENADE_IF_FIRE);
             event.accept(ModItems.GRENADE_NUC);
+            event.accept(ModItems.MORY_LAH);
 
         }
 
@@ -229,6 +230,13 @@ public class CrustalIncursionMod {
             event.accept(ModItems.DEPTH_WORM_SPAWN_EGG);
             event.accept(ModBlocks.DEPTH_WORM_NEST);
             event.accept(ModBlocks.HIVE_SOIL);
+            event.accept(ModBlocks.MORY_BLOCK);
+        }
+
+        if (event.getTab() == ModCreativeTabs.CIM_FOOD_TAB.get()) {
+
+            event.accept(ModItems.MORY_FOOD.get());
+            event.accept(ModItems.COFFEE.get());
         }
     }
 
