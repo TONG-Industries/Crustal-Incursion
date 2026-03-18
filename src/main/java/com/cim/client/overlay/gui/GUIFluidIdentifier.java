@@ -287,14 +287,6 @@ public class GUIFluidIdentifier extends Screen {
         int x = this.leftPos;
         int y = this.topPos;
 
-        // Поиск
-        if (mouseX >= x + 22 && mouseX <= x + 37 && mouseY >= y + 9 && mouseY <= y + 24) {
-            timerSearch = PRESS_DURATION;
-            playClickSound();
-            this.searchBox.setFocused(true);
-            return true;
-        }
-
         // Очистка
         if (mouseX >= x + 105 && mouseX <= x + 117 && mouseY >= y + 33 && mouseY <= y + 66) {
             timerClear = PRESS_DURATION;

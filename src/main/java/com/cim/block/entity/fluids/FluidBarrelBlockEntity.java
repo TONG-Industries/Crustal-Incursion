@@ -29,10 +29,11 @@ import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.Nullable;
 import com.cim.menu.FluidBarrelMenu;
 import com.cim.block.entity.ModBlockEntities;
+import com.cim.item.ModItems; // для защитников
 
 public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider {
 
@@ -41,7 +42,7 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
 
     public String fluidFilter = "none";
 
-    // Хранилище жидкости (например, 16000 mB = 16 ведер)
+    // Хранилище жидкости (16 ведёр = 16000 mB)
     public final FluidTank fluidTank = new FluidTank(16000) {
         @Override
         protected void onContentsChanged() {
@@ -51,30 +52,39 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
             }
         }
 
-        // Запрещаем заливать жидкость, если она не совпадает с фильтром
+        // Проверка фильтра
         @Override
         public boolean isFluidValid(FluidStack stack) {
             if (!fluidFilter.equals("none")) {
                 ResourceLocation stackLoc = ForgeRegistries.FLUIDS.getKey(stack.getFluid());
                 if (stackLoc != null && !stackLoc.toString().equals(fluidFilter)) {
-                    return false; // Отклоняем чужую жидкость!
+                    return false;
                 }
             }
             return super.isFluidValid(stack);
         }
     };
 
-    // 0: Full in, 1: Empty out | 2: Empty in, 3: Full out
-    public final ItemStackHandler itemHandler = new ItemStackHandler(4) {
+    // 0: Full in, 1: Empty out | 2: Empty in, 3: Full out | 4: Protector
+    public final ItemStackHandler itemHandler = new ItemStackHandler(5) { // увеличено до 5
         @Override
-        protected void onContentsChanged(int slot) { setChanged(); }
+        protected void onContentsChanged(int slot) {
+            setChanged();
+        }
 
         @Override
         public boolean isItemValid(int slot, @NotNull ItemStack stack) {
+            if (slot == 4) {
+                // Слот для защитника: только PROTECTOR_STEEL, LEAD, TUNGSTEN
+                return stack.getItem() == ModItems.PROTECTOR_STEEL.get() ||
+                        stack.getItem() == ModItems.PROTECTOR_LEAD.get() ||
+                        stack.getItem() == ModItems.PROTECTOR_TUNGSTEN.get();
+            }
+            // Для слотов вёдер (0 и 2) требуется наличие жидкости в предмете
             if (slot == 0 || slot == 2) {
                 return stack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).isPresent();
             }
-            return false;
+            return false; // слоты 1 и 3 автоматически не принимают предметы (только вывод)
         }
     };
 
@@ -88,7 +98,6 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
     };
 
     public FluidBarrelBlockEntity(BlockPos pos, BlockState state) {
-        // Убедись, что зарегистрировал FLUID_BARREL_BE в ModBlockEntities
         super(ModBlockEntities.FLUID_BARREL_BE.get(), pos, state);
     }
 
@@ -98,26 +107,33 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
     }
 
     private void processBuckets() {
-        // 1. Опустошение полного ведра (Слот 0 -> Слот 1)
-        ItemStack fullIn = itemHandler.getStackInSlot(0);
-        if (!fullIn.isEmpty()) {
-            var result = FluidUtil.tryEmptyContainer(fullIn, fluidTank, fluidTank.getSpace(), null, true);
-            if (result.isSuccess()) {
-                ItemStack emptyOut = result.getResult();
-                if (insertToOutput(1, emptyOut)) {
-                    fullIn.shrink(1);
+        // Если режим отключён — ничего не делаем
+        if (mode == 3) return;
+
+        // 1. Опустошение полного ведра (Слот 0 -> Слот 1) — разрешено в режимах BOTH и INPUT
+        if (mode == 0 || mode == 1) {
+            ItemStack fullIn = itemHandler.getStackInSlot(0);
+            if (!fullIn.isEmpty()) {
+                var result = FluidUtil.tryEmptyContainer(fullIn, fluidTank, fluidTank.getSpace(), null, true);
+                if (result.isSuccess()) {
+                    ItemStack emptyOut = result.getResult();
+                    if (insertToOutput(1, emptyOut)) {
+                        fullIn.shrink(1);
+                    }
                 }
             }
         }
 
-        // 2. Наполнение пустого ведра (Слот 2 -> Слот 3)
-        ItemStack emptyIn = itemHandler.getStackInSlot(2);
-        if (!emptyIn.isEmpty() && fluidTank.getFluidAmount() > 0) {
-            var result = FluidUtil.tryFillContainer(emptyIn, fluidTank, fluidTank.getFluidAmount(), null, true);
-            if (result.isSuccess()) {
-                ItemStack fullOut = result.getResult();
-                if (insertToOutput(3, fullOut)) {
-                    emptyIn.shrink(1);
+        // 2. Наполнение пустого ведра (Слот 2 -> Слот 3) — разрешено в режимах BOTH и OUTPUT
+        if (mode == 0 || mode == 2) {
+            ItemStack emptyIn = itemHandler.getStackInSlot(2);
+            if (!emptyIn.isEmpty() && fluidTank.getFluidAmount() > 0) {
+                var result = FluidUtil.tryFillContainer(emptyIn, fluidTank, fluidTank.getFluidAmount(), null, true);
+                if (result.isSuccess()) {
+                    ItemStack fullOut = result.getResult();
+                    if (insertToOutput(3, fullOut)) {
+                        emptyIn.shrink(1);
+                    }
                 }
             }
         }
@@ -144,10 +160,18 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
         if (!newFilter.equals("none") && !fluidTank.isEmpty()) {
             ResourceLocation currentFluidLoc = ForgeRegistries.FLUIDS.getKey(fluidTank.getFluid().getFluid());
             if (currentFluidLoc != null && !currentFluidLoc.toString().equals(newFilter)) {
-                fluidTank.setFluid(FluidStack.EMPTY); // Сливаем в никуда
+                fluidTank.setFluid(FluidStack.EMPTY);
             }
         }
 
+        setChanged();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    public void changeMode() {
+        this.mode = (this.mode + 1) % 4;
         setChanged();
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
@@ -195,17 +219,12 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
         tag.putString("FluidFilter", this.fluidFilter);
     }
 
-    public void changeMode() {
-        this.mode = (this.mode + 1) % 4; // Переключаем 0-1-2-3
-        setChanged();
-        if (level != null && !level.isClientSide) {
-            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
-        }
+    @Override
+    public CompoundTag getUpdateTag() {
+        return saveWithoutMetadata();
     }
 
-    @Override
-    public CompoundTag getUpdateTag() { return saveWithoutMetadata(); }
-
+    @Nullable
     @Override
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
