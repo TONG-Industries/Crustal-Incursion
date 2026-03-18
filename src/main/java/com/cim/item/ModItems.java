@@ -6,7 +6,11 @@ import com.cim.entity.weapons.grenades.GrenadeType;
 import com.cim.item.energy.EnergyCellItem;
 import com.cim.item.food.FoodZamaz;
 import com.cim.item.mobs.MoryLahItem;
+import com.cim.item.energy.WireCoilItem;
 import com.cim.item.rotation.*;
+import com.cim.item.tools.BeamPlacerItem;
+import com.cim.item.tools.FluidIdentifierItem;
+import com.cim.item.tools.ScrewdriverItem;
 import com.cim.item.weapons.grenades.GrenadeIfItem;
 import com.cim.item.weapons.grenades.GrenadeItem;
 import com.cim.item.weapons.grenades.GrenadeNucItem;
@@ -50,6 +54,21 @@ public class ModItems {
             () -> new MultiDetonatorItem(new Item.Properties()));
     public static final RegistryObject<Item> DETONATOR = ITEMS.register("detonator",
             () -> new DetonatorItem(new Item.Properties()));
+
+    public static final RegistryObject<Item> WIRE_COIL = ITEMS.register("wire_coil",
+            () -> new WireCoilItem(new Item.Properties().stacksTo(64)));
+
+    public static final RegistryObject<Item> BEAM_PLACER = ITEMS.register("beam_placer",
+            () -> new BeamPlacerItem(new Item.Properties().stacksTo(1)));
+
+    public static final RegistryObject<Item> FLUID_IDENTIFIER = ITEMS.register("fluid_identifier",
+            () -> new FluidIdentifierItem(new Item.Properties()));
+    public static final RegistryObject<Item> PROTECTOR_LEAD = ITEMS.register("protector_lead",
+            () -> new Item(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> PROTECTOR_STEEL = ITEMS.register("protector_steel",
+            () -> new Item(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> PROTECTOR_TUNGSTEN = ITEMS.register("protector_tungsten",
+            () -> new Item(new Item.Properties().stacksTo(1)));
 
     //ОРУЖИЕ
     public static final RegistryObject<Item> MACHINEGUN = ITEMS.register("machinegun",
@@ -140,4 +159,6 @@ public class ModItems {
             () -> new ModBatteryItem(new Item.Properties(), 250000, 1000, 1000));
     public static final RegistryObject<Item> BATTERY_TRIXITE = ITEMS.register("battery_trixite",
             () -> new ModBatteryItem(new Item.Properties(), 5000000, 40000, 200000));
+    public static final RegistryObject<Item> MORY_LAH = ITEMS.register("mory_lah",
+            () -> new Item(new Item.Properties()));
 }

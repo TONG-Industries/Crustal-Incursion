@@ -1,6 +1,8 @@
 package com.cim.main;
 
 
+import com.cim.api.fluids.ModFluids;
+import com.cim.api.hive.HiveNetworkManager;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -57,7 +59,7 @@ public class CrustalIncursionMod {
 
         ModCreativeTabs.register(modEventBus);
         GeckoLib.initialize();
-
+        this.registerCapabilities(modEventBus);
         ModBlocks.register(modEventBus); // 1. Сначала блоки
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
@@ -69,9 +71,10 @@ public class CrustalIncursionMod {
         modEventBus.addListener(this::commonSetup);
         MinecraftForge.EVENT_BUS.register(this);
         modEventBus.addListener(this::addCreative);
-        registerCapabilities(modEventBus);
         ModTrunkPlacerTypes.register(modEventBus);
         ModFoliagePlacerTypes.register(modEventBus);
+        ModFluids.register(modEventBus);
+        MinecraftForge.EVENT_BUS.register(new HiveEventHandler());
 
     }
     private void registerCapabilities(IEventBus modEventBus) {
@@ -125,10 +128,13 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.DECO_STEEL_DARK.get());
             event.accept(ModBlocks.DECO_STEEL_SMOG.get());
             event.accept(ModBlocks.DECO_LEAD.get());
+            event.accept(ModBlocks.DECO_BEAM.get());
+            event.accept(ModBlocks.BEAM_BLOCK.get());
             // Другие строительные блоки
             event.accept(ModBlocks.CRATE.get());
             event.accept(ModBlocks.CRATE_AMMO.get());
-        }
+            event.accept(ModBlocks.MORY_BLOCK);
+            event.accept(ModBlocks.ANTON_CHIGUR);        }
 
 
         if (event.getTab() == ModCreativeTabs.CIM_TECH_TAB.get()) {
@@ -147,13 +153,16 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.SHAFT_PLACER);
             event.accept(ModBlocks.MINING_PORT);
 
+            event.accept(ModBlocks.FLUID_BARREL);
+
+            event.accept(ModBlocks.CONNECTOR);
+            event.accept(ModBlocks.MEDIUM_CONNECTOR);
+            event.accept(ModBlocks.LARGE_CONNECTOR);
             event.accept(ModBlocks.WIRE_COATED);
             event.accept(ModBlocks.SWITCH);
             event.accept(ModBlocks.CONVERTER_BLOCK);
             event.accept(ModBlocks.MACHINE_BATTERY);
-
             event.accept(ModItems.ENERGY_CELL_BASIC);
-
             event.accept(ModItems.CREATIVE_BATTERY);
             List<RegistryObject<Item>> batteriesToAdd = List.of(
                     ModItems.BATTERY,
@@ -178,7 +187,6 @@ public class CrustalIncursionMod {
         if (event.getTab() == ModCreativeTabs.CIM_WEAPONS_TAB.get()) {
 
             event.accept(ModBlocks.DET_MINER);
-            event.accept(ModItems.TURRET_CHIP);
             event.accept(ModItems.TURRET_LIGHT_PORTATIVE_PLACER);
             event.accept(ModItems.MACHINEGUN);
             event.accept(ModBlocks.TURRET_LIGHT_PLACER);
@@ -205,12 +213,23 @@ public class CrustalIncursionMod {
         if (event.getTab() == ModCreativeTabs.CIM_TOOLS_TAB.get()) {
 
             event.accept(ModItems.SCREWDRIVER.get());
+            event.accept(ModItems.BEAM_PLACER.get());
+            event.accept(ModItems.FLUID_IDENTIFIER.get());
             event.accept(ModItems.CROWBAR.get());
+            event.accept(ModItems.WIRE_COIL);
+            event.accept(ModItems.PROTECTOR_STEEL);
+            event.accept(ModItems.PROTECTOR_LEAD);
+            event.accept(ModItems.PROTECTOR_TUNGSTEN);
+
+
+            event.accept(ModItems.TURRET_CHIP);
 
             event.accept(ModItems.DETONATOR);
             event.accept(ModItems.MULTI_DETONATOR);
             event.accept(ModItems.RANGE_DETONATOR);
 
+            event.accept(ModItems.MORY_FOOD.get());
+            event.accept(ModItems.COFFEE.get());
         }
 
         if (event.getTab() == ModCreativeTabs.CIM_NATURE_TAB.get()) {
@@ -230,15 +249,12 @@ public class CrustalIncursionMod {
             event.accept(ModItems.DEPTH_WORM_SPAWN_EGG);
             event.accept(ModBlocks.DEPTH_WORM_NEST);
             event.accept(ModBlocks.HIVE_SOIL);
-            event.accept(ModBlocks.MORY_BLOCK);
+            event.accept(ModBlocks.HIVE_ROOTS.get()); // Обычная версия
+            event.accept(ModBlocks.DEPTH_WORM_NEST_DEAD);
+            event.accept(ModBlocks.HIVE_SOIL_DEAD);
         }
 
-        if (event.getTab() == ModCreativeTabs.CIM_FOOD_TAB.get()) {
-
-            event.accept(ModItems.MORY_FOOD.get());
-            event.accept(ModItems.COFFEE.get());
-        }
-    }
+       }
 
     // Метод регистрации атрибутов (здоровье, урон и т.д.)
     private void entityAttributeEvent(net.minecraftforge.event.entity.EntityAttributeCreationEvent event) {
@@ -261,11 +277,26 @@ public class CrustalIncursionMod {
         }
     }
     @SubscribeEvent
-    public void onAttachCapabilitiesLevel(AttachCapabilitiesEvent<Level> event) {
-        // Проверка, чтобы не прикрепить дважды
+    public void onAttachCapabilities(AttachCapabilitiesEvent<Level> event) {
         if (!event.getObject().isClientSide) {
             event.addCapability(new ResourceLocation("cim", "hive_network_manager"),
                     new HiveNetworkManagerProvider());
+            System.out.println("DEBUG: Capability Attached to Level!");
+        }
+    }
+
+
+    @Mod.EventBusSubscriber(modid = "cim", bus = Mod.EventBusSubscriber.Bus.FORGE)
+    public class HiveEventHandler {
+        @SubscribeEvent
+        public static void onWorldTick(TickEvent.LevelTickEvent event) {
+            // Обязательно проверяем сторону (Server) и фазу (END)
+            if (event.phase == TickEvent.Phase.END && event.level instanceof ServerLevel serverLevel) {
+                HiveNetworkManager manager = HiveNetworkManager.get(serverLevel);
+                if (manager != null) {
+                    manager.tick(serverLevel);
+                }
+            }
         }
     }
 

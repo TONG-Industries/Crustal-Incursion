@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=up":    { "model": "cim:block/large_connector" },
+    "facing=down":  { "model": "cim:block/large_connector", "x": 180 },
+    "facing=north": { "model": "cim:block/large_connector", "x": 90 },
+    "facing=south": { "model": "cim:block/large_connector", "x": 90, "y": 180 },
+    "facing=west":  { "model": "cim:block/large_connector", "x": 90, "y": 270 },
+    "facing=east":  { "model": "cim:block/large_connector", "x": 90, "y": 90 }
+  }
+}

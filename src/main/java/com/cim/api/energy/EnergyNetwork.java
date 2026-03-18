@@ -1,5 +1,6 @@
 package com.cim.api.energy;
 
+import com.cim.block.entity.energy.ConnectorBlockEntity;
 import com.mojang.logging.LogUtils;
 
 import net.minecraft.core.BlockPos;
@@ -16,6 +17,8 @@ import java.util.*;
  * ===================================================================
  * EnergyNetwork.java - ВЕРСИЯ 7.0 (Cascading Priority Flow)
  * Решает проблемы перетока энергии между приоритетами.
+ * РАПТОР ЕСЛИ ТЫ ХОЧЕШЬ СПИЗДИТЬ ЭТОТ КОД ТО ТЫ ПЕТУХ
+ * АНАЛЬНЫЙ ЧЕРВЯЧОК ПРИДЁТ К ТЕБЕ И ...
  * ===================================================================
  */
 public class EnergyNetwork {
@@ -24,6 +27,8 @@ public class EnergyNetwork {
     private final EnergyNetworkManager manager;
     private final Set<EnergyNode> nodes = new HashSet<>();
     private final UUID id = UUID.randomUUID();
+
+
 
     public EnergyNetwork(EnergyNetworkManager manager) {
         this.manager = manager;
@@ -99,6 +104,14 @@ public class EnergyNetwork {
 
         // Превращаем уникальные коллекции в списки для работы алгоритма
         List<IEnergyProvider> pureGenerators = new ArrayList<>(uniqueGenerators);
+
+        if (level.getGameTime() % 60 == 0) {
+            LOGGER.info("=== СТАТУС СЕТИ [{}] ===", id.toString().substring(0, 5));
+            LOGGER.info("1. Всего узлов (nodes): {}", nodes.size());
+            LOGGER.info("2. Найдено чистых Генераторов: {}", pureGenerators.size());
+            LOGGER.info("3. Найдено Машин (потребителей): {}", uniqueMachines.size());
+            LOGGER.info("4. Найдено Батарей: {}", uniqueBatteries.size());
+        }
 
         // Группируем машины по приоритетам
         Map<IEnergyReceiver.Priority, List<IEnergyReceiver>> machinesByPriority = new EnumMap<>(IEnergyReceiver.Priority.class);
@@ -195,37 +208,44 @@ public class EnergyNetwork {
     /**
      * Ищет батареи в приоритетах НИЖЕ указанного и заставляет их отдать энергию.
      */
+    /**
+     * Ищет батареи в приоритетах НИЖЕ (и в ТЕКУЩЕМ) и заставляет их отдать энергию.
+     */
     private long stealFromLowerPriorities(IEnergyReceiver.Priority currentPriority, long amountNeeded,
                                           Map<IEnergyReceiver.Priority, List<BatteryInfo>> allBatteries,
                                           Map<IEnergyProvider, Long> providerPool) {
         long gathered = 0;
 
-        // Определяем, какие приоритеты ниже текущего
-        List<IEnergyReceiver.Priority> lowerPriorities = new ArrayList<>();
+        // ИСПРАВЛЕНИЕ: Порядок "грабежа".
+        // Сначала забираем у самых неважных (LOW), а если не хватило - берем у батарей СВОЕГО же уровня.
+        List<IEnergyReceiver.Priority> prioritiesToSearch = new ArrayList<>();
         if (currentPriority == IEnergyReceiver.Priority.HIGH) {
-            lowerPriorities.add(IEnergyReceiver.Priority.NORMAL);
-            lowerPriorities.add(IEnergyReceiver.Priority.LOW);
+            prioritiesToSearch.add(IEnergyReceiver.Priority.LOW);
+            prioritiesToSearch.add(IEnergyReceiver.Priority.NORMAL);
+            prioritiesToSearch.add(IEnergyReceiver.Priority.HIGH); // Свои
         } else if (currentPriority == IEnergyReceiver.Priority.NORMAL) {
-            lowerPriorities.add(IEnergyReceiver.Priority.LOW);
+            prioritiesToSearch.add(IEnergyReceiver.Priority.LOW);
+            prioritiesToSearch.add(IEnergyReceiver.Priority.NORMAL); // Свои
+        } else {
+            prioritiesToSearch.add(IEnergyReceiver.Priority.LOW); // Свои
         }
 
-        for (IEnergyReceiver.Priority p : lowerPriorities) {
+        for (IEnergyReceiver.Priority p : prioritiesToSearch) {
             if (gathered >= amountNeeded) break;
 
             for (BatteryInfo bat : allBatteries.get(p)) {
                 if (gathered >= amountNeeded) break;
 
-                // Батарея должна уметь отдавать (BOTH или OUTPUT, но здесь у нас только BOTH/INPUT, так что BOTH)
+                // Батарея должна уметь отдавать (BOTH или OUTPUT)
                 if (bat.canOutput() && bat.provider.canExtract()) {
                     long available = Math.min(bat.provider.getEnergyStored(), bat.provider.getProvideSpeed());
 
-                    // Если эта батарея уже отдала что-то в этом тике (например, в providerPool), учитываем это
+                    // Если эта батарея уже отдала что-то в этом тике, учитываем это
                     long alreadyPromised = providerPool.getOrDefault(bat.provider, 0L);
                     available -= alreadyPromised;
 
                     if (available > 0) {
                         long toTake = Math.min(available, amountNeeded - gathered);
-                        // Добавляем эту батарею в общий пул провайдеров для текущей раздачи
                         providerPool.merge(bat.provider, toTake, Long::sum);
                         gathered += toTake;
                     }
@@ -416,16 +436,28 @@ public class EnergyNetwork {
     public void removeNode(EnergyNode node) {
         if (!nodes.remove(node)) return;
         node.setNetwork(null);
+
+        // Если после удаления узла в сети остался всего 1 блок (или 0)
         if (nodes.size() < 2) {
-            for (EnergyNode remainingNode : nodes) remainingNode.setNetwork(null);
+            // ВАЖНО: Делаем копию списка, чтобы не поймать ConcurrentModificationException
+            List<EnergyNode> orphanedNodes = new ArrayList<>(nodes);
             nodes.clear();
             manager.removeNetwork(this);
+
+            // ИСПРАВЛЕНИЕ: Заставляем менеджер заново "осознать" брошенные блоки!
+            for (EnergyNode orphaned : orphanedNodes) {
+                orphaned.setNetwork(null);
+                manager.reAddNode(orphaned.getPos(), this);
+            }
         } else {
             verifyConnectivity();
         }
     }
 
     private void verifyConnectivity() {
+
+        ServerLevel level = manager.getLevel();
+
         if (nodes.isEmpty()) return;
         Set<EnergyNode> allReachableNodes = new HashSet<>();
         Queue<EnergyNode> queue = new LinkedList<>();
@@ -439,6 +471,22 @@ public class EnergyNetwork {
                 EnergyNode neighbor = manager.getNode(current.getPos().relative(dir));
                 if (neighbor != null && nodes.contains(neighbor) && allReachableNodes.add(neighbor)) {
                     queue.add(neighbor);
+                }
+            }
+
+            // ИСПРАВЛЕНО ДЛЯ МНОЖЕСТВА ПОДКЛЮЧЕНИЙ
+            if (level != null && level.isLoaded(current.getPos())) {
+                BlockEntity be = level.getBlockEntity(current.getPos());
+                if (be instanceof ConnectorBlockEntity connector) {
+                    for (BlockPos linkedPos : connector.getConnections()) {
+                        if (linkedPos != null) {
+                            EnergyNode linkedNeighbor = manager.getNode(linkedPos);
+                            if (linkedNeighbor != null && nodes.contains(linkedNeighbor)
+                                    && allReachableNodes.add(linkedNeighbor)) {
+                                queue.add(linkedNeighbor);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -477,4 +525,10 @@ public class EnergyNetwork {
     }
 
     public UUID getId() { return id; }
+
+    public int getNodeCount() {
+        return nodes.size();
+    }
+
+
 }

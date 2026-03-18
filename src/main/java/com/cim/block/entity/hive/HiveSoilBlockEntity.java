@@ -1,6 +1,7 @@
 package com.cim.block.entity.hive;
 
 
+import com.cim.api.hive.HiveNetworkManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -30,6 +31,15 @@ public class HiveSoilBlockEntity extends BlockEntity implements HiveNetworkMembe
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         if (this.networkId != null) tag.putUUID("NetworkId", this.networkId);
+    }
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (this.level != null && !this.level.isClientSide && this.networkId != null) {
+            // Регистрируем почву в менеджере при загрузке чанка
+            // false — потому что почва не является гнездом для червей
+            HiveNetworkManager.get(this.level).addNode(this.networkId, this.worldPosition, false);
+        }
     }
 
     @Override

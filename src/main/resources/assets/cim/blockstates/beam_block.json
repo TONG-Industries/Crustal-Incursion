@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=north": { "model": "cim:block/beam_block" },
+    "facing=east":  { "model": "cim:block/beam_block", "y": 90 },
+    "facing=south": { "model": "cim:block/beam_block", "y": 180 },
+    "facing=west":  { "model": "cim:block/beam_block", "y": 270 },
+    "facing=up":    { "model": "cim:block/beam_block", "x": -90 },
+    "facing=down":  { "model": "cim:block/beam_block", "x": 90 }
+  }
+}

@@ -34,7 +34,8 @@ public class ModBlockLootTableProvider extends BlockLootSubProvider {
         // --- ДЕФОЛТ (Для всех остальных) ---
         for (RegistryObject<Block> entry : ModBlocks.BLOCKS.getEntries()) {
             Block block = entry.get();
-            if (!exceptions.contains(block)) {
+            // Добавляем проверку, чтобы цикл пропускал наш BEAM_COLLISION
+            if (!exceptions.contains(block) && block != ModBlocks.BEAM_COLLISION.get()) {
                 this.dropSelf(block);
             }
         }
@@ -56,6 +57,10 @@ public class ModBlockLootTableProvider extends BlockLootSubProvider {
 
     @Override
     protected Iterable<Block> getKnownBlocks() {
-        return ModBlocks.BLOCKS.getEntries().stream().map(RegistryObject::get).collect(Collectors.toList());
+        return ModBlocks.BLOCKS.getEntries().stream()
+                .map(RegistryObject::get)
+                // Исключаем наш технический блок из проверки на наличие лута
+                .filter(block -> block != ModBlocks.BEAM_COLLISION.get())
+                .collect(Collectors.toList());
     }
 }

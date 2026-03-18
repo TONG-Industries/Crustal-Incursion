@@ -268,6 +268,11 @@ public class MachineBatteryBlockEntity extends BlockEntity implements MenuProvid
         hbmReceiver = LazyOptional.of(() -> this);
         hbmConnector = LazyOptional.of(() -> this);
 
+        if (level != null && !level.isClientSide) {
+            com.cim.api.energy.EnergyNetworkManager.get(
+                    (net.minecraft.server.level.ServerLevel) level).addNode(worldPosition);
+        }
+
         recalculateCellStats();
     }
 

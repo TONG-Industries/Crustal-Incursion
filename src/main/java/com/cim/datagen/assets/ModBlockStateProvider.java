@@ -1,9 +1,12 @@
 package com.cim.datagen.assets;
 
+import com.cim.block.basic.necrosis.hive.HiveRootsBlock;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraftforge.client.model.generators.BlockStateProvider;
+import net.minecraftforge.client.model.generators.ConfiguredModel;
 import net.minecraftforge.client.model.generators.ModelFile;
 import net.minecraftforge.client.model.generators.VariantBlockStateBuilder;
 import net.minecraftforge.common.data.ExistingFileHelper;
@@ -30,6 +33,9 @@ public class ModBlockStateProvider extends BlockStateProvider {
         cubeAllWithItem(ModBlocks.SEQUOIA_BARK);
         cubeAllWithItem(ModBlocks.SEQUOIA_HEARTWOOD);
 
+        cubeAllWithItem(ModBlocks.MORY_BLOCK);
+        cubeAllWithItem(ModBlocks.ANTON_CHIGUR);
+
         cubeAllWithItem(ModBlocks.SEQUOIA_ROOTS);
         cubeAllWithItem(ModBlocks.SEQUOIA_ROOTS_MOSSY);
         cubeAllWithItem(ModBlocks.SEQUOIA_PLANKS);
@@ -40,6 +46,8 @@ public class ModBlockStateProvider extends BlockStateProvider {
 
         cubeAllWithItem(ModBlocks.DEPTH_WORM_NEST);
         cubeAllWithItem(ModBlocks.HIVE_SOIL);
+        cubeAllWithItem(ModBlocks.HIVE_SOIL_DEAD);
+        cubeAllWithItem(ModBlocks.DEPTH_WORM_NEST_DEAD);
         cubeAllWithItem(ModBlocks.SWITCH);
         cubeAllWithItem(ModBlocks.CONVERTER_BLOCK);
         cubeAllWithItem(ModBlocks.GEAR_PORT);
@@ -69,7 +77,7 @@ public class ModBlockStateProvider extends BlockStateProvider {
         cubeAllWithItem(ModBlocks.CRATE_AMMO);
         simpleBlockWithItem(ModBlocks.WIRE_COATED.get(), models().getExistingFile(modLoc("block/wire_coated")));
 
-
+        hiveRootsBlock(ModBlocks.HIVE_ROOTS);
 
         //СТАТИЧНИЫЕ БЛОКИ У КОТОРЫХ РАЗНОЕ ДНО/ВЕРХ, ПРИМЕР:
        columnBlockWithItem(ModBlocks.WASTE_LOG,
@@ -90,7 +98,11 @@ public class ModBlockStateProvider extends BlockStateProvider {
                 modLoc("block/det_miner_top"),
                 modLoc("block/det_miner_top")
         );
-
+        columnBlockWithItem(ModBlocks.DECO_BEAM,
+                modLoc("block/deco_beam_side"),
+                modLoc("block/deco_beam_top"),
+                modLoc("block/deco_beam_top")
+        );
 
 
         //ПОВОРОТ ДЛЯ 3Д МОДЕЛИ, ПРИМЕР:
@@ -113,6 +125,61 @@ public class ModBlockStateProvider extends BlockStateProvider {
         stairsAndSlabs(ModBlocks.CONCRETE_HAZARD_OLD.get(), ModBlocks.CONCRETE_HAZARD_OLD_STAIRS.get(), ModBlocks.CONCRETE_HAZARD_OLD_SLAB.get());
 
     }
+
+
+    public void hiveRootsBlock(RegistryObject<Block> block) {
+        getVariantBuilder(block.get()).forAllStates(state -> {
+            boolean up = state.getValue(HiveRootsBlock.UP);
+            boolean down = state.getValue(HiveRootsBlock.DOWN);
+            boolean hanging = state.getValue(HiveRootsBlock.HANGING);
+
+            // Определяем модель ТОЛЬКО на основе конфигурации, без возраста
+            String modelName = block.getId().getPath();
+
+            if (hanging) {
+                // Висячие корни
+                if (!down) {
+                    // Конец висящей цепочки (нижний конец)
+                    modelName += "_hanging_end";
+                } else if (!up) {
+                    // Начало висящей цепочки (верхний конец, у опоры)
+                    modelName += "_hanging_top";
+                } else {
+                    // Середина
+                    modelName += "_hanging_middle";
+                }
+            } else {
+                // Растущие вверх корни
+                if (!up) {
+                    // Верхушка (конец)
+                    modelName += "_top";
+                } else if (!down) {
+                    // Низ (у опоры)
+                    modelName += "_bottom";
+                } else {
+                    // Середина
+                    modelName += "_middle";
+                }
+            }
+
+            // УБРАНО: добавление возраста к имени модели
+            // if (age > 0) {
+            //     modelName += "_age" + age;
+            // }
+
+            return ConfiguredModel.builder()
+                    .modelFile(models()
+                            .cross(modelName, modLoc("block/" + modelName))
+                            .renderType("cutout"))
+                    .build();
+        });
+
+        // Для инвентаря используем нижнюю часть (у опоры)
+        simpleBlockItem(block.get(), models()
+                .cross(block.getId().getPath() + "_bottom", modLoc("block/" + block.getId().getPath() + "_bottom"))
+                .renderType("cutout"));
+    }
+
 
     private void resourceBlockWithItem(RegistryObject<Block> blockObject) {
         String registrationName = blockObject.getId().getPath();

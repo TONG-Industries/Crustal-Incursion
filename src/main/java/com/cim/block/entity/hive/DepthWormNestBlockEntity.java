@@ -2,8 +2,10 @@ package com.cim.block.entity.hive;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -14,6 +16,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import com.cim.api.hive.HiveNetworkManager;
+import com.cim.api.hive.HiveNetwork;
 import com.cim.api.hive.HiveNetworkMember;
 import com.cim.block.entity.ModBlockEntities;
 import com.cim.entity.mobs.DepthWormEntity;
@@ -25,33 +28,30 @@ import java.util.UUID;
 public class DepthWormNestBlockEntity extends BlockEntity implements HiveNetworkMember {
     private UUID networkId;
     private final List<CompoundTag> storedWorms = new ArrayList<>();
+    private long lastReleaseTime = 0;
 
     public DepthWormNestBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.DEPTH_WORM_NEST.get(), pos, state);
     }
 
     @Override
-    public UUID getNetworkId() {
-        return networkId;
-    }
+    public UUID getNetworkId() { return networkId; }
 
     @Override
     public void setNetworkId(UUID id) {
         this.networkId = id;
-        setChanged();
+        this.setChanged();
     }
 
-    public boolean isFull() {
-        return storedWorms.size() >= 3;
-    }
+    public boolean isFull() { return storedWorms.size() >= 3; }
 
     public void addWorm(DepthWormEntity worm) {
         if (isFull()) return;
         CompoundTag tag = new CompoundTag();
         worm.save(tag);
+        tag.putLong("BoundNest", this.worldPosition.asLong());
         storedWorms.add(tag);
         worm.discard();
-
         if (!level.isClientSide && networkId != null) {
             HiveNetworkManager manager = HiveNetworkManager.get(level);
             if (manager != null) manager.updateWormCount(networkId, worldPosition, 1);
@@ -60,13 +60,13 @@ public class DepthWormNestBlockEntity extends BlockEntity implements HiveNetwork
     }
 
     public void addWormTag(CompoundTag tag) {
+        if (!tag.contains("BoundNest")) tag.putLong("BoundNest", this.worldPosition.asLong());
         storedWorms.add(tag);
         setChanged();
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, DepthWormNestBlockEntity blockEntity) {
         if (level.isClientSide) return;
-
         if (level.getGameTime() % 20 == 0 && !blockEntity.storedWorms.isEmpty()) {
             AABB searchArea = new AABB(pos).inflate(10);
             List<LivingEntity> enemies = level.getEntitiesOfClass(LivingEntity.class, searchArea,
@@ -76,25 +76,20 @@ public class DepthWormNestBlockEntity extends BlockEntity implements HiveNetwork
             if (!enemies.isEmpty()) {
                 LivingEntity target = enemies.get(0);
                 Vec3 targetPos = target.position();
-
                 HiveNetworkManager manager = HiveNetworkManager.get(level);
+
                 if (manager != null && blockEntity.networkId != null) {
                     BlockPos spawnNode = manager.findNearestNode(blockEntity.networkId, targetPos, level);
-                    if (spawnNode != null) {
-                        blockEntity.releaseWorms(spawnNode, target);
-                    } else {
-                        blockEntity.releaseWorms(blockEntity.worldPosition, target);
-                    }
+                    blockEntity.releaseWorms(spawnNode != null ? spawnNode : blockEntity.worldPosition, target);
                 } else {
                     blockEntity.releaseWorms(blockEntity.worldPosition, target);
-                }
-
-                if (blockEntity.networkId != null) {
-                    manager.updateWormCount(blockEntity.networkId, blockEntity.worldPosition, -blockEntity.storedWorms.size());
                 }
             }
         }
     }
+
+    public List<CompoundTag> getStoredWorms() { return new ArrayList<>(this.storedWorms); }
+    public int getStoredWormsCount() { return this.storedWorms.size(); }
 
     public void releaseWormsAndNotify() {
         int count = storedWorms.size();
@@ -106,67 +101,77 @@ public class DepthWormNestBlockEntity extends BlockEntity implements HiveNetwork
     }
 
     private BlockPos findSpawnPos(BlockPos center) {
-        // Проверяем шесть направлений
         for (Direction dir : Direction.values()) {
             BlockPos relative = center.relative(dir);
-            if (level.getBlockState(relative).isAir()) {
-                return relative;
-            }
+            if (level.getBlockState(relative).isAir()) return relative;
         }
-        // Ищем в радиусе 2 блоков
-        for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-                for (int z = -2; z <= 2; z++) {
-                    if (x == 0 && y == 0 && z == 0) continue;
-                    BlockPos check = center.offset(x, y, z);
-                    if (level.getBlockState(check).isAir()) {
-                        return check;
-                    }
-                }
-            }
-        }
-        // Ищем вверх до 10 блоков
-        for (int y = 1; y <= 10; y++) {
+        for (int y = 1; y <= 3; y++) {
             BlockPos above = center.above(y);
-            if (level.getBlockState(above).isAir()) {
-                return above;
-            }
+            if (level.getBlockState(above).isAir()) return above;
         }
-        // Ничего не нашли — спавним прямо в блоке
         return center;
     }
 
     public void releaseWorms(BlockPos spawnPos, LivingEntity target) {
         if (this.level == null || this.level.isClientSide) return;
-        String entityId = "cim:depth_worm";
+        int countBefore = this.storedWorms.size();
+        if (countBefore == 0) return;
+
+        if (this.level.getGameTime() - lastReleaseTime < 5) return; // Защита от спама
+        lastReleaseTime = this.level.getGameTime();
+
+        if (this.networkId != null) {
+            HiveNetworkManager manager = HiveNetworkManager.get(this.level);
+            if (manager != null) {
+                HiveNetwork network = manager.getNetwork(this.networkId);
+                // ⭐ ИСПРАВЛЕНО: Добавляем активных червей в глобальный пул сети
+                if (network != null) network.addActiveWorms(countBefore);
+            }
+        }
 
         for (CompoundTag wormTag : this.storedWorms) {
-            wormTag.putString("id", entityId);
+            wormTag.putString("id", "cim:depth_worm");
             wormTag.remove("UUID");
-            wormTag.remove("UUIDMost");
-            wormTag.remove("UUIDLeast");
+            if (!wormTag.contains("BoundNest")) wormTag.putLong("BoundNest", this.worldPosition.asLong());
+
+            final UUID netId = this.networkId;
 
             Entity entity = EntityType.loadEntityRecursive(wormTag, level, (e) -> {
                 BlockPos actualSpawn = findSpawnPos(spawnPos);
-                e.moveTo(actualSpawn.getX() + 0.5, actualSpawn.getY(), actualSpawn.getZ() + 0.5,
-                        level.random.nextFloat() * 360F, 0);
+                e.moveTo(actualSpawn.getX() + 0.5, actualSpawn.getY(), actualSpawn.getZ() + 0.5, level.random.nextFloat() * 360F, 0);
                 e.setUUID(UUID.randomUUID());
 
                 if (e instanceof DepthWormEntity worm) {
                     worm.setHomePos(actualSpawn);
-                    if (target != null) {
-                        worm.setTarget(target);
-                    }
+                    worm.bindToNest(this.worldPosition);
+
+                    // ⭐ ИСПРАВЛЕНО: Callback просто уменьшает глобальный счетчик при смерти
+                    worm.setOnDeathCallback(() -> {
+                        if (netId != null) {
+                            HiveNetworkManager mgr = HiveNetworkManager.get(worm.level());
+                            if (mgr != null) {
+                                HiveNetwork net = mgr.getNetwork(netId);
+                                if (net != null) {
+                                    net.removeActiveWorm();
+                                    System.out.println("[Hive] Active worm died. Active total: " + net.activeWorms);
+                                }
+                            }
+                        }
+                    });
+                    if (target != null) worm.setTarget(target);
                 }
                 return e;
             });
 
             if (entity != null) {
                 level.addFreshEntity(entity);
+                ((ServerLevel)level).sendParticles(ParticleTypes.POOF, entity.getX(), entity.getY(), entity.getZ(), 5, 0.2, 0.2, 0.2, 0.02);
             }
         }
+
         this.storedWorms.clear();
         this.setChanged();
+        System.out.println("[Hive] Nest at " + this.worldPosition + " released " + countBefore + " worms.");
     }
 
     @Override
@@ -179,14 +184,39 @@ public class DepthWormNestBlockEntity extends BlockEntity implements HiveNetwork
     }
 
     @Override
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        if (tag.hasUUID("NetworkId")) this.networkId = tag.getUUID("NetworkId");
+        ListTag list = tag.getList("StoredWorms", 10);
+        storedWorms.clear();
+        for (int i = 0; i < list.size(); i++) storedWorms.add(list.getCompound(i));
+    }
+
+    @Override
     public void onLoad() {
         super.onLoad();
-        if (this.level != null && !this.level.isClientSide) {
-            if (this.networkId == null) {
-                this.networkId = UUID.randomUUID();
-                this.setChanged();
-            }
-            HiveNetworkManager.get(this.level).addNode(this.networkId, this.worldPosition);
+        if (this.level != null && !this.level.isClientSide && this.networkId != null) {
+            HiveNetworkManager.get(this.level).addNode(this.networkId, this.worldPosition, true);
         }
+    }
+
+    public boolean hasInjuredWorms() {
+        for (CompoundTag tag : storedWorms) {
+            float h = tag.contains("Health") ? tag.getFloat("Health") : 15.0f;
+            if (h < 15.0f) return true; // Максимальное здоровье червя - 15.0
+        }
+        return false;
+    }
+
+    public boolean healOneWorm() {
+        for (CompoundTag tag : storedWorms) {
+            float h = tag.contains("Health") ? tag.getFloat("Health") : 15.0f;
+            if (h < 15.0f) {
+                tag.putFloat("Health", 15.0f); // 1 очко = полное исцеление червя
+                this.setChanged();
+                return true;
+            }
+        }
+        return false;
     }
 }

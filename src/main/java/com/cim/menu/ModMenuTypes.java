@@ -33,6 +33,10 @@ public class ModMenuTypes {
             MENUS.register("mining_port_menu",
                     () -> IForgeMenuType.create(MiningPortMenu::new));
 
+    public static final RegistryObject<MenuType<FluidBarrelMenu>> FLUID_BARREL_MENU =
+            MENUS.register("fluid_barrel_menu",
+                    () -> IForgeMenuType.create(FluidBarrelMenu::new));
+
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);
     }

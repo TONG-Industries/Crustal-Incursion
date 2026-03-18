@@ -1,5 +1,12 @@
 package com.cim.block.basic;
 
+import com.cim.api.energy.ConnectorTier;
+import com.cim.block.basic.deco.BeamBlock;
+import com.cim.block.basic.deco.BeamCollisionBlock;
+import com.cim.block.basic.direction.SideOBlock;
+import com.cim.block.basic.energy.*;
+import com.cim.block.basic.fluids.FluidBarrelBlock;
+import com.cim.block.basic.necrosis.hive.HiveRootsBlock;
 import com.cim.block.basic.rotation.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -15,10 +22,6 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import com.cim.block.basic.direction.FullOBlock;
-import com.cim.block.basic.energy.ConverterBlock;
-import com.cim.block.basic.energy.MachineBatteryBlock;
-import com.cim.block.basic.energy.SwitchBlock;
-import com.cim.block.basic.energy.WireBlock;
 import com.cim.block.basic.explosives.DetMinerBlock;
 import com.cim.block.basic.necrosis.NecrosisPortalBlock;
 import com.cim.block.basic.necrosis.hive.DepthWormNestBlock;
@@ -48,6 +51,21 @@ public class ModBlocks {
     public static final RegistryObject<Block> SWITCH = registerBlock("switch",
             () -> new SwitchBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)));
 
+    // Маленький (Ваш старый)
+    public static final RegistryObject<Block> CONNECTOR = registerBlock("connector",
+            () -> new ConnectorBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK),
+                    new ConnectorTier(16, 3, 0.03125f, 4, 6)));
+
+    // Средний
+    public static final RegistryObject<Block> MEDIUM_CONNECTOR = registerBlock("medium_connector",
+            () -> new ConnectorBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK),
+                    new ConnectorTier(32, 7, 0.05f, 6, 8))); // Длина 32, 4 провода, толще провод, модель 6х8
+
+    // Большой
+    public static final RegistryObject<Block> LARGE_CONNECTOR = registerBlock("large_connector",
+            () -> new ConnectorBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK),
+                    new ConnectorTier(100, 11, 0.08f, 8, 13)));
+
     //ВЗРЫВЧАТКА
     public static final RegistryObject<Block> DET_MINER = registerBlock("det_miner",
             () -> new DetMinerBlock(BlockBehaviour.Properties.of()
@@ -63,6 +81,12 @@ public class ModBlocks {
             () -> new DepthWormNestBlock(BlockBehaviour.Properties.copy(Blocks.MUD).sound(SoundType.MUD)));
     public static final RegistryObject<Block> HIVE_SOIL = registerBlock("hive_soil",
             () -> new HiveSoilBlock(BlockBehaviour.Properties.copy(Blocks.MUD).sound(SoundType.MUD)));
+    public static final RegistryObject<Block> DEPTH_WORM_NEST_DEAD = registerBlock("depth_worm_nest_dead",
+            () -> new DepthWormNestBlock(BlockBehaviour.Properties.copy(Blocks.MUD).sound(SoundType.MUD)));
+    public static final RegistryObject<Block> HIVE_SOIL_DEAD = registerBlock("hive_soil_dead",
+            () -> new HiveSoilBlock(BlockBehaviour.Properties.copy(Blocks.MUD).sound(SoundType.MUD)));
+    public static final RegistryObject<Block> HIVE_ROOTS = registerBlock("hive_roots",
+            () -> new HiveRootsBlock(BlockBehaviour.Properties.copy(Blocks.SPORE_BLOSSOM).noCollission().instabreak()));
 
 
     //ОБЫЧНЫЕ БЛОКИ
@@ -127,6 +151,9 @@ public class ModBlocks {
     public static final RegistryObject<Block> MORY_BLOCK = registerBlock("mory_block",
             () -> new Block(BlockBehaviour.Properties.of()
                     .strength(0.7F, 6.0F).sound(SoundType.HONEY_BLOCK).requiresCorrectToolForDrops()));
+    public static final RegistryObject<Block> DECO_BEAM = registerBlock("deco_beam",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops()));
 
 
     //СТУПЕНИ И ПОЛУБЛОКИ
@@ -177,6 +204,13 @@ public class ModBlocks {
                     BlockSetType.DARK_OAK));
 
 
+    //ЖИДКОСТИ
+
+    public static final RegistryObject<Block> FLUID_BARREL = registerBlock("fluid_barrel",
+            () -> new FluidBarrelBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)
+                    .strength(3.0f, 4.0f).noOcclusion().requiresCorrectToolForDrops()));
+
+
     //БЛОКИ-ВРАЩЕНИЯ
     public static final RegistryObject<Block> DRILL_HEAD = BLOCKS.register("drill_head",
             () -> new DrillHeadBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)
@@ -225,6 +259,17 @@ public class ModBlocks {
             () -> new MiningPortBlock(BlockBehaviour.Properties.copy(Blocks.STONE)
                     .strength(5.0f, 4.0f).requiresCorrectToolForDrops()));
 
+    //декоративные блоки
+    public static final RegistryObject<Block> BEAM_BLOCK = registerBlock("beam_block",
+            () -> new BeamBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)
+                    .strength(5.0f, 6.0f).noOcclusion().requiresCorrectToolForDrops()));
+
+    public static final RegistryObject<Block> BEAM_COLLISION = BLOCKS.register("beam_collision",
+            () -> new BeamCollisionBlock(BlockBehaviour.Properties.of()
+                    .strength(2.0f, 6.0f) // Изменили с -1.0f на 2.0f
+                    .noOcclusion()
+                    .noLootTable()));
+
 
     //СЕКВОЯ
     public static final RegistryObject<Block> SEQUOIA_BARK = registerBlock("sequoia_bark",
@@ -261,6 +306,15 @@ public class ModBlocks {
                 public int getFireSpreadSpeed(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
                     return 30; // Шанс, что огонь перекинется на этот блок
                 }});
+
+    public static final RegistryObject<Block> MORY_BLOCK = registerBlock("mory_block",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
+    public static final RegistryObject<Block> ANTON_CHIGUR = registerBlock("anton_chigur",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.WOOD).requiresCorrectToolForDrops()));
+
+
 
 
     // Вспомогательный метод: регистрирует блок И предмет для него

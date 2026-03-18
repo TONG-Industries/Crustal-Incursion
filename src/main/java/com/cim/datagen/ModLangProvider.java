@@ -20,7 +20,7 @@ public class ModLangProvider extends LanguageProvider {
         if (locale.equals("ru_ru")) {
             addRussian();
         } else if (locale.equals("uk_ua")){
-         addUkrainian();
+            addUkrainian();
         } else {
             addEnglish();
         }
@@ -29,145 +29,157 @@ public class ModLangProvider extends LanguageProvider {
     private void addEnglish() {
 //транслейт бай марко_поло  , плиз донт аск ми ебаут проблемс
         // Вкладки креатива (SNM_WEAPONS_TAB)
-    add("itemGroup.cim.cim_build_tab", "Building Blocks");
-    add("itemGroup.cim.cim_tech_tab", "Technology");
-    add("itemGroup.cim.cim_weapons_tab", " Arsenal"); 
-    add("itemGroup.cim.cim_tools_tab", "Tools");
-    add("itemGroup.cim.cim_nature_tab", "Nature");
-    
+        add("itemGroup.cim.cim_build_tab", "Building Blocks");
+        add("itemGroup.cim.cim_tech_tab", "Technology");
+        add("itemGroup.cim.cim_weapons_tab", " Arsenal");
+        add("itemGroup.cim.cim_tools_tab", "Tools");
+        add("itemGroup.cim.cim_nature_tab", "Nature");
+// Fluid Identifier
+        add("item.cim.fluid_identifier", "Fluid Identifier");
+        add("fluid.cim.none", "None");
+        add("tooltip.cim.fluid.unknown", "Unknown Fluid");
+        add("tooltip.cim.fluid.invalid", "Invalid Fluid");
+
+// Fluids
+        add("fluid_type.cim.hydrogen_peroxide", "Hydrogen Peroxide");
+        add("fluid_type.cim.sulfuric_acid", "Sulfuric Acid");
+        add("fluid_type.cim.natural_gas", "Natural Gas");
+        add("fluid_type.cim.steam", "Steam");
         // Подказки
         add("tooltip.cim.detminer.line1", "Mines blocks in explosion radius");
         add("tooltip.cim.detminer.line2", "Completely harmless to entities");
-        
-       //Секвойя 
+
+        //Секвойя
         add(ModBlocks.SEQUOIA_BARK.get(), "Sequoia bark");
-    add(ModBlocks.SEQUOIA_HEARTWOOD.get(), "Sequoia heartwood");
-    add(ModBlocks.SEQUOIA_PLANKS.get(), "Sequoia planks");
-    add(ModBlocks.SEQUOIA_ROOTS.get(), "Sequoia roots");
-    add(ModBlocks.SEQUOIA_ROOTS_MOSSY.get(), "Mossy sequoia roots");
-   
+        add(ModBlocks.SEQUOIA_HEARTWOOD.get(), "Sequoia heartwood");
+        add(ModBlocks.SEQUOIA_PLANKS.get(), "Sequoia planks");
+        add(ModBlocks.SEQUOIA_ROOTS.get(), "Sequoia roots");
+        add(ModBlocks.SEQUOIA_ROOTS_MOSSY.get(), "Mossy sequoia roots");
+
         add(ModBlocks.SEQUOIA_BARK_DARK.get(), "Dark sequoia bark");
         add(ModBlocks.SEQUOIA_BARK_MOSSY.get(), "Sequoia bark with moss");
         add(ModBlocks.SEQUOIA_BARK_LIGHT.get(), "Light sequoia bark");
-        add(ModBlocks.SEQUOIA_DOOR.get(), "Sequoia doors");
+        add(ModBlocks.SEQUOIA_DOOR.get(), "Sequoia door");
         add(ModBlocks.SEQUOIA_BIOME_MOSS.get(), "Dark moss");
         add(ModBlocks.SEQUOIA_LEAVES.get(), "Sequoia leaves");
-        
-    //Электроника 
-    add(ModItems.ENERGY_CELL_BASIC.get(), "Basic energy cell");
-    add(ModItems.CREATIVE_BATTERY.get(), "Creative battery");
-    add(ModItems.BATTERY.get(), "Battery");
-    add(ModItems.BATTERY_ADVANCED.get(), "Advanced battery");
-    add(ModItems.BATTERY_LITHIUM.get(), "Lithium battery");
-    add(ModItems.BATTERY_TRIXITE.get(), "Trixite battery");
-    add(ModBlocks.MACHINE_BATTERY.get(), "Machine battery");
-    add(ModBlocks.CONVERTER_BLOCK.get(), "Converter");
-    add(ModBlocks.WIRE_COATED.get(), "Coated wire");
-    add(ModBlocks.SWITCH.get(), "Switch");
-    add(ModBlocks.TURRET_LIGHT_PLACER.get(), "Light turret");
-    
-    // Нэкроз
-    add(ModBlocks.DEPTH_WORM_NEST.get(), "Depth worm nest");
-    add(ModBlocks.HIVE_SOIL.get(), "Hive soil");
-    
-    //Блоки
-    add(ModBlocks.CRATE.get(), "Crate");
-    add(ModBlocks.CRATE_AMMO.get(), "Ammo crate");
-    add(ModBlocks.CONCRETE.get(), "Concrete");
-    add(ModBlocks.CONCRETE_RED.get(), "Red concrete");
-    add(ModBlocks.CONCRETE_BLUE.get(), "Blue concrete");
-    add(ModBlocks.CONCRETE_GREEN.get(), "Green concrete");
-    add(ModBlocks.CONCRETE_HAZARD_NEW.get(), "New hazard concrete");
-    add(ModBlocks.CONCRETE_HAZARD_OLD.get(), "Old hazard concrete");
-    add(ModBlocks.NECROSIS_TEST.get(), "Necrosis test block");
-    add(ModBlocks.NECROSIS_TEST2.get(), "Necrosis test block 2");
-    add(ModBlocks.NECROSIS_TEST3.get(), "Necrosis test block 3");
-    add(ModBlocks.NECROSIS_TEST4.get(), "Necrosis test block 4");
-    add(ModBlocks.NECROSIS_PORTAL.get(), "Necrosis portal");
-    add(ModBlocks.WASTE_LOG.get(), "Waste log");
-    add(ModBlocks.CONCRETE_STAIRS.get(), "Concrete stairs");
-    add(ModBlocks.CONCRETE_SLAB.get(), "Concrete slab");
-    add(ModBlocks.CONCRETE_RED_STAIRS.get(), "Red concrete stairs");
-    add(ModBlocks.CONCRETE_RED_SLAB.get(), "Red concrete slab");
-    add(ModBlocks.CONCRETE_BLUE_STAIRS.get(), "Blue concrete stairs");
-    add(ModBlocks.CONCRETE_BLUE_SLAB.get(), "Blue concrete slab");
-    add(ModBlocks.CONCRETE_GREEN_STAIRS.get(), "Green concrete stairs");
-    add(ModBlocks.CONCRETE_GREEN_SLAB.get(), "Green concrete slab");
-    add(ModBlocks.CONCRETE_HAZARD_NEW_STAIRS.get(), "New hazard concrete stairs");
-    add(ModBlocks.CONCRETE_HAZARD_NEW_SLAB.get(), "New hazard concrete slab");
-    add(ModBlocks.CONCRETE_HAZARD_OLD_STAIRS.get(), "Old hazard concrete stairs");
-    add(ModBlocks.CONCRETE_HAZARD_OLD_SLAB.get(), "Old hazard concrete slab");
-    add(ModBlocks.SEQUOIA_TRAPDOOR.get(), "Sequoia trapdoor");
-    
-    // Валы
-    add(ModBlocks.DRILL_HEAD.get(), "Drill head");
-    add(ModBlocks.MOTOR_ELECTRO.get(), "Electric motor");
-    add(ModBlocks.WIND_GEN_FLUGER.get(), "Wind generator vane");
-    add(ModBlocks.SHAFT_IRON.get(), "Iron shaft");
-    add(ModBlocks.SHAFT_WOODEN.get(), "Wooden shaft");
-    add(ModBlocks.GEAR_PORT.get(), "Gear port");
-    add(ModBlocks.STOPPER.get(), "Stopper");
-    add(ModBlocks.ADDER.get(), "Adder");
-    add(ModBlocks.TACHOMETER.get(), "Tachometer");
-    add(ModBlocks.ROTATION_METER.get(), "Rotation meter");
-    add(ModBlocks.RCONVERTER.get(), "Rotational converter");
-    add(ModBlocks.SHAFT_PLACER.get(), "Shaft placer");
-    add(ModBlocks.MINING_PORT.get(), "Mining port");
-    
-       //Другие предметы 
-       add(ModBlocks.DET_MINER.get(), "Mining charge");
-add(ModItems.DEPTH_WORM_SPAWN_EGG.get(), "Depth worm spawn egg");
-    add(ModItems.SCREWDRIVER.get(), "Screwdriver");
-    add(ModItems.CROWBAR.get(), "Crowbar");
-    add(ModItems.RANGE_DETONATOR.get(), "Long-Range detonator");
-    add(ModItems.MULTI_DETONATOR.get(), "Multi-Detonator");
-    add(ModItems.DETONATOR.get(), "Detonator");
-    add(ModItems.MACHINEGUN.get(), "Machine gun");
-    add(ModItems.TURRET_CHIP.get(), "Turret chip");
-    add(ModItems.TURRET_LIGHT_PORTATIVE_PLACER.get(), "Portable light turret");
-    add(ModItems.AMMO_TURRET.get(), "Turret ammo");
-    add(ModItems.AMMO_TURRET_PIERCING.get(), "Armor-Piercing turret ammo");
-    add(ModItems.AMMO_TURRET_HOLLOW.get(), "Hollow-Point turret ammo");
-    add(ModItems.AMMO_TURRET_FIRE.get(), "Incendiary turret ammo");
-    add(ModItems.AMMO_TURRET_RADIO.get(), "Radioactive turret ammo");
-    add(ModItems.GRENADE.get(), "Grenade");
-    add(ModItems.GRENADEHE.get(), "High explosive grenade");
-    add(ModItems.GRENADEFIRE.get(), "Incendiary grenade");
-    add(ModItems.GRENADESLIME.get(), "Slime grenade");
-    add(ModItems.GRENADESMART.get(), "Smart grenade");
-    add(ModItems.GRENADE_IF.get(), "Impact grenade");
-    add(ModItems.GRENADE_IF_HE.get(), "HE Impact grenade");
-    add(ModItems.GRENADE_IF_SLIME.get(), "Slime impact grenade");
-    add(ModItems.GRENADE_IF_FIRE.get(), "Incendiary impact grenade");
-    add(ModItems.GRENADE_NUC.get(), "Nuclear grenade");
-    
-    
-      // Энтити
-    add("entity.cim.turret_light", "Light turret");
-    add("entity.cim.turret_light_linked", "Linked light turret");
-    add("entity.cim.turret_bullet", "Turret bullet");
-    add("entity.cim.depth_worm", "Depth worm");
-    add("entity.cim.grenade_projectile", "Grenade");
-    add("entity.cim.grenadehe_projectile", "HE Grenade");
-    add("entity.cim.grenadefire_projectile", "Incendiary grenade");
-    add("entity.cim.grenadesmart_projectile", "Smart grenade");
-    add("entity.cim.grenadeslime_projectile", "Slime grenade");
-    add("entity.cim.grenade_if_projectile", "Impact grenade");
-    add("entity.cim.grenade_if_fire_projectile", "Incendiary Impact grenade");
-    add("entity.cim.grenade_if_slime_projectile", "Slime impact grenade");
-    add("entity.cim.grenade_if_he_projectile", "HE Impact grenade");
-    add("entity.cim.grenade_nuc_projectile", "Nuclear grenade");
+
+        //Электроника
+        add(ModItems.ENERGY_CELL_BASIC.get(), "Energy cell");
+        add(ModItems.CREATIVE_BATTERY.get(), "Creative battery");
+        add(ModItems.BATTERY.get(), "Battery");
+        add(ModItems.BATTERY_ADVANCED.get(), "Advanced battery");
+        add(ModItems.BATTERY_LITHIUM.get(), "Lithium battery");
+        add(ModItems.BATTERY_TRIXITE.get(), "Trixite Battery");
+        add(ModBlocks.MACHINE_BATTERY.get(), "Module energy storage");
+        add(ModBlocks.CONVERTER_BLOCK.get(), "Energy converter");
+        add(ModBlocks.WIRE_COATED.get(), "Copper wire");
+        add(ModBlocks.SWITCH.get(), "Switch");
+        add(ModBlocks.TURRET_LIGHT_PLACER.get(), "Light landing turret 'Nagual' ");
+
+        // Нэкроз
+        add(ModBlocks.DEPTH_WORM_NEST.get(), "Depth worm nest");
+        add(ModBlocks.HIVE_SOIL.get(), "Depth worm hive flesh");
+
+
+
+        //Блоки
+        add(ModBlocks.CRATE.get(), "Crate");
+        add(ModBlocks.CRATE_AMMO.get(), "Ammo crate");
+        add(ModBlocks.CONCRETE.get(), "Concrete");
+        add(ModBlocks.CONCRETE_RED.get(), "Red concrete");
+        add(ModBlocks.CONCRETE_BLUE.get(), "Blue concrete");
+        add(ModBlocks.CONCRETE_GREEN.get(), "Green concrete");
+        add(ModBlocks.CONCRETE_HAZARD_NEW.get(), "New hazard concrete");
+        add(ModBlocks.CONCRETE_HAZARD_OLD.get(), "Old hazard concrete");
+        add(ModBlocks.NECROSIS_TEST.get(), "Necrosis test block");
+        add(ModBlocks.NECROSIS_TEST2.get(), "Necrosis test block 2");
+        add(ModBlocks.NECROSIS_TEST3.get(), "Necrosis test block 3");
+        add(ModBlocks.NECROSIS_TEST4.get(), "Necrosis test block 4");
+        add(ModBlocks.NECROSIS_PORTAL.get(), "Necrosis portal");
+        add(ModBlocks.WASTE_LOG.get(), "Waste log");
+        add(ModBlocks.CONCRETE_STAIRS.get(), "Concrete stairs");
+        add(ModBlocks.CONCRETE_SLAB.get(), "Concrete slab");
+        add(ModBlocks.CONCRETE_RED_STAIRS.get(), "Red concrete stairs");
+        add(ModBlocks.CONCRETE_RED_SLAB.get(), "Red concrete slab");
+        add(ModBlocks.CONCRETE_BLUE_STAIRS.get(), "Blue concrete stairs");
+        add(ModBlocks.CONCRETE_BLUE_SLAB.get(), "Blue concrete slab");
+        add(ModBlocks.CONCRETE_GREEN_STAIRS.get(), "Green concrete stairs");
+        add(ModBlocks.CONCRETE_GREEN_SLAB.get(), "Green concrete slab");
+        add(ModBlocks.CONCRETE_HAZARD_NEW_STAIRS.get(), "New hazard concrete stairs");
+        add(ModBlocks.CONCRETE_HAZARD_NEW_SLAB.get(), "New hazard concrete slab");
+        add(ModBlocks.CONCRETE_HAZARD_OLD_STAIRS.get(), "Old hazard concrete stairs");
+        add(ModBlocks.CONCRETE_HAZARD_OLD_SLAB.get(), "Old hazard concrete slab");
+        add(ModBlocks.SEQUOIA_TRAPDOOR.get(), "Sequoia trapdoor");
+
+        // Валы
+        add(ModBlocks.DRILL_HEAD.get(), "Drill head");
+        add(ModBlocks.MOTOR_ELECTRO.get(), "Electric motor");
+        add(ModBlocks.WIND_GEN_FLUGER.get(), "Wind generator vane");
+        add(ModBlocks.SHAFT_IRON.get(), "Iron shaft");
+        add(ModBlocks.SHAFT_WOODEN.get(), "Wooden shaft");
+        add(ModBlocks.GEAR_PORT.get(), "Gear port");
+        add(ModBlocks.STOPPER.get(), "Stopper");
+        add(ModBlocks.ADDER.get(), "Adder");
+        add(ModBlocks.TACHOMETER.get(), "Tachometer");
+        add(ModBlocks.ROTATION_METER.get(), "Rotation meter");
+        add(ModBlocks.RCONVERTER.get(), "RtoE converter");
+        add(ModBlocks.SHAFT_PLACER.get(), "Shaft placer");
+        add(ModBlocks.MINING_PORT.get(), "Mining port");
+
+        //Другие предметы
+        add(ModBlocks.DET_MINER.get(), "Mining charge");
+        add(ModItems.DEPTH_WORM_SPAWN_EGG.get(), "Depth worm spawn egg");
+        add(ModItems.SCREWDRIVER.get(), "Screwdriver");
+        add(ModItems.CROWBAR.get(), "Crowbar");
+        add(ModItems.RANGE_DETONATOR.get(), "Long-Range detonator");
+        add(ModItems.MULTI_DETONATOR.get(), "Multi-Detonator");
+        add(ModItems.DETONATOR.get(), "Detonator");
+        add(ModItems.MACHINEGUN.get(), "'A.P. 17'");
+        add(ModItems.TURRET_CHIP.get(), "Turret chip");
+        add(ModItems.TURRET_LIGHT_PORTATIVE_PLACER.get(), "Portable light turret");
+        add(ModItems.AMMO_TURRET.get(), "20mm Turret ammo");
+        add(ModItems.AMMO_TURRET_PIERCING.get(), "20mm Armor-Piercing turret ammo");
+        add(ModItems.AMMO_TURRET_HOLLOW.get(), "20mm Hollow-Point turret ammo");
+        add(ModItems.AMMO_TURRET_FIRE.get(), "20mm Incendiary turret ammo");
+        add(ModItems.AMMO_TURRET_RADIO.get(), "20mm Turret ammo with radio-exploder");
+        add(ModItems.GRENADE.get(), "Grenade");
+        add(ModItems.GRENADEHE.get(), "High explosive grenade");
+        add(ModItems.GRENADEFIRE.get(), "Incendiary grenade");
+        add(ModItems.GRENADESLIME.get(), "Slime grenade");
+        add(ModItems.GRENADESMART.get(), "Smart grenade");
+        add(ModItems.GRENADE_IF.get(), "Impact grenade");
+        add(ModItems.GRENADE_IF_HE.get(), "HE Impact grenade");
+        add(ModItems.GRENADE_IF_SLIME.get(), "Slime impact grenade");
+        add(ModItems.GRENADE_IF_FIRE.get(), "Incendiary impact grenade");
+        add(ModItems.GRENADE_NUC.get(), "Nuclear grenade");
+
+
+        // Энтити
+        add("entity.cim.turret_light", "Light turret");
+        add("entity.cim.turret_light_linked", "Linked light turret");
+        add("entity.cim.turret_bullet", "Turret bullet");
+        add("entity.cim.depth_worm", "Depth worm");
+        add("entity.cim.grenade_projectile", "Grenade");
+        add("entity.cim.grenadehe_projectile", "HE Grenade");
+        add("entity.cim.grenadefire_projectile", "Incendiary grenade");
+        add("entity.cim.grenadesmart_projectile", "Smart grenade");
+        add("entity.cim.grenadeslime_projectile", "Slime grenade");
+        add("entity.cim.grenade_if_projectile", "Impact grenade");
+        add("entity.cim.grenade_if_fire_projectile", "Incendiary Impact grenade");
+        add("entity.cim.grenade_if_slime_projectile", "Slime impact grenade");
+        add("entity.cim.grenade_if_he_projectile", "HE Impact grenade");
+        add("entity.cim.grenade_nuc_projectile", "Nuclear grenade");
     }
-      
+
 
     private void addRussian() {
-       //Секвойя 
+        //Секвойя
         add(ModBlocks.SEQUOIA_BARK.get(), "Кора секвойи");
-    add(ModBlocks.SEQUOIA_HEARTWOOD.get(), "Бревно секвойи");
-    add(ModBlocks.SEQUOIA_PLANKS.get(), "Доски из секвойи");
-    add(ModBlocks.SEQUOIA_ROOTS.get(), "Корни секвойи");
-    add(ModBlocks.SEQUOIA_ROOTS_MOSSY.get(), "Корни секвойи с мхом");
-   
+        add(ModBlocks.SEQUOIA_HEARTWOOD.get(), "Бревно секвойи");
+        add(ModBlocks.SEQUOIA_PLANKS.get(), "Доски из секвойи");
+        add(ModBlocks.SEQUOIA_ROOTS.get(), "Корни секвойи");
+        add(ModBlocks.SEQUOIA_ROOTS_MOSSY.get(), "Корни секвойи с мхом");
+
         add(ModBlocks.SEQUOIA_BARK_DARK.get(), "Тёмная кора секвойи");
         add(ModBlocks.SEQUOIA_BARK_MOSSY.get(), "Кора секвойи с мхом");
         add(ModBlocks.SEQUOIA_BARK_LIGHT.get(), "Светлая кора секвойи");
@@ -175,121 +187,131 @@ add(ModItems.DEPTH_WORM_SPAWN_EGG.get(), "Depth worm spawn egg");
         add(ModBlocks.SEQUOIA_BIOME_MOSS.get(), "Тёмный мох");
         add(ModBlocks.SEQUOIA_LEAVES.get(), "Листья секвойи");
         add(ModBlocks.SEQUOIA_TRAPDOOR.get(), "Люк из секвойи");
-        
-    //Электроника 
-    add(ModItems.ENERGY_CELL_BASIC.get(), "Базовая энергетическая ячейка");
-    add(ModItems.CREATIVE_BATTERY.get(), "Батарея креатива");
-    add(ModItems.BATTERY.get(), "Батарея");
-    add(ModItems.BATTERY_ADVANCED.get(), "Улучшенная батарея");
-    add(ModItems.BATTERY_LITHIUM.get(), "Литиевая батарея");
-    add(ModItems.BATTERY_TRIXITE.get(), "Трикситовая батарея");
-    add(ModBlocks.MACHINE_BATTERY.get(), "Машинная батарея");
-    add(ModBlocks.CONVERTER_BLOCK.get(), "Конвертер");
-    add(ModBlocks.WIRE_COATED.get(), "Провод в изоляции");
-    add(ModBlocks.SWITCH.get(), "Выключатель");
-    
-    add(ModBlocks.TURRET_LIGHT_PLACER.get(), "Лёгкая турель");
-    
-    // Нэкроз
-    add(ModBlocks.DEPTH_WORM_NEST.get(), "Гнездо глубинного червя");
-    add(ModBlocks.HIVE_SOIL.get(), "Улейная почва");
-    
-    //Блоки
-    add(ModBlocks.CRATE.get(), "Ящик");
-    add(ModBlocks.CRATE_AMMO.get(), "Ящик с патронами");
-    add(ModBlocks.CONCRETE.get(), "Бетон");
-    add(ModBlocks.CONCRETE_RED.get(), "Красный бетон");
-    add(ModBlocks.CONCRETE_BLUE.get(), "Синий бетон");
-    add(ModBlocks.CONCRETE_GREEN.get(), "Зелёный бетон");
-    add(ModBlocks.CONCRETE_HAZARD_NEW.get(), "Новый опасный бетон");
-    add(ModBlocks.CONCRETE_HAZARD_OLD.get(), "Старый опасный бетон");
-    add(ModBlocks.NECROSIS_TEST.get(), "Тестовый блок некроза");
-    add(ModBlocks.NECROSIS_TEST2.get(), "Тестовый блок некроза 2");
-    add(ModBlocks.NECROSIS_TEST3.get(), "Тестовый блок некроза 3");
-    add(ModBlocks.NECROSIS_TEST4.get(), "Тестовый блок некроза 4");
-    add(ModBlocks.NECROSIS_PORTAL.get(), "Портал некроза");
-    add(ModBlocks.WASTE_LOG.get(), "Заражённое бревно");
-    add(ModBlocks.CONCRETE_STAIRS.get(), "Бетонные ступени");
-    add(ModBlocks.CONCRETE_SLAB.get(), "Бетонная плита");
-    add(ModBlocks.CONCRETE_RED_STAIRS.get(), "Лестница из красного бетона");
-    add(ModBlocks.CONCRETE_RED_SLAB.get(), "Плита из красного бетона");
-    add(ModBlocks.CONCRETE_BLUE_STAIRS.get(), "Лестница из синего бетона");
-    add(ModBlocks.CONCRETE_BLUE_SLAB.get(), "Плита из синего бетона");
-    add(ModBlocks.CONCRETE_GREEN_STAIRS.get(), "Ступени из зелёного бетона");
-    add(ModBlocks.CONCRETE_GREEN_SLAB.get(), "Плита из зелёного бетона");
-    add(ModBlocks.CONCRETE_HAZARD_NEW_STAIRS.get(), "Ступени из нового опасного бетона");
-    add(ModBlocks.CONCRETE_HAZARD_NEW_SLAB.get(), "Плита из нового опасного бетона");
-    add(ModBlocks.CONCRETE_HAZARD_OLD_STAIRS.get(), "Ступени из старого опасного бетона");
-    add(ModBlocks.CONCRETE_HAZARD_OLD_SLAB.get(), "Плита из старого опасного бетона");
-    
-    
-    // Валы
-    add(ModBlocks.DRILL_HEAD.get(), "Головка бура");
-    add(ModBlocks.MOTOR_ELECTRO.get(), "Электромотор");
-    add(ModBlocks.SHAFT_IRON.get(), "Железный вал");
-    add(ModBlocks.SHAFT_WOODEN.get(), "Деревянный вал");
-    add(ModBlocks.GEAR_PORT.get(), "Порт редуктора");
-    add(ModBlocks.STOPPER.get(), "Стопор");
-    add(ModBlocks.ADDER.get(), "Сумматор");
-    add(ModBlocks.TACHOMETER.get(), "Тахометр");
-    add(ModBlocks.ROTATION_METER.get(), "Датчик поворота");
-    add(ModBlocks.RCONVERTER.get(), "Поворотный преобразователь");
-    add(ModBlocks.SHAFT_PLACER.get(), "Установщик валов");
-    add(ModBlocks.MINING_PORT.get(), "Порт добычи");
-    
-      //Другие предметы
-      add(ModBlocks.DET_MINER.get(), "Шахтёрский заряд");
+
+        //Электроника
+        add(ModItems.ENERGY_CELL_BASIC.get(), "Энергетическая ячейка");
+        add(ModItems.CREATIVE_BATTERY.get(), "Бесконечный аккумулятор");
+        add(ModItems.BATTERY.get(), "Батарея");
+        add(ModItems.BATTERY_ADVANCED.get(), "Улучшенный аккумулятор");
+        add(ModItems.BATTERY_LITHIUM.get(), "Литий-ионный аккумулятор");
+        add(ModItems.BATTERY_TRIXITE.get(), "Продвинутый аккумулятор");
+        add(ModBlocks.MACHINE_BATTERY.get(), "Модульное энергохранилище");
+        add(ModBlocks.CONVERTER_BLOCK.get(), "Энергетический конвертер");
+        add(ModBlocks.WIRE_COATED.get(), "Провод из красной меди");
+        add(ModBlocks.SWITCH.get(), "Рубильник");
+
+        add(ModBlocks.TURRET_LIGHT_PLACER.get(), "Лёгкая десантная турель 'Нагваль'");
+
+        // Нэкроз
+        add(ModBlocks.DEPTH_WORM_NEST.get(), "Ядро улья глубинного червя");
+        add(ModBlocks.HIVE_SOIL.get(), "Плоть улья глубинного червя");
+
+        //Блоки
+        add(ModBlocks.CRATE.get(), "Ящик");
+        add(ModBlocks.CRATE_AMMO.get(), "Ящик с патронами");
+        add(ModBlocks.CONCRETE.get(), "Бетон");
+        add(ModBlocks.CONCRETE_RED.get(), "Красный бетон");
+        add(ModBlocks.CONCRETE_BLUE.get(), "Синий бетон");
+        add(ModBlocks.CONCRETE_GREEN.get(), "Зелёный бетон");
+        add(ModBlocks.CONCRETE_HAZARD_NEW.get(), "Бетон 'в полоску'");
+        add(ModBlocks.CONCRETE_HAZARD_OLD.get(), "Изношенный бетон 'в полоску'");
+        add(ModBlocks.NECROSIS_TEST.get(), "Тестовый блок Некроза");
+        add(ModBlocks.NECROSIS_TEST2.get(), "Тестовый блок Некроза 2");
+        add(ModBlocks.NECROSIS_TEST3.get(), "Тестовый блок Некроза 3");
+        add(ModBlocks.NECROSIS_TEST4.get(), "Тестовый блок Некроза 4");
+        add(ModBlocks.NECROSIS_PORTAL.get(), "Портал Некроза");
+        add(ModBlocks.WASTE_LOG.get(),"Обугленное бревно");
+        add(ModBlocks.CONCRETE_STAIRS.get(), "Бетонные ступени");
+        add(ModBlocks.CONCRETE_SLAB.get(), "Бетонная плита");
+        add(ModBlocks.CONCRETE_RED_STAIRS.get(), "Лестница из красного бетона");
+        add(ModBlocks.CONCRETE_RED_SLAB.get(), "Плита из красного бетона");
+        add(ModBlocks.CONCRETE_BLUE_STAIRS.get(), "Лестница из синего бетона");
+        add(ModBlocks.CONCRETE_BLUE_SLAB.get(), "Плита из синего бетона");
+        add(ModBlocks.CONCRETE_GREEN_STAIRS.get(), "Ступени из зелёного бетона");
+        add(ModBlocks.CONCRETE_GREEN_SLAB.get(), "Плита из зелёного бетона");
+        add(ModBlocks.CONCRETE_HAZARD_NEW_STAIRS.get(), "Ступени из бетона 'в полоску'");
+        add(ModBlocks.CONCRETE_HAZARD_NEW_SLAB.get(), "Плита из бетона 'в полоску'");
+        add(ModBlocks.CONCRETE_HAZARD_OLD_STAIRS.get(), "Ступени из изношенного бетона 'в полоску'");
+        add(ModBlocks.CONCRETE_HAZARD_OLD_SLAB.get(), "Плита из изношенного бетона 'в полоску'");
+
+
+        // Валы
+        add(ModBlocks.DRILL_HEAD.get(), "Головка бура");
+        add(ModBlocks.MOTOR_ELECTRO.get(), "Электромотор");
+        add(ModBlocks.SHAFT_IRON.get(), "Железный вал");
+        add(ModBlocks.SHAFT_WOODEN.get(), "Деревянный вал");
+        add(ModBlocks.GEAR_PORT.get(), "Трансмиттер вращения");
+        add(ModBlocks.STOPPER.get(), "Стопор");
+        add(ModBlocks.ADDER.get(), "Сумматор");
+        add(ModBlocks.TACHOMETER.get(), "Тахометр");
+        add(ModBlocks.ROTATION_METER.get(), "Измеритель вращения");
+        add(ModBlocks.RCONVERTER.get(), "Преобразователь вращения в энергию");
+        add(ModBlocks.SHAFT_PLACER.get(), "Установщик валов");
+        add(ModBlocks.MINING_PORT.get(), "Сборочный порт");
+
+        //Другие предметы
+        add(ModBlocks.DET_MINER.get(), "Шахтёрский заряд");
         add(ModItems.RANGE_DETONATOR.get(), "Детонатор дальнего действия");
-add(ModItems.DEPTH_WORM_SPAWN_EGG.get(), "Яйцо призыва глубинного червя");
-    add(ModItems.SCREWDRIVER.get(), "Отвёртка");
-    add(ModItems.CROWBAR.get(), "Монтировка");
-    add(ModItems.MULTI_DETONATOR.get(), "Мульти-детонатор");
-    add(ModItems.DETONATOR.get(), "Детонатор");
-    add(ModItems.MACHINEGUN.get(), "Пулемёт");
-    add(ModItems.TURRET_CHIP.get(), "Чип турели");
-    add(ModItems.TURRET_LIGHT_PORTATIVE_PLACER.get(), "Портативная лёгкая турель");
-    add(ModItems.WIND_GEN_FLUGER.get(), "Флюгер ветрогенератора");
-    add(ModItems.AMMO_TURRET_PIERCING.get(), "Бронебойные боеприпасы для турели");
-    add(ModItems.AMMO_TURRET_HOLLOW.get(), "Пустые патроны для турели");
-    add(ModItems.AMMO_TURRET_FIRE.get(), "Зажигательные патроны для турели");
-    add(ModItems.AMMO_TURRET_RADIO.get(), "Радиоактивные патроны для турели");
-    add(ModItems.GRENADE.get(), "Граната");
-    add(ModItems.GRENADEHE.get(), "Фугасная граната");
-    add(ModItems.GRENADEFIRE.get(), "Зажигательная граната");
-    add(ModItems.GRENADESLIME.get(), "Слизистая граната");
-    add(ModItems.GRENADESMART.get(), "Умная граната");
-    add(ModItems.GRENADE_IF.get(), "Ударная граната");
-    add(ModItems.GRENADE_IF_HE.get(), "Фугасная ударная граната");
-    add(ModItems.GRENADE_IF_SLIME.get(), "Слизистая ударная граната");
-    add(ModItems.GRENADE_IF_FIRE.get(), "Зажигательная ударная граната");
-    add(ModItems.GRENADE_NUC.get(), "Ядерная граната");
-    
+        add(ModItems.DEPTH_WORM_SPAWN_EGG.get(), "Яйцо призыва глубинного червя");
+        add(ModItems.SCREWDRIVER.get(), "Отвёртка");
+        add(ModItems.CROWBAR.get(), "Монтировка");
+        add(ModItems.MULTI_DETONATOR.get(), "Мульти-детонатор");
+        add(ModItems.DETONATOR.get(), "Детонатор");
+        add(ModItems.MACHINEGUN.get(), "'А.П. 17'");
+        add(ModItems.TURRET_CHIP.get(), "Чип турели");
+        add(ModItems.TURRET_LIGHT_PORTATIVE_PLACER.get(), "Портативная лёгкая десантная турель 'Нагваль'");
+        add(ModItems.WIND_GEN_FLUGER.get(), "Ветряной генератор вращения");
+        add(ModItems.AMMO_TURRET_PIERCING.get(), "20мм турельный боеприпас");
+        add(ModItems.AMMO_TURRET_HOLLOW.get(), "20мм экспансивный турельный боеприпас");
+        add(ModItems.AMMO_TURRET_FIRE.get(), "20мм зажигательный турельный боеприпас");
+        add(ModItems.AMMO_TURRET_RADIO.get(), "20мм турельный боеприпас с радио-взрывателем");
+        add(ModItems.GRENADE.get(), "Граната");
+        add(ModItems.GRENADEHE.get(), "Фугасная граната");
+        add(ModItems.GRENADEFIRE.get(), "Зажигательная граната");
+        add(ModItems.GRENADESLIME.get(), "Граната в слизи");
+        add(ModItems.GRENADESMART.get(), "УМная граната");
+        add(ModItems.GRENADE_IF.get(), "Ударная граната");
+        add(ModItems.GRENADE_IF_HE.get(), "Фугасная ударная граната");
+        add(ModItems.GRENADE_IF_SLIME.get(), "Ударная граната в слизи");
+        add(ModItems.GRENADE_IF_FIRE.get(), "Зажигательная ударная граната");
+        add(ModItems.GRENADE_NUC.get(), "Водородная граната");
+
         // Вкладка креатива
         add("itemGroup.cim.cim_build_tab", "Строительные блоки");
-    add("itemGroup.cim.cim_tech_tab", "Технологии");
-    add("itemGroup.cim.cim_weapons_tab", "Арсенал"); 
-    add("itemGroup.cim.cim_tools_tab", "Инструменты");
-    add("itemGroup.cim.cim_nature_tab", "Природа");
-    
+        add("itemGroup.cim.cim_tech_tab", "Технологии");
+        add("itemGroup.cim.cim_weapons_tab", "Арсенал");
+        add("itemGroup.cim.cim_tools_tab", "Инструменты");
+        add("itemGroup.cim.cim_nature_tab", "Природа");
+
         // Тултипы
         add("tooltip.cim.detminer.line1", "Добывает блоки в радиусе взрыва");
         add("tooltip.cim.detminer.line2", "Не наносит урон сущностям");
-        
-            // Энтити
-    add("entity.cim.turret_light", "Лёгкая турель");
-    add("entity.cim.turret_light_linked", "Связанная лёгкая турель");
-    add("entity.cim.turret_bullet", "Пуля турели");
-    add("entity.cim.depth_worm", "Глубинный червь");
-    add("entity.cim.grenade_projectile", "Граната");
-    add("entity.cim.grenadehe_projectile", "Фугасная граната");
-    add("entity.cim.grenadefire_projectile", "Зажигательная граната");
-    add("entity.cim.grenadesmart_projectile", "Умная граната");
-    add("entity.cim.grenadeslime_projectile", "Желатиновая граната");
-    add("entity.cim.grenade_if_projectile", "Ударная граната");
-    add("entity.cim.grenade_if_fire_projectile", "Зажигательная ударная граната");
-    add("entity.cim.grenade_if_slime_projectile", "Желатиновая ударная граната");
-    add("entity.cim.grenade_if_he_projectile", "Фугасная ударная граната");
-    add("entity.cim.grenade_nuc_projectile", "Ядерная граната");
+// Fluid Identifier
+        add("item.cim.fluid_identifier", "Жидкостный индефикатор");
+        add("fluid.cim.none", "Ничего");
+        add("tooltip.cim.fluid.unknown", "Неизвестная жидкость");
+        add("tooltip.cim.fluid.invalid", "Недействительная жидкость");
+
+// Fluids
+        add("fluid_type.cim.hydrogen_peroxide", "Пероксид водорода");
+        add("fluid_type.cim.sulfuric_acid", "Серная кислота");
+        add("fluid_type.cim.natural_gas", "Природный газ");
+        add("fluid_type.cim.steam", "Пар");
+        // Энтити
+        add("entity.cim.turret_light", "Лёгкая турель");
+        add("entity.cim.turret_light_linked", "Связанная лёгкая турель");
+        add("entity.cim.turret_bullet", "Пуля турели");
+        add("entity.cim.depth_worm", "Глубинный червь");
+        add("entity.cim.grenade_projectile", "Граната");
+        add("entity.cim.grenadehe_projectile", "Фугасная граната");
+        add("entity.cim.grenadefire_projectile", "Зажигательная граната");
+        add("entity.cim.grenadesmart_projectile", "Умная граната");
+        add("entity.cim.grenadeslime_projectile", "Желатиновая граната");
+        add("entity.cim.grenade_if_projectile", "Ударная граната");
+        add("entity.cim.grenade_if_fire_projectile", "Зажигательная ударная граната");
+        add("entity.cim.grenade_if_slime_projectile", "Желатиновая ударная граната");
+        add("entity.cim.grenade_if_he_projectile", "Фугасная ударная граната");
+        add("entity.cim.grenade_nuc_projectile", "Ядерная граната");
     }
     private void addUkrainian() {
         // Вкладки креативу
@@ -298,12 +320,22 @@ add(ModItems.DEPTH_WORM_SPAWN_EGG.get(), "Яйцо призыва глубинн
         add("itemGroup.cim.cim_weapons_tab", "Арсенал");
         add("itemGroup.cim.cim_tools_tab", "Інструменти");
         add("itemGroup.cim.cim_nature_tab", "Природа");
+// Fluid Identifier
+        add("item.cim.fluid_identifier", "Ідентифікатор рідин");
+        add("fluid.cim.none", "Нічого");
+        add("tooltip.cim.fluid.unknown", "Невідома рідина");
+        add("tooltip.cim.fluid.invalid", "Недійсна рідина");
 
+// Fluids
+        add("fluid_type.cim.hydrogen_peroxide", "Перекис водню");
+        add("fluid_type.cim.sulfuric_acid", "Сірчана кислота");
+        add("fluid_type.cim.natural_gas", "Природний газ");
+        add("fluid_type.cim.steam", "Пара");
         // Підказки
         add("tooltip.cim.detminer.line1", "Видобуває блоки в радіусі вибуху");
         add("tooltip.cim.detminer.line2", "Не завдає шкоди істотам");
 
-        
+
         // Секвойя
         add(ModBlocks.SEQUOIA_BARK.get(), "Кора секвої");
         add(ModBlocks.SEQUOIA_HEARTWOOD.get(), "Колода секвої");
@@ -325,7 +357,7 @@ add(ModItems.DEPTH_WORM_SPAWN_EGG.get(), "Яйцо призыва глубинн
         add(ModItems.BATTERY_ADVANCED.get(), "Покращена батарея");
         add(ModItems.BATTERY_LITHIUM.get(), "Літієва батарея");
         add(ModItems.BATTERY_TRIXITE.get(), "Тріксітова батарея");
-        
+
         add(ModBlocks.MACHINE_BATTERY.get(), "Машинна батарея");
         add(ModBlocks.CONVERTER_BLOCK.get(), "Конвертер");
         add(ModBlocks.WIRE_COATED.get(), "Ізольований дріт");

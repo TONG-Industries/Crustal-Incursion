@@ -1,5 +1,8 @@
 package com.cim.block.entity;
 
+import com.cim.block.entity.deco.BeamCollisionBlockEntity;
+import com.cim.block.entity.energy.*;
+import com.cim.block.entity.fluids.FluidBarrelBlockEntity;
 import com.cim.block.entity.rotation.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -8,13 +11,8 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
-import com.cim.block.entity.energy.ConverterBlockEntity;
-import com.cim.block.entity.energy.MachineBatteryBlockEntity;
-import com.cim.block.entity.energy.SwitchBlockEntity;
-import com.cim.block.entity.energy.WireBlockEntity;
 import com.cim.block.entity.hive.DepthWormNestBlockEntity;
 import com.cim.block.entity.hive.HiveSoilBlockEntity;
-import com.cim.block.entity.rotation.*;
 import com.cim.block.entity.weapons.TurretLightPlacerBlockEntity;
 import com.cim.main.CrustalIncursionMod;
 import com.cim.block.basic.ModBlocks;
@@ -115,12 +113,34 @@ public class ModBlockEntities {
             BLOCK_ENTITIES.register("motor_electro_be",
                     () -> BlockEntityType.Builder.of(MotorElectroBlockEntity::new, ModBlocks.MOTOR_ELECTRO.get()).build(null));
 
+
+    public static final RegistryObject<BlockEntityType<BeamCollisionBlockEntity>> BEAM_COLLISION_BE =
+            BLOCK_ENTITIES.register("beam_collision_be", () ->
+                    BlockEntityType.Builder.of(BeamCollisionBlockEntity::new,
+                            ModBlocks.BEAM_COLLISION.get()).build(null));
+
     public static final RegistryObject<BlockEntityType<ShaftBlockEntity>> SHAFT_BLOCK_BE =
             BLOCK_ENTITIES.register("shaft",
                     () -> BlockEntityType.Builder.of(ShaftBlockEntity::new,
                             ModBlocks.SHAFT_IRON.get(),
                             ModBlocks.SHAFT_WOODEN.get() // и все другие валы
                     ).build(null));
+
+    public static final RegistryObject<BlockEntityType<ConnectorBlockEntity>> CONNECTOR_BE =
+            BLOCK_ENTITIES.register("connector", () ->
+                    BlockEntityType.Builder.of(ConnectorBlockEntity::new,
+                            ModBlocks.CONNECTOR.get(),         // Твой маленький коннектор
+                            ModBlocks.MEDIUM_CONNECTOR.get(),  // ДОБАВИТЬ ЭТО!
+                            ModBlocks.LARGE_CONNECTOR.get()    // ДОБАВИТЬ ЭТО!
+                    ).build(null));
+
+    // Не забудь импорт:
+    // import com.cim.block.entity.fluid.FluidBarrelBlockEntity;
+
+    public static final RegistryObject<BlockEntityType<FluidBarrelBlockEntity>> FLUID_BARREL_BE =
+            BLOCK_ENTITIES.register("fluid_barrel_be",
+                    () -> BlockEntityType.Builder.of(FluidBarrelBlockEntity::new, ModBlocks.FLUID_BARREL.get()).build(null));
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }
