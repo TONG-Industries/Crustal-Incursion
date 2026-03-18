@@ -60,6 +60,12 @@ public class ModItems {
 
     public static final RegistryObject<Item> FLUID_IDENTIFIER = ITEMS.register("fluid_identifier",
             () -> new FluidIdentifierItem(new Item.Properties()));
+    public static final RegistryObject<Item> PROTECTOR_LEAD = ITEMS.register("protector_lead",
+            () -> new Item(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> PROTECTOR_STEEL = ITEMS.register("protector_steel",
+            () -> new Item(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> PROTECTOR_TUNGSTEN = ITEMS.register("protector_tungsten",
+            () -> new Item(new Item.Properties().stacksTo(1)));
 
     //ОРУЖИЕ
     public static final RegistryObject<Item> MACHINEGUN = ITEMS.register("machinegun",

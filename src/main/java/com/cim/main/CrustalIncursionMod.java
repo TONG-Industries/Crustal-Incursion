@@ -215,7 +215,11 @@ public class CrustalIncursionMod {
             event.accept(ModItems.FLUID_IDENTIFIER.get());
             event.accept(ModItems.CROWBAR.get());
             event.accept(ModItems.WIRE_COIL);
+            event.accept(ModItems.PROTECTOR_STEEL);
+            event.accept(ModItems.PROTECTOR_LEAD);
+            event.accept(ModItems.PROTECTOR_TUNGSTEN);
             event.accept(ModItems.MORY_LAH);
+
             event.accept(ModItems.TURRET_CHIP);
 
             event.accept(ModItems.DETONATOR);
