@@ -1,5 +1,6 @@
 package com.cim.main;
 
+import com.cim.api.energy.EnergyNetworkManager;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -53,6 +54,13 @@ public class ModCreativeTabs {
                     .icon(() -> new ItemStack(ModItems.DEPTH_WORM_SPAWN_EGG.get()))
                     .withTabsBefore(new ResourceLocation(CrustalIncursionMod.MOD_ID, "cim_tools_tab"))
                     .build());
+   // Да мазал я ваши эти вкладки
+   public static final RegistryObject<CreativeModeTab> CIM_FOOD_TAB = CREATIVE_MODE_TABS.register("cim_food_tab",
+           () -> CreativeModeTab.builder()
+                   .title(Component.translatable("itemGroup." + CrustalIncursionMod.MOD_ID + ".cim_food_tab"))
+                   .icon(() -> new ItemStack(ModItems.MORY_FOOD.get()))
+                   .withTabsBefore(new ResourceLocation(CrustalIncursionMod.MOD_ID, "cim_nature_tab"))
+                   .build());
 
     public static void register(IEventBus eventBus) {
         CREATIVE_MODE_TABS.register(eventBus);

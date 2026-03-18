@@ -148,6 +148,9 @@ public class ModBlocks {
     public static final RegistryObject<Block> DECO_LEAD = registerBlock("deco_lead",
             () -> new Block(BlockBehaviour.Properties.of()
                     .strength(0.5F, 6.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops()));
+    public static final RegistryObject<Block> MORY_BLOCK = registerBlock("mory_block",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.7F, 6.0F).sound(SoundType.HONEY_BLOCK).requiresCorrectToolForDrops()));
     public static final RegistryObject<Block> DECO_BEAM = registerBlock("deco_beam",
             () -> new Block(BlockBehaviour.Properties.of()
                     .strength(0.5F, 6.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops()));

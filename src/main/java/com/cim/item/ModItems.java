@@ -4,6 +4,8 @@ import com.cim.entity.ModEntities;
 import com.cim.entity.weapons.grenades.GrenadeIfType;
 import com.cim.entity.weapons.grenades.GrenadeType;
 import com.cim.item.energy.EnergyCellItem;
+import com.cim.item.food.FoodZamaz;
+import com.cim.item.mobs.MoryLahItem;
 import com.cim.item.energy.WireCoilItem;
 import com.cim.item.rotation.*;
 import com.cim.item.tools.BeamPlacerItem;
@@ -12,6 +14,7 @@ import com.cim.item.tools.ScrewdriverItem;
 import com.cim.item.weapons.grenades.GrenadeIfItem;
 import com.cim.item.weapons.grenades.GrenadeItem;
 import com.cim.item.weapons.grenades.GrenadeNucItem;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -124,6 +127,21 @@ public class ModItems {
             () -> new GrenadeIfItem(new Item.Properties(), GrenadeIfType.GRENADE_IF_FIRE, ModEntities.GRENADE_IF_FIRE_PROJECTILE));
     public static final RegistryObject<Item> GRENADE_NUC = ITEMS.register("grenade_nuc",
             () -> new GrenadeNucItem(new Item.Properties(), ModEntities.GRENADE_NUC_PROJECTILE));
+    public static final RegistryObject<Item> MORY_LAH = ITEMS.register("mory_lah",
+            () -> new MoryLahItem(new Item.Properties()));
+
+    //ЕДА
+    public static final RegistryObject<Item> MORY_FOOD = ITEMS.register("mory_food",
+            () -> new FoodZamaz(new FoodZamaz.Builder()
+                    .nutrition(4)
+                    .saturation(2.0F)));
+    public static final RegistryObject<Item> COFFEE = ITEMS.register("coffee",
+            () -> new FoodZamaz(new FoodZamaz.Builder()
+                    .nutrition(2)
+                    .saturation(0.5F)
+                    .alwaysEat()
+                    .eatDuration(16)
+                    .effect(MobEffects.MOVEMENT_SPEED, 30, 1)
 
     //БАТАРЕИ
     public static final RegistryObject<Item> ENERGY_CELL_BASIC = ITEMS.register("energy_cell_basic",

@@ -206,6 +206,8 @@ public class CrustalIncursionMod {
             event.accept(ModItems.GRENADE_IF_SLIME);
             event.accept(ModItems.GRENADE_IF_FIRE);
             event.accept(ModItems.GRENADE_NUC);
+            event.accept(ModItems.MORY_LAH);
+
         }
 
         if (event.getTab() == ModCreativeTabs.CIM_TOOLS_TAB.get()) {
@@ -218,7 +220,7 @@ public class CrustalIncursionMod {
             event.accept(ModItems.PROTECTOR_STEEL);
             event.accept(ModItems.PROTECTOR_LEAD);
             event.accept(ModItems.PROTECTOR_TUNGSTEN);
-            event.accept(ModItems.MORY_LAH);
+
 
             event.accept(ModItems.TURRET_CHIP);
 
@@ -226,7 +228,8 @@ public class CrustalIncursionMod {
             event.accept(ModItems.MULTI_DETONATOR);
             event.accept(ModItems.RANGE_DETONATOR);
 
-
+            event.accept(ModItems.MORY_FOOD.get());
+            event.accept(ModItems.COFFEE.get());
         }
 
         if (event.getTab() == ModCreativeTabs.CIM_NATURE_TAB.get()) {
@@ -247,11 +250,11 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.DEPTH_WORM_NEST);
             event.accept(ModBlocks.HIVE_SOIL);
             event.accept(ModBlocks.HIVE_ROOTS.get()); // Обычная версия
-
             event.accept(ModBlocks.DEPTH_WORM_NEST_DEAD);
             event.accept(ModBlocks.HIVE_SOIL_DEAD);
         }
-    }
+
+       }
 
     // Метод регистрации атрибутов (здоровье, урон и т.д.)
     private void entityAttributeEvent(net.minecraftforge.event.entity.EntityAttributeCreationEvent event) {
