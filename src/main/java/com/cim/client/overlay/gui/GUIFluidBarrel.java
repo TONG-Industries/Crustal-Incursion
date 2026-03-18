@@ -2,7 +2,6 @@ package com.cim.client.overlay.gui;
 
 import com.cim.network.ModPacketHandler;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -12,10 +11,13 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.minecraftforge.fluids.FluidStack;
 import com.cim.main.CrustalIncursionMod;
 import com.cim.menu.FluidBarrelMenu;
+import com.cim.item.ModItems; // Добавлен импорт для PROTECTOR'ов
 
 public class GUIFluidBarrel extends AbstractContainerScreen<FluidBarrelMenu> {
 
@@ -25,7 +27,7 @@ public class GUIFluidBarrel extends AbstractContainerScreen<FluidBarrelMenu> {
     public GUIFluidBarrel(FluidBarrelMenu pMenu, Inventory pPlayerInventory, Component pTitle) {
         super(pMenu, pPlayerInventory, pTitle);
         this.imageWidth = 176;
-        this.imageHeight = 166;
+        this.imageHeight = 196; // Изменено с 166 на 196
     }
 
     @Override
@@ -51,12 +53,29 @@ public class GUIFluidBarrel extends AbstractContainerScreen<FluidBarrelMenu> {
         // 1. Рисуем фон
         graphics.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight);
 
-        // 2. Рисуем кнопку режима (х151 у34)
+        // 2. Рисуем кнопку режима (новое расположение: x80 y95, размер 15x15)
         int mode = menu.getMode();
-        graphics.blit(TEXTURE, x + 151, y + 34, 176, mode * 18, 18, 18);
+        graphics.blit(TEXTURE, x + 80, y + 95, 177, mode * 16, 15, 15);
 
-        // 3. Рисуем жидкость (х71 у17, размер 34х52)
-        renderFluid(graphics, x + 71, y + 17);
+        // 3. Рисуем полоску защитника, если в слоте 4 есть нужный предмет
+        ItemStack protectorStack = menu.getSlot(4).getItem();
+        if (!protectorStack.isEmpty()) {
+            Item item = protectorStack.getItem();
+            int vOffset = -1;
+            if (item == ModItems.PROTECTOR_STEEL.get()) {
+                vOffset = 197;
+            } else if (item == ModItems.PROTECTOR_LEAD.get()) {
+                vOffset = 214;
+            } else if (item == ModItems.PROTECTOR_TUNGSTEN.get()) {
+                vOffset = 231;
+            }
+            if (vOffset != -1) {
+                graphics.blit(TEXTURE, x + 39, y + 6, 0, vOffset, 118, 16);
+            }
+        }
+
+        // 4. Рисуем жидкость (новое расположение: x71 y39)
+        renderFluid(graphics, x + 71, y + 39);
     }
 
     private void renderFluid(GuiGraphics graphics, int x, int y) {
@@ -83,21 +102,18 @@ public class GUIFluidBarrel extends AbstractContainerScreen<FluidBarrelMenu> {
         RenderSystem.setShaderColor(r, g, b, a);
         RenderSystem.setShaderTexture(0, InventoryMenu.BLOCK_ATLAS);
 
-        // Блиттим жидкость (снизу вверх)
         int drawY = y + (maxFluidHeight - fluidHeight);
         graphics.blit(x, drawY, 0, 34, fluidHeight, sprite);
 
-        // Возвращаем цвет в норму
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0) {
-            // Клик по кнопке режима
-            if (isMouseOver(mouseX, mouseY, 151, 34, 18, 18)) {
+            // Клик по новой кнопке режима (x80 y95, размер 15x15)
+            if (isMouseOver(mouseX, mouseY, 80, 95, 15, 15)) {
                 playSound();
-                // Отправляем пакет на сервер!
                 com.cim.network.ModPacketHandler.INSTANCE.sendToServer(
                         new com.cim.network.packet.fluids.UpdateBarrelModeC2SPacket(menu.blockEntity.getBlockPos())
                 );
