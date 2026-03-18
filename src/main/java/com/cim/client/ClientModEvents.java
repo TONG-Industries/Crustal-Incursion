@@ -4,17 +4,18 @@ import com.cim.client.gecko.block.energy.MachineBatteryRenderer;
 import com.cim.client.overlay.gui.*;
 import com.cim.client.renderer.BeamCollisionRenderer;
 import com.cim.client.renderer.ConnectorRenderer;
+import com.cim.item.tools.FluidIdentifierItem;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.EntityRenderersEvent;
-import net.minecraftforge.client.event.ModelEvent;
-import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.client.event.*;
+import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -37,6 +38,7 @@ import com.cim.entity.ModEntities;
 import com.cim.item.ModItems;
 import com.cim.main.CrustalIncursionMod;
 import com.cim.menu.ModMenuTypes;
+import net.minecraftforge.registries.ForgeRegistries;
 
 @Mod.EventBusSubscriber(modid = CrustalIncursionMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ClientModEvents {
@@ -61,6 +63,7 @@ public class ClientModEvents {
         MenuScreens.register(ModMenuTypes.TURRET_AMMO_MENU.get(), GUITurretAmmo::new);
         MenuScreens.register(ModMenuTypes.SHAFT_PLACER_MENU.get(), GUIShaftPlacer::new);
         MenuScreens.register(ModMenuTypes.MINING_PORT_MENU.get(), GUIMiningPort::new);
+        MenuScreens.register(ModMenuTypes.FLUID_BARREL_MENU.get(), GUIFluidBarrel::new);
 
         BlockEntityRenderers.register(ModBlockEntities.MOTOR_ELECTRO_BE.get(), MotorElectroRenderer::new);
         BlockEntityRenderers.register(ModBlockEntities.SHAFT_BLOCK_BE.get(), ShaftRenderer::new);
@@ -117,5 +120,25 @@ public class ClientModEvents {
     @SubscribeEvent
     public static void onRegisterGuiOverlays(RegisterGuiOverlaysEvent event) {
         event.registerAbove(VanillaGuiOverlay.HOTBAR.id(), "ammo_hud", OverlayAmmoHud.HUD_AMMO);
+    }
+
+    @SubscribeEvent
+    public static void registerItemColors(RegisterColorHandlersEvent.Item event) {
+        event.register((stack, tintIndex) -> {
+            // tintIndex 0 - это layer0 (железная база), его не красим.
+            // tintIndex 1 - это layer1 (капля), красим её!
+            if (tintIndex == 1) {
+                String fluidId = FluidIdentifierItem.getSelectedFluid(stack);
+                if (fluidId.equals("none")) return 0xFFFFFF;
+                if (fluidId.equals("minecraft:lava")) return 0xFFFF5500;
+
+                Fluid fluid = ForgeRegistries.FLUIDS.getValue(new ResourceLocation(fluidId));
+                if (fluid != null && fluid != Fluids.EMPTY) {
+                    // Получаем цвет жидкости, точно так же как для рендера в бочке!
+                    return IClientFluidTypeExtensions.of(fluid).getTintColor();
+                }
+            }
+            return 0xFFFFFFFF;
+        }, ModItems.FLUID_IDENTIFIER.get()); // Замени на свой предмет
     }
 }

@@ -1,0 +1,7 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "cim:item/fluid_identifier_base",
+    "layer1": "cim:item/fluid_identifier_drop"
+  }
+}

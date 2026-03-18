@@ -1,6 +1,10 @@
 package com.cim.network;
 
 
+import com.cim.network.packet.fluids.ClearFluidHistoryPacket;
+import com.cim.network.packet.fluids.SelectFluidPacket;
+import com.cim.network.packet.fluids.ToggleFavoriteFluidPacket;
+import com.cim.network.packet.fluids.UpdateBarrelModeC2SPacket;
 import com.cim.network.packet.rotation.PacketToggleRetractMode;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkRegistry;
@@ -44,6 +48,11 @@ public class ModPacketHandler {
                 PacketSyncEnergy::decode,
                 PacketSyncEnergy::handle
         );
+
+        INSTANCE.registerMessage(id++, UpdateBarrelModeC2SPacket.class,
+                UpdateBarrelModeC2SPacket::toBytes,
+                UpdateBarrelModeC2SPacket::new,
+                UpdateBarrelModeC2SPacket::handle);
 
         INSTANCE.registerMessage(id++,
                 PacketReloadGun.class,
@@ -148,5 +157,23 @@ public class ModPacketHandler {
                 PacketToggleRetractMode::encode,
                 PacketToggleRetractMode::decode,
                 PacketToggleRetractMode::handle);
+
+        INSTANCE.registerMessage(id++,
+                ClearFluidHistoryPacket.class,
+                ClearFluidHistoryPacket::toBytes,
+                ClearFluidHistoryPacket::new,
+                ClearFluidHistoryPacket::handle);
+
+        INSTANCE.registerMessage(id++,
+                ToggleFavoriteFluidPacket.class,
+                ToggleFavoriteFluidPacket::toBytes,
+                ToggleFavoriteFluidPacket::new,
+                ToggleFavoriteFluidPacket::handle);
+
+        INSTANCE.registerMessage(id++,
+                SelectFluidPacket.class,
+                SelectFluidPacket::toBytes,
+                SelectFluidPacket::new,
+                SelectFluidPacket::handle);
     }
 }

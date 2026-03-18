@@ -5,6 +5,7 @@ import com.cim.block.basic.deco.BeamBlock;
 import com.cim.block.basic.deco.BeamCollisionBlock;
 import com.cim.block.basic.direction.SideOBlock;
 import com.cim.block.basic.energy.*;
+import com.cim.block.basic.fluids.FluidBarrelBlock;
 import com.cim.block.basic.necrosis.hive.HiveRootsBlock;
 import com.cim.block.basic.rotation.*;
 import net.minecraft.core.BlockPos;
@@ -198,6 +199,13 @@ public class ModBlocks {
             () -> new net.minecraft.world.level.block.TrapDoorBlock( // <--- ВОТ ТУТ ИСПРАВЬ
                     BlockBehaviour.Properties.copy(Blocks.DARK_OAK_DOOR).sound(SoundType.WOOD).noOcclusion(),
                     BlockSetType.DARK_OAK));
+
+
+    //ЖИДКОСТИ
+
+    public static final RegistryObject<Block> FLUID_BARREL = registerBlock("fluid_barrel",
+            () -> new FluidBarrelBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)
+                    .strength(3.0f, 4.0f).noOcclusion().requiresCorrectToolForDrops()));
 
 
     //БЛОКИ-ВРАЩЕНИЯ

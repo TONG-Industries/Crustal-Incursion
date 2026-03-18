@@ -1,6 +1,7 @@
 package com.cim.main;
 
 
+import com.cim.api.fluids.ModFluids;
 import com.cim.api.hive.HiveNetworkManager;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
@@ -72,6 +73,7 @@ public class CrustalIncursionMod {
         modEventBus.addListener(this::addCreative);
         ModTrunkPlacerTypes.register(modEventBus);
         ModFoliagePlacerTypes.register(modEventBus);
+        ModFluids.register(modEventBus);
         MinecraftForge.EVENT_BUS.register(new HiveEventHandler());
 
     }
@@ -161,7 +163,7 @@ public class CrustalIncursionMod {
 
             event.accept(ModItems.ENERGY_CELL_BASIC);
 
-
+            event.accept(ModBlocks.FLUID_BARREL);
 
 
             event.accept(ModItems.CREATIVE_BATTERY);

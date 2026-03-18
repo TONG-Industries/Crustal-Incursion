@@ -2,6 +2,7 @@ package com.cim.block.entity;
 
 import com.cim.block.entity.deco.BeamCollisionBlockEntity;
 import com.cim.block.entity.energy.*;
+import com.cim.block.entity.fluids.FluidBarrelBlockEntity;
 import com.cim.block.entity.rotation.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -132,6 +133,14 @@ public class ModBlockEntities {
                             ModBlocks.MEDIUM_CONNECTOR.get(),  // ДОБАВИТЬ ЭТО!
                             ModBlocks.LARGE_CONNECTOR.get()    // ДОБАВИТЬ ЭТО!
                     ).build(null));
+
+    // Не забудь импорт:
+    // import com.cim.block.entity.fluid.FluidBarrelBlockEntity;
+
+    public static final RegistryObject<BlockEntityType<FluidBarrelBlockEntity>> FLUID_BARREL_BE =
+            BLOCK_ENTITIES.register("fluid_barrel_be",
+                    () -> BlockEntityType.Builder.of(FluidBarrelBlockEntity::new, ModBlocks.FLUID_BARREL.get()).build(null));
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }
