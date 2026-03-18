@@ -189,15 +189,20 @@ public class GUIFluidIdentifier extends Screen {
     private void renderRecentFluids(GuiGraphics graphics, int x, int y, int mouseX, int mouseY) {
         for (int i = 0; i < recentFluids.size(); i++) {
             if (i >= 10) break;
+            String fluidId = recentFluids.get(i);
+            if (fluidId == null || fluidId.isEmpty() || fluidId.equals("null")) continue; // ← добавить эту проверку
+
             int drawX = x + 22 + ((i % 5) * 16);
             int drawY = y + 33 + ((i / 5) * 17);
 
-            String fluidId = recentFluids.get(i);
             renderFluidIcon(graphics, fluidId, drawX, drawY);
 
-            // ИСПРАВЛЕНО: точная проверка границ 16x16
             if (mouseX >= drawX && mouseX < drawX + 16 && mouseY >= drawY && mouseY < drawY + 16) {
                 Component tooltip = getFluidDisplayName(fluidId);
+                // Дополнительная защита: если компонент пустой, подставить заглушку
+                if (tooltip.getString().trim().isEmpty()) {
+                    tooltip = Component.literal("Unknown");
+                }
                 graphics.renderTooltip(this.font, tooltip, mouseX, mouseY);
             }
         }
@@ -235,15 +240,14 @@ public class GUIFluidIdentifier extends Screen {
 
             graphics.blit(TEXTURE, listX, entryY, 154, vOffset, 99, 19);
 
-            if (!fluidId.equals("none")) {
-                renderFluidIcon(graphics, fluidId, listX + 3, entryY + 3);
+            // Иконка теперь рисуется для всех, включая "none"
+            renderFluidIcon(graphics, fluidId, listX + 3, entryY + 3);
 
-                // Индикаторы характеристик
+            if (!fluidId.equals("none")) {
                 Fluid fluid = BuiltInRegistries.FLUID.get(new ResourceLocation(fluidId));
                 if (fluid != null) {
                     FluidStack stack = new FluidStack(fluid, 1000);
                     int cx = listX + 88;
-
                     if (com.cim.api.fluids.FluidPropertyHelper.getCorrosivity(stack) > 0) {
                         graphics.fill(cx, entryY + 4, cx + 2, entryY + 6, COLOR_HAZARDOUS);
                         cx -= 3;
@@ -323,11 +327,11 @@ public class GUIFluidIdentifier extends Screen {
     private void selectFluid(String fluid) {
         ModPacketHandler.INSTANCE.sendToServer(new SelectFluidPacket(fluid));
         identifierStack.getOrCreateTag().putString("SelectedFluid", fluid);
-        if (!fluid.equals("none")) {
-            recentFluids.remove(fluid);
-            recentFluids.add(0, fluid);
-            if (recentFluids.size() > 10) recentFluids.remove(10);
-        }
+
+        // Добавляем ВСЕ выбранные жидкости (включая "none") в историю
+        recentFluids.remove(fluid);
+        recentFluids.add(0, fluid);
+        if (recentFluids.size() > 10) recentFluids.remove(10);
     }
 
     private void toggleFavorite(String fluid) {
@@ -338,28 +342,16 @@ public class GUIFluidIdentifier extends Screen {
     }
 
     private void renderFluidIcon(GuiGraphics graphics, String id, int x, int y) {
+        ItemStack dummy;
         if (id.equals("none")) {
-            // Используем иконку пара как заглушку
-            Fluid steam = ModFluids.STEAM_SOURCE.get(); // предполагается, что ModFluids доступен
-            if (steam != null) {
-                ResourceLocation steamId = BuiltInRegistries.FLUID.getKey(steam);
-                ItemStack dummy = new ItemStack(identifierStack.getItem());
-                dummy.getOrCreateTag().putString("SelectedFluid", steamId.toString());
-                graphics.pose().pushPose();
-                graphics.pose().translate(x, y, 0);
-                graphics.pose().scale(13f / 16f, 13f / 16f, 1f);
-                graphics.renderItem(dummy, 0, 0);
-                graphics.pose().popPose();
-            } else {
-                // Если пар не зарегистрирован – запасной вариант (серый квадрат)
-                graphics.fill(x, y, x + 13, y + 13, 0xFFAAAAAA);
-            }
-            return;
+            // Для "ничего" используем сам предмет идентификатора без NBT
+            dummy = new ItemStack(identifierStack.getItem());
+        } else {
+            // Для жидкости подкладываем её ID в NBT, чтобы предмет отрисовал её иконку
+            dummy = new ItemStack(identifierStack.getItem());
+            dummy.getOrCreateTag().putString("SelectedFluid", id);
         }
 
-        // Стандартный рендер для обычных жидкостей
-        ItemStack dummy = new ItemStack(identifierStack.getItem());
-        dummy.getOrCreateTag().putString("SelectedFluid", id);
         graphics.pose().pushPose();
         graphics.pose().translate(x, y, 0);
         graphics.pose().scale(13f / 16f, 13f / 16f, 1f);
@@ -403,5 +395,9 @@ public class GUIFluidIdentifier extends Screen {
     @Override
     public boolean keyPressed(int k, int s, int m) {
         return searchBox.keyPressed(k, s, m) || super.keyPressed(k, s, m);
+    }
+    @Override
+    public boolean isPauseScreen() {
+        return false; // Мир не должен застывать
     }
 }

@@ -206,7 +206,6 @@ public class CrustalIncursionMod {
             event.accept(ModItems.GRENADE_IF_SLIME);
             event.accept(ModItems.GRENADE_IF_FIRE);
             event.accept(ModItems.GRENADE_NUC);
-            event.accept(ModItems.ENERGY_CELL_BASIC);
         }
 
         if (event.getTab() == ModCreativeTabs.CIM_TOOLS_TAB.get()) {
