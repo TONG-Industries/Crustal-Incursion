@@ -100,8 +100,10 @@ public class MultiblockPattern {
                 }
             }
         }
-        // Если не найден, возвращаем центр нижнего слоя
-        return origin.offset(width/2, 0, depth/2);
+        // Если контроллер не найден, используем центр структуры
+        int centerX = width / 2;
+        int centerZ = depth / 2;
+        return origin.offset(centerX, 0, centerZ);
     }
 
     public boolean isControllerPos(BlockPos origin, BlockPos pos) {

@@ -1,5 +1,6 @@
 package com.cim.multiblock.part;
 
+import com.cim.block.basic.ModBlocks;
 import com.cim.multiblock.industrial.HeaterBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
@@ -23,7 +24,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 public class MultiblockPartBlock extends Block implements EntityBlock {
-    private static final VoxelShape SHAPE = Shapes.block();
 
     public MultiblockPartBlock(Properties properties) {
         super(properties);
@@ -31,12 +31,22 @@ public class MultiblockPartBlock extends Block implements EntityBlock {
 
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof MultiblockPartEntity part) {
+            BlockPos controllerPos = part.getControllerPos();
+            if (controllerPos != null) {
+                BlockEntity controllerBe = level.getBlockEntity(controllerPos);
+                if (controllerBe instanceof HeaterBlockEntity heater) {
+                    return heater.getFullMultiblockShape(pos);
+                }
+            }
+        }
+        return Shapes.block();
     }
 
     @Override
     public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
+        return getShape(state, level, pos, context);
     }
 
     @Override
@@ -46,7 +56,28 @@ public class MultiblockPartBlock extends Block implements EntityBlock {
 
     @Override
     public List<ItemStack> getDrops(BlockState state, LootParams.Builder builder) {
-        return List.of(); // ничего не дропает
+        return List.of();
+    }
+
+    @Override
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        if (!level.isClientSide) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof MultiblockPartEntity part) {
+                BlockPos controllerPos = part.getControllerPos();
+                if (controllerPos != null) {
+                    BlockEntity controllerBe = level.getBlockEntity(controllerPos);
+                    if (controllerBe instanceof HeaterBlockEntity controller && !controller.isDestroying()) {
+                        // Дропаем предмет контроллера здесь
+                        Block.popResource(level, pos, new ItemStack(ModBlocks.HEATER.get().asItem()));
+                        // Уничтожаем весь мультиблок
+                        controller.destroyMultiblockFromPart(pos);
+                        return;
+                    }
+                }
+            }
+        }
+        super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override
@@ -65,23 +96,6 @@ public class MultiblockPartBlock extends Block implements EntityBlock {
             }
         }
         return InteractionResult.PASS;
-    }
-
-    @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!level.isClientSide && !state.is(newState.getBlock())) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof MultiblockPartEntity part) {
-                BlockPos controllerPos = part.getControllerPos();
-                if (controllerPos != null) {
-                    BlockEntity controllerBe = level.getBlockEntity(controllerPos);
-                    if (controllerBe instanceof HeaterBlockEntity controller && !controller.isDestroying()) {
-                        controller.destroyMultiblock();
-                    }
-                }
-            }
-        }
-        super.onRemove(state, level, pos, newState, isMoving);
     }
 
     @Nullable
