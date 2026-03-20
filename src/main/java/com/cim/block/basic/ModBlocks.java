@@ -8,6 +8,8 @@ import com.cim.block.basic.fluids.FluidBarrelBlock;
 import com.cim.block.basic.necrosis.hive.HiveRootsBlock;
 import com.cim.block.basic.rotation.*;
 
+import com.cim.multiblock.industrial.HeaterBlock;
+import com.cim.multiblock.system.MultiblockPartBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.BlockItem;
@@ -314,6 +316,8 @@ public class ModBlocks {
                     return 30; // Шанс, что огонь перекинется на этот блок
                 }});
 
+
+
     public static final RegistryObject<Block> MORY_BLOCK = registerBlock("mory_block",
             () -> new Block(BlockBehaviour.Properties.of()
                     .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
@@ -323,10 +327,12 @@ public class ModBlocks {
 
 
     //МУЛЬТИБЛОКИ
-//    public static final RegistryObject<Block> HEATER = registerBlockWithoutItem("heater",
-//            () -> new HeaterBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)
-//                    .strength(3f)
-//                    .requiresCorrectToolForDrops()));
+    public static final RegistryObject<Block> MULTIBLOCK_PART = BLOCKS.register("multiblock_part",
+            () -> new MultiblockPartBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).noOcclusion()));
+
+    // 2. Регистрируем блок самого Нагревателя
+    public static final RegistryObject<Block> HEATER = BLOCKS.register("heater",
+            () -> new HeaterBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).noOcclusion()));
 
 
 

@@ -189,7 +189,7 @@ public class CrustalIncursionMod {
 
             event.accept(ModBlocks.FLUID_BARREL);
 
-           // event.accept(ModItems.HEATER_ITEM);
+            event.accept(ModItems.HEATER_ITEM);
         }
 
 

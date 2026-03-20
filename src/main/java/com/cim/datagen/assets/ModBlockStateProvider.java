@@ -87,6 +87,8 @@ public class ModBlockStateProvider extends BlockStateProvider {
 
         //СТАТИЧНИЫЕ ПРОЗРАЧНЫЕ БЛОКИ, ПРИМЕР:
         // cutoutBlockWithItem(ModBlocks.REINFORCED_GLASS);
+        simpleBlock(ModBlocks.MULTIBLOCK_PART.get(),
+                models().withExistingParent(ModBlocks.MULTIBLOCK_PART.getId().getPath(), "minecraft:block/air"));
 
 
         //С ПОВОРОТОМ К ИГРОКУ
@@ -160,11 +162,6 @@ public class ModBlockStateProvider extends BlockStateProvider {
                     modelName += "_middle";
                 }
             }
-
-            // УБРАНО: добавление возраста к имени модели
-            // if (age > 0) {
-            //     modelName += "_age" + age;
-            // }
 
             return ConfiguredModel.builder()
                     .modelFile(models()

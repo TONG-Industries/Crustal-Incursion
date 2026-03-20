@@ -30,7 +30,7 @@ public class ModBlockLootTableProvider extends BlockLootSubProvider {
 
             // Пропускаем блоки, которые не должны иметь стандартного дропа
             if (exceptions.contains(block)) continue;
-            if (block == ModBlocks.BEAM_COLLISION.get()) continue;// добавлено
+            if (block == ModBlocks.BEAM_COLLISION.get() || block == ModBlocks.MULTIBLOCK_PART.get()) continue;
 
             this.dropSelf(block);
         }
@@ -50,7 +50,7 @@ public class ModBlockLootTableProvider extends BlockLootSubProvider {
     protected Iterable<Block> getKnownBlocks() {
         return ModBlocks.BLOCKS.getEntries().stream()
                 .map(RegistryObject::get)
-                .filter(block -> block != ModBlocks.BEAM_COLLISION.get())
+                .filter(block -> block != ModBlocks.BEAM_COLLISION.get() && block != ModBlocks.MULTIBLOCK_PART.get())
                 .collect(Collectors.toList());
     }
 }

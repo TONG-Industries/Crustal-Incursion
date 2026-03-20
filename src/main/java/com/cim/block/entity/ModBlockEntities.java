@@ -5,6 +5,8 @@ import com.cim.block.entity.energy.*;
 import com.cim.block.entity.fluids.FluidBarrelBlockEntity;
 import com.cim.block.entity.rotation.*;
 
+import com.cim.multiblock.industrial.HeaterBlockEntity;
+import com.cim.multiblock.system.MultiblockPartEntity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -66,9 +68,13 @@ public class ModBlockEntities {
 
 
 
-//    public static final RegistryObject<BlockEntityType<HeaterBlockEntity>> HEATER_BE =
-//            BLOCK_ENTITIES.register("heater_be", () ->
-//                    BlockEntityType.Builder.of(HeaterBlockEntity::new, ModBlocks.HEATER.get()).build(null));
+    // 1. BlockEntity для части мультиблока
+    public static final RegistryObject<BlockEntityType<MultiblockPartEntity>> MULTIBLOCK_PART = BLOCK_ENTITIES.register("multiblock_part",
+            () -> BlockEntityType.Builder.of(MultiblockPartEntity::new, ModBlocks.MULTIBLOCK_PART.get()).build(null));
+
+    // 2. BlockEntity для Нагревателя
+    public static final RegistryObject<BlockEntityType<HeaterBlockEntity>> HEATER_BE = BLOCK_ENTITIES.register("heater_be",
+            () -> BlockEntityType.Builder.of(HeaterBlockEntity::new, ModBlocks.HEATER.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<SwitchBlockEntity>> SWITCH_BE =
             BLOCK_ENTITIES.register("switch_be", () ->
