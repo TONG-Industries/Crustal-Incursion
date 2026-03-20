@@ -57,7 +57,7 @@ public class ModBlockStateProvider extends BlockStateProvider {
         cubeAllWithItem(ModBlocks.CONCRETE_GREEN);
         cubeAllWithItem(ModBlocks.CONCRETE_HAZARD_NEW);
         cubeAllWithItem(ModBlocks.CONCRETE_HAZARD_OLD);
-
+        cubeAllWithItem(ModBlocks.FIREBRICK_BLOCK);
         cubeAllWithItem(ModBlocks.NECROSIS_TEST);
         cubeAllWithItem(ModBlocks.NECROSIS_TEST2);
         cubeAllWithItem(ModBlocks.NECROSIS_TEST3);
@@ -115,7 +115,7 @@ public class ModBlockStateProvider extends BlockStateProvider {
         trapdoorBlockWithRenderType((net.minecraft.world.level.block.TrapDoorBlock) ModBlocks.SEQUOIA_TRAPDOOR.get(),
                 modLoc("block/sequoia_trapdoor"), true, "cutout");
 
-
+        stairsAndSlabs(ModBlocks.FIREBRICK_BLOCK.get(), ModBlocks.FIREBRICK_STAIRS.get(), ModBlocks.FIREBRICK_SLAB.get());
         stairsAndSlabs(ModBlocks.CONCRETE.get(), ModBlocks.CONCRETE_STAIRS.get(), ModBlocks.CONCRETE_SLAB.get());
         stairsAndSlabs(ModBlocks.CONCRETE_RED.get(), ModBlocks.CONCRETE_RED_STAIRS.get(), ModBlocks.CONCRETE_RED_SLAB.get());
         stairsAndSlabs(ModBlocks.CONCRETE_BLUE.get(), ModBlocks.CONCRETE_BLUE_STAIRS.get(), ModBlocks.CONCRETE_BLUE_SLAB.get());
