@@ -14,7 +14,6 @@ import com.cim.item.tools.ScrewdriverItem;
 import com.cim.item.weapons.grenades.GrenadeIfItem;
 import com.cim.item.weapons.grenades.GrenadeItem;
 import com.cim.item.weapons.grenades.GrenadeNucItem;
-import com.cim.multiblock.industrial.HeaterBlockItem;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.registries.DeferredRegister;
@@ -72,8 +71,14 @@ public class ModItems {
             () -> new Item(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> PROTECTOR_TUNGSTEN = ITEMS.register("protector_tungsten",
             () -> new Item(new Item.Properties().stacksTo(1)));
-    public static final RegistryObject<Item> HEATER_ITEM = ITEMS.register("heater",
-            () -> new HeaterBlockItem(ModBlocks.HEATER.get(), new Item.Properties()));
+
+
+//    public static final RegistryObject<Item> HEATER_ITEM = ITEMS.register("heater",
+//            () -> new HeaterBlockItem(ModBlocks.HEATER.get(), new Item.Properties()));
+
+
+
+
     //ОРУЖИЕ
     public static final RegistryObject<Item> MACHINEGUN = ITEMS.register("machinegun",
             () -> new MachineGunItem(new Item.Properties()));

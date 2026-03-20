@@ -4,8 +4,7 @@ import com.cim.block.entity.deco.BeamCollisionBlockEntity;
 import com.cim.block.entity.energy.*;
 import com.cim.block.entity.fluids.FluidBarrelBlockEntity;
 import com.cim.block.entity.rotation.*;
-import com.cim.multiblock.industrial.HeaterBlockEntity;
-import com.cim.multiblock.system.part.MultiblockPartEntity;
+
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -23,8 +22,6 @@ public class ModBlockEntities {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
             DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, CrustalIncursionMod.MOD_ID);
 
-    // ПРИМЕР: Некротический Алтарь (если такой был в cim)
-    // .build(null) в 1.20.1 — это стандарт для создания типа
 
     public static final RegistryObject<BlockEntityType<DepthWormNestBlockEntity>> DEPTH_WORM_NEST =
             BLOCK_ENTITIES.register("depth_worm_nest",
@@ -67,13 +64,11 @@ public class ModBlockEntities {
             BLOCK_ENTITIES.register("converter_be",
                     () -> BlockEntityType.Builder.of(ConverterBlockEntity::new, ModBlocks.CONVERTER_BLOCK.get()).build(null));
 
-    public static final RegistryObject<BlockEntityType<MultiblockPartEntity>> MULTIBLOCK_PART =
-            BLOCK_ENTITIES.register("multiblock_part", () ->
-                    BlockEntityType.Builder.of(MultiblockPartEntity::new, ModBlocks.MULTIBLOCK_PART.get()).build(null));
 
-    public static final RegistryObject<BlockEntityType<HeaterBlockEntity>> HEATER_BE =
-            BLOCK_ENTITIES.register("heater_be", () ->
-                    BlockEntityType.Builder.of(HeaterBlockEntity::new, ModBlocks.HEATER.get()).build(null));
+
+//    public static final RegistryObject<BlockEntityType<HeaterBlockEntity>> HEATER_BE =
+//            BLOCK_ENTITIES.register("heater_be", () ->
+//                    BlockEntityType.Builder.of(HeaterBlockEntity::new, ModBlocks.HEATER.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<SwitchBlockEntity>> SWITCH_BE =
             BLOCK_ENTITIES.register("switch_be", () ->
@@ -137,13 +132,11 @@ public class ModBlockEntities {
     public static final RegistryObject<BlockEntityType<ConnectorBlockEntity>> CONNECTOR_BE =
             BLOCK_ENTITIES.register("connector", () ->
                     BlockEntityType.Builder.of(ConnectorBlockEntity::new,
-                            ModBlocks.CONNECTOR.get(),         // Твой маленький коннектор
-                            ModBlocks.MEDIUM_CONNECTOR.get(),  // ДОБАВИТЬ ЭТО!
-                            ModBlocks.LARGE_CONNECTOR.get()    // ДОБАВИТЬ ЭТО!
+                            ModBlocks.CONNECTOR.get(),
+                            ModBlocks.MEDIUM_CONNECTOR.get(),
+                            ModBlocks.LARGE_CONNECTOR.get()
                     ).build(null));
 
-    // Не забудь импорт:
-    // import com.cim.block.entity.fluid.FluidBarrelBlockEntity;
 
     public static final RegistryObject<BlockEntityType<FluidBarrelBlockEntity>> FLUID_BARREL_BE =
             BLOCK_ENTITIES.register("fluid_barrel_be",

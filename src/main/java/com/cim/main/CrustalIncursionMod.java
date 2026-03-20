@@ -3,7 +3,6 @@ package com.cim.main;
 
 import com.cim.api.fluids.ModFluids;
 import com.cim.api.hive.HiveNetworkManager;
-import com.cim.multiblock.system.MultiblockEventHandler;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -67,7 +66,6 @@ public class CrustalIncursionMod {
         ModSounds.register(modEventBus);
         ModMenuTypes.MENUS.register(modEventBus);
         modEventBus.addListener(this::entityAttributeEvent);
-        MinecraftForge.EVENT_BUS.register(new MultiblockEventHandler());
         modEventBus.addListener(this::commonSetup);
         MinecraftForge.EVENT_BUS.register(this);
         modEventBus.addListener(this::addCreative);
@@ -191,7 +189,7 @@ public class CrustalIncursionMod {
 
             event.accept(ModBlocks.FLUID_BARREL);
 
-            event.accept(ModItems.HEATER_ITEM);
+           // event.accept(ModItems.HEATER_ITEM);
         }
 
 

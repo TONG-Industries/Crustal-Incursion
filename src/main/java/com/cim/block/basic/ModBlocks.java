@@ -7,10 +7,7 @@ import com.cim.block.basic.energy.*;
 import com.cim.block.basic.fluids.FluidBarrelBlock;
 import com.cim.block.basic.necrosis.hive.HiveRootsBlock;
 import com.cim.block.basic.rotation.*;
-import com.cim.multiblock.industrial.HeaterBlock;
 
-
-import com.cim.multiblock.system.part.MultiblockPartBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.BlockItem;
@@ -62,7 +59,7 @@ public class ModBlocks {
     // Средний
     public static final RegistryObject<Block> MEDIUM_CONNECTOR = registerBlock("medium_connector",
             () -> new ConnectorBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK),
-                    new ConnectorTier(32, 7, 0.05f, 6, 8))); // Длина 32, 4 провода, толще провод, модель 6х8
+                    new ConnectorTier(32, 7, 0.05f, 6, 8)));
 
     // Большой
     public static final RegistryObject<Block> LARGE_CONNECTOR = registerBlock("large_connector",
@@ -326,20 +323,12 @@ public class ModBlocks {
 
 
     //МУЛЬТИБЛОКИ
-    public static final RegistryObject<Block> HEATER = registerBlockWithoutItem("heater",
-            () -> new HeaterBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)
-                    .strength(3f)
-                    .requiresCorrectToolForDrops()));
+//    public static final RegistryObject<Block> HEATER = registerBlockWithoutItem("heater",
+//            () -> new HeaterBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)
+//                    .strength(3f)
+//                    .requiresCorrectToolForDrops()));
 
-    public static final RegistryObject<Block> MULTIBLOCK_PART = registerBlockOnly("multiblock_part",
-            () -> new MultiblockPartBlock(BlockBehaviour.Properties.of()
-                    .strength(1.0f, 6.0f) // Нормальная прочность, будет переопределена динамически
-                    .noOcclusion()
-                    .noLootTable()
-                    .isRedstoneConductor((state, level, pos) -> false)
-                    .isSuffocating((state, level, pos) -> false)
-                    .isViewBlocking((state, level, pos) -> false)
-            ));
+
 
     // Вспомогательный метод регистрации без предмета
     private static <T extends Block> RegistryObject<T> registerBlockOnly(String name, Supplier<T> block) {
