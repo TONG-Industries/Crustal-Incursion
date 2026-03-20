@@ -55,9 +55,11 @@ public class ModItems {
             () -> new MultiDetonatorItem(new Item.Properties()));
     public static final RegistryObject<Item> DETONATOR = ITEMS.register("detonator",
             () -> new DetonatorItem(new Item.Properties()));
+    public static final RegistryObject<Item> FIREBRICK = ITEMS.register("firebrick",
+            () -> new Item(new Item.Properties()));
 
     public static final RegistryObject<Item> WIRE_COIL = ITEMS.register("wire_coil",
-            () -> new WireCoilItem(new Item.Properties().stacksTo(64)));
+            () -> new WireCoilItem(new Item.Properties().stacksTo(1)));
 
     public static final RegistryObject<Item> BEAM_PLACER = ITEMS.register("beam_placer",
             () -> new BeamPlacerItem(new Item.Properties().stacksTo(1)));
