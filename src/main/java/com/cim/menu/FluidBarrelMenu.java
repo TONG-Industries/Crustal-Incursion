@@ -21,15 +21,27 @@ public class FluidBarrelMenu extends AbstractContainerMenu {
         this.blockEntity = (FluidBarrelBlockEntity) entity;
         this.data = data;
 
-        // Слоты бочки (теперь 5 слотов: 4 для ведер + 1 для защитника)
         this.blockEntity.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(handler -> {
-            this.addSlot(new SlotItemHandler(handler, 0, 35, 17));  // Full In
-            this.addSlot(new SlotItemHandler(handler, 1, 35, 53));  // Empty Out
-            this.addSlot(new SlotItemHandler(handler, 2, 125, 17)); // Empty In
-            this.addSlot(new SlotItemHandler(handler, 3, 125, 53)); // Full Out
-            // Добавляем пятый слот для защитника (x19 y6)
-            if (handler.getSlots() > 4) {
-                this.addSlot(new SlotItemHandler(handler, 4, 19, 6));
+            // 1. Наполнение: ВХОД (пустые/полупустые предметы)
+            for (int i = 0; i < 4; i++) {
+                this.addSlot(new SlotItemHandler(handler, i, 11, 37 + (i * 18)));
+            }
+            // 2. Наполнение: ВЫХОД (полные предметы)
+            for (int i = 0; i < 4; i++) {
+                this.addSlot(new SlotItemHandler(handler, i + 4, 45, 37 + (i * 18)));
+            }
+            // 3. Опустошение: ВЫХОД (опустошенные предметы)
+            for (int i = 0; i < 4; i++) {
+                this.addSlot(new SlotItemHandler(handler, i + 8, 115, 37 + (i * 18)));
+            }
+            // 4. Опустошение: ВХОД (предметы с жидкостью)
+            for (int i = 0; i < 4; i++) {
+                this.addSlot(new SlotItemHandler(handler, i + 12, 149, 37 + (i * 18)));
+            }
+
+            // 5. Слот защитника (индекс 16)
+            if (handler.getSlots() > 16) {
+                this.addSlot(new SlotItemHandler(handler, 16, 19, 6));
             }
         });
 

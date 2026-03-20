@@ -40,6 +40,12 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
     // 0 = BOTH, 1 = INPUT, 2 = OUTPUT, 3 = DISABLED
     public int mode = 0;
 
+    public static final int TOTAL_SLOTS = 17;
+    public static final int FILL_IN_START = 0, FILL_IN_END = 4;
+    public static final int FILL_OUT_START = 4, FILL_OUT_END = 8;
+    public static final int DRAIN_OUT_START = 8, DRAIN_OUT_END = 12;
+    public static final int DRAIN_IN_START = 12, DRAIN_IN_END = 16;
+
     public String fluidFilter = "none";
 
     // Хранилище жидкости (16 ведёр = 16000 mB)
@@ -66,25 +72,32 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
     };
 
     // 0: Full in, 1: Empty out | 2: Empty in, 3: Full out | 4: Protector
-    public final ItemStackHandler itemHandler = new ItemStackHandler(5) { // увеличено до 5
+    public final ItemStackHandler itemHandler = new ItemStackHandler(TOTAL_SLOTS) {
         @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-        }
+        protected void onContentsChanged(int slot) { setChanged(); }
 
         @Override
         public boolean isItemValid(int slot, @NotNull ItemStack stack) {
-            if (slot == 4) {
-                // Слот для защитника: только PROTECTOR_STEEL, LEAD, TUNGSTEN
-                return stack.getItem() == ModItems.PROTECTOR_STEEL.get() ||
-                        stack.getItem() == ModItems.PROTECTOR_LEAD.get() ||
-                        stack.getItem() == ModItems.PROTECTOR_TUNGSTEN.get();
-            }
-            // Для слотов вёдер (0 и 2) требуется наличие жидкости в предмете
-            if (slot == 0 || slot == 2) {
+            // Разрешаем класть вручную только во входные слоты (и в слот защитника)
+            if (slot >= FILL_IN_START && slot < FILL_IN_END) {
                 return stack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).isPresent();
             }
-            return false; // слоты 1 и 3 автоматически не принимают предметы (только вывод)
+            if (slot >= DRAIN_IN_START && slot < DRAIN_IN_END) {
+                return stack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).isPresent();
+            }
+            if (slot == 16) return true; // Можно добавить строгую проверку на предметы-защитники
+
+            return false; // В аутпуты руками класть нельзя
+        }
+
+        @Override
+        public void deserializeNBT(CompoundTag nbt) {
+            super.deserializeNBT(nbt);
+            // Защита от крашей при загрузке старых сохранений.
+            // Если Forge сжал инвентарь из-за старого NBT, восстанавливаем правильный размер!
+            if (this.getSlots() != TOTAL_SLOTS) {
+                this.setSize(TOTAL_SLOTS);
+            }
         }
     };
 
@@ -107,50 +120,65 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
     }
 
     private void processBuckets() {
-        // Если режим отключён — ничего не делаем
-        if (mode == 3) return;
+        // 1. Опустошение предметов (Слоты 12-15 -> переходят в 8-11)
+        for (int i = DRAIN_IN_START; i < DRAIN_IN_END; i++) {
+            ItemStack inStack = itemHandler.getStackInSlot(i);
+            if (inStack.isEmpty()) continue;
 
-        // 1. Опустошение полного ведра (Слот 0 -> Слот 1) — разрешено в режимах BOTH и INPUT
-        if (mode == 0 || mode == 1) {
-            ItemStack fullIn = itemHandler.getStackInSlot(0);
-            if (!fullIn.isEmpty()) {
-                var result = FluidUtil.tryEmptyContainer(fullIn, fluidTank, fluidTank.getSpace(), null, true);
-                if (result.isSuccess()) {
-                    ItemStack emptyOut = result.getResult();
-                    if (insertToOutput(1, emptyOut)) {
-                        fullIn.shrink(1);
-                    }
+            // Пытаемся вылить жидкость ИЗ предмета В бочку
+            var result = FluidUtil.tryEmptyContainer(inStack, fluidTank, fluidTank.getSpace(), null, true);
+            if (result.isSuccess()) {
+                ItemStack emptyOut = result.getResult();
+                // Ищем свободный выходной слот
+                if (insertToOutput(DRAIN_OUT_START, DRAIN_OUT_END, emptyOut)) {
+                    inStack.shrink(1); // Уничтожаем предмет во входе, если успешно переложили пустой
                 }
             }
         }
 
-        // 2. Наполнение пустого ведра (Слот 2 -> Слот 3) — разрешено в режимах BOTH и OUTPUT
-        if (mode == 0 || mode == 2) {
-            ItemStack emptyIn = itemHandler.getStackInSlot(2);
-            if (!emptyIn.isEmpty() && fluidTank.getFluidAmount() > 0) {
-                var result = FluidUtil.tryFillContainer(emptyIn, fluidTank, fluidTank.getFluidAmount(), null, true);
+        // 2. Наполнение предметов (Слоты 0-3 -> переходят в 4-7)
+        if (fluidTank.getFluidAmount() > 0) {
+            for (int i = FILL_IN_START; i < FILL_IN_END; i++) {
+                ItemStack inStack = itemHandler.getStackInSlot(i);
+                if (inStack.isEmpty()) continue;
+
+                // Пытаемся залить жидкость ИЗ бочки В предмет
+                var result = FluidUtil.tryFillContainer(inStack, fluidTank, fluidTank.getFluidAmount(), null, true);
                 if (result.isSuccess()) {
                     ItemStack fullOut = result.getResult();
-                    if (insertToOutput(3, fullOut)) {
-                        emptyIn.shrink(1);
+                    // Ищем свободный выходной слот
+                    if (insertToOutput(FILL_OUT_START, FILL_OUT_END, fullOut)) {
+                        inStack.shrink(1); // Уничтожаем предмет во входе, если успешно переложили полный
                     }
                 }
             }
         }
     }
 
-    private boolean insertToOutput(int slot, ItemStack stack) {
-        if (stack.isEmpty()) return true;
-        ItemStack existing = itemHandler.getStackInSlot(slot);
-        if (existing.isEmpty()) {
-            itemHandler.setStackInSlot(slot, stack);
-            return true;
+    private boolean insertToOutput(int startSlot, int endSlot, ItemStack stackToInsert) {
+        if (stackToInsert.isEmpty()) return true; // Ведро пропало (например, одноразовое), считаем успехом
+
+        // Сначала ищем слот с таким же предметом, чтобы застакать
+        for (int i = startSlot; i < endSlot; i++) {
+            ItemStack existing = itemHandler.getStackInSlot(i);
+            if (!existing.isEmpty() && ItemStack.isSameItemSameTags(existing, stackToInsert)) {
+                if (existing.getCount() + stackToInsert.getCount() <= existing.getMaxStackSize()) {
+                    existing.grow(stackToInsert.getCount());
+                    return true;
+                }
+            }
         }
-        if (ItemHandlerHelper.canItemStacksStack(existing, stack) && existing.getCount() + stack.getCount() <= existing.getMaxStackSize()) {
-            existing.grow(stack.getCount());
-            return true;
+
+        // Если не нашли куда стакнуть, ищем первый пустой слот
+        for (int i = startSlot; i < endSlot; i++) {
+            ItemStack existing = itemHandler.getStackInSlot(i);
+            if (existing.isEmpty()) {
+                itemHandler.setStackInSlot(i, stackToInsert.copy());
+                return true;
+            }
         }
-        return false;
+
+        return false; // Нет места
     }
 
     public void setFilter(String newFilter) {

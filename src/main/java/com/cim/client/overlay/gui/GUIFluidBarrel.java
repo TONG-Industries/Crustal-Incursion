@@ -17,7 +17,7 @@ import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.minecraftforge.fluids.FluidStack;
 import com.cim.main.CrustalIncursionMod;
 import com.cim.menu.FluidBarrelMenu;
-import com.cim.item.ModItems; // Добавлен импорт для PROTECTOR'ов
+import com.cim.item.ModItems;
 
 public class GUIFluidBarrel extends AbstractContainerScreen<FluidBarrelMenu> {
 
@@ -27,7 +27,7 @@ public class GUIFluidBarrel extends AbstractContainerScreen<FluidBarrelMenu> {
     public GUIFluidBarrel(FluidBarrelMenu pMenu, Inventory pPlayerInventory, Component pTitle) {
         super(pMenu, pPlayerInventory, pTitle);
         this.imageWidth = 176;
-        this.imageHeight = 196; // Изменено с 166 на 196
+        this.imageHeight = 196;
     }
 
     @Override
@@ -53,12 +53,10 @@ public class GUIFluidBarrel extends AbstractContainerScreen<FluidBarrelMenu> {
         // 1. Рисуем фон
         graphics.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight);
 
-        // 2. Рисуем кнопку режима (новое расположение: x80 y95, размер 15x15)
         int mode = menu.getMode();
         graphics.blit(TEXTURE, x + 80, y + 95, 177, mode * 16, 15, 15);
 
-        // 3. Рисуем полоску защитника, если в слоте 4 есть нужный предмет
-        ItemStack protectorStack = menu.getSlot(4).getItem();
+        ItemStack protectorStack = menu.getSlot(16).getItem();
         if (!protectorStack.isEmpty()) {
             Item item = protectorStack.getItem();
             int vOffset = -1;
