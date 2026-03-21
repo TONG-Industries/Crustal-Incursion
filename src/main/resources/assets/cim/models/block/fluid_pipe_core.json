@@ -1,0 +1,5 @@
+{
+  "loader": "forge:obj",
+  "model": "cim:models/block/fluid_pipe_core.obj",
+  "flip_v": true
+}

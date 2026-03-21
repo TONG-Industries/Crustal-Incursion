@@ -1,10 +1,12 @@
 package com.cim.block.basic;
 
 import com.cim.api.energy.ConnectorTier;
+import com.cim.api.fluids.PipeTier;
 import com.cim.block.basic.deco.BeamBlock;
 import com.cim.block.basic.deco.BeamCollisionBlock;
 import com.cim.block.basic.energy.*;
 import com.cim.block.basic.fluids.FluidBarrelBlock;
+import com.cim.block.basic.fluids.FluidPipeBlock;
 import com.cim.block.basic.necrosis.hive.HiveRootsBlock;
 import com.cim.block.basic.rotation.*;
 
@@ -67,6 +69,22 @@ public class ModBlocks {
     public static final RegistryObject<Block> LARGE_CONNECTOR = registerBlock("large_connector",
             () -> new ConnectorBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK),
                     new ConnectorTier(100, 11, 0.08f, 8, 13)));
+
+    //трубы
+
+    public static final RegistryObject<Block> COPPER_FLUID_PIPE = registerBlock("copper_fluid_pipe",
+            () -> new FluidPipeBlock(PipeTier.COPPER, BlockBehaviour.Properties.copy(Blocks.COPPER_BLOCK).noOcclusion()));
+
+    // Стальная труба
+    public static final RegistryObject<Block> STEEL_FLUID_PIPE = registerBlock("steel_fluid_pipe",
+            () -> new FluidPipeBlock(PipeTier.STEEL, BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).noOcclusion()));
+
+    // Свинцовая труба
+    public static final RegistryObject<Block> LEAD_FLUID_PIPE = registerBlock("lead_fluid_pipe",
+            () -> new FluidPipeBlock(PipeTier.LEAD, BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).noOcclusion()));
+
+
+
 
     //ВЗРЫВЧАТКА
     public static final RegistryObject<Block> DET_MINER = registerBlock("det_miner",

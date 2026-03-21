@@ -10,13 +10,19 @@ public class BaseFluidType extends FluidType {
     private final ResourceLocation stillTexture;
     private final ResourceLocation flowingTexture;
     private final int tintColor;
+    private final int acidity;
+    private final int radiation;
 
-    public BaseFluidType(Properties properties, ResourceLocation stillTexture, ResourceLocation flowingTexture, int tintColor) {
+    public BaseFluidType(Properties properties, ResourceLocation stillTexture, ResourceLocation flowingTexture, int tintColor, int acidity, int radiation) {
         super(properties);
         this.stillTexture = stillTexture;
         this.flowingTexture = flowingTexture;
         this.tintColor = tintColor;
+        this.acidity = acidity;
+        this.radiation = radiation;
     }
+
+
 
     @Override
     public void initializeClient(Consumer<IClientFluidTypeExtensions> consumer) {
@@ -37,4 +43,7 @@ public class BaseFluidType extends FluidType {
             }
         });
     }
+
+    public int getAcidity() { return acidity; }
+    public int getRadiation() { return radiation; }
 }

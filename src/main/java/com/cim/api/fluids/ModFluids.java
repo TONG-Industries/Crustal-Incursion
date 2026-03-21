@@ -28,7 +28,9 @@ public class ModFluids {
     // ==========================================
     public static final RegistryObject<FluidType> HYDROGEN_PEROXIDE_TYPE = FLUID_TYPES.register("hydrogen_peroxide",
             () -> new BaseFluidType(FluidType.Properties.create().density(1450).viscosity(1100).temperature(300),
-                    WATER_STILL, WATER_FLOW, 0xAAFFFFFF));
+                    WATER_STILL, WATER_FLOW, 0xAAFFFFFF,
+                    10,
+                    0));
 
     public static final RegistryObject<FlowingFluid> HYDROGEN_PEROXIDE_SOURCE = FLUIDS.register("hydrogen_peroxide",
             () -> new ForgeFlowingFluid.Source(ModFluids.HYDROGEN_PEROXIDE_PROPS));
@@ -45,7 +47,9 @@ public class ModFluids {
     // ==========================================
     public static final RegistryObject<FluidType> SULFURIC_ACID_TYPE = FLUID_TYPES.register("sulfuric_acid",
             () -> new BaseFluidType(FluidType.Properties.create().density(1830).viscosity(2000).temperature(350),
-                    WATER_STILL, WATER_FLOW, 0xCCAAAA00));
+                    WATER_STILL, WATER_FLOW, 0xCCAAAA00,
+                    60,
+                    0));
 
     public static final RegistryObject<FlowingFluid> SULFURIC_ACID_SOURCE = FLUIDS.register("sulfuric_acid",
             () -> new ForgeFlowingFluid.Source(ModFluids.SULFURIC_ACID_PROPS));
@@ -62,7 +66,9 @@ public class ModFluids {
     // ==========================================
     public static final RegistryObject<FluidType> NATURAL_GAS_TYPE = FLUID_TYPES.register("natural_gas",
             () -> new BaseFluidType(FluidType.Properties.create().density(-800).viscosity(500).temperature(300),
-                    WATER_STILL, WATER_FLOW, 0x44B0C4DE));
+                    WATER_STILL, WATER_FLOW, 0x44B0C4DE,
+                    0,
+                    0));
 
     public static final RegistryObject<FlowingFluid> NATURAL_GAS_SOURCE = FLUIDS.register("natural_gas",
             () -> new ForgeFlowingFluid.Source(ModFluids.NATURAL_GAS_PROPS));
@@ -77,7 +83,9 @@ public class ModFluids {
     // ==========================================
     public static final RegistryObject<FluidType> STEAM_TYPE = FLUID_TYPES.register("steam",
             () -> new BaseFluidType(FluidType.Properties.create().density(-1000).viscosity(200).temperature(373),
-                    WATER_STILL, WATER_FLOW, 0x88FFFFFF));
+                    WATER_STILL, WATER_FLOW, 0x88FFFFFF,
+                    0,
+                    0));
 
     public static final RegistryObject<FlowingFluid> STEAM_SOURCE = FLUIDS.register("steam",
             () -> new ForgeFlowingFluid.Source(ModFluids.STEAM_PROPS));

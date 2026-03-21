@@ -3,6 +3,7 @@ package com.cim.block.entity;
 import com.cim.block.entity.deco.BeamCollisionBlockEntity;
 import com.cim.block.entity.energy.*;
 import com.cim.block.entity.fluids.FluidBarrelBlockEntity;
+import com.cim.block.entity.fluids.FluidPipeBlockEntity;
 import com.cim.block.entity.rotation.*;
 
 import com.cim.multiblock.industrial.HeaterBlockEntity;
@@ -121,6 +122,10 @@ public class ModBlockEntities {
     public static final RegistryObject<BlockEntityType<MotorElectroBlockEntity>> MOTOR_ELECTRO_BE =
             BLOCK_ENTITIES.register("motor_electro_be",
                     () -> BlockEntityType.Builder.of(MotorElectroBlockEntity::new, ModBlocks.MOTOR_ELECTRO.get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<FluidPipeBlockEntity>> FLUID_PIPE_BE =
+            BLOCK_ENTITIES.register("fluid_pipe_be",
+                    () -> BlockEntityType.Builder.of(FluidPipeBlockEntity::new, ModBlocks.FLUID_PIPE.get()).build(null));
 
 
     public static final RegistryObject<BlockEntityType<BeamCollisionBlockEntity>> BEAM_COLLISION_BE =

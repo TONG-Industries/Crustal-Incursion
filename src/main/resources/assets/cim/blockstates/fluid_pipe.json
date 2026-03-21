@@ -1,0 +1,26 @@
+{
+  "multipart": [
+    { "apply": { "model": "cim:block/fluid_pipe_core" } },
+
+    { "when": { "north": "true" }, "apply": { "model": "cim:block/fluid_pipe_arm" } },
+    { "when": { "east": "true" }, "apply": { "model": "cim:block/fluid_pipe_arm", "y": 90 } },
+    { "when": { "south": "true" }, "apply": { "model": "cim:block/fluid_pipe_arm", "y": 180 } },
+    { "when": { "west": "true" }, "apply": { "model": "cim:block/fluid_pipe_arm", "y": 270 } },
+    { "when": { "up": "true" }, "apply": { "model": "cim:block/fluid_pipe_arm", "x": 270 } },
+    { "when": { "down": "true" }, "apply": { "model": "cim:block/fluid_pipe_arm", "x": 90 } },
+
+    { "when": { "none": "true" }, "apply": { "model": "cim:block/fluid_pipe_arm" } },
+    { "when": { "none": "true" }, "apply": { "model": "cim:block/fluid_pipe_arm", "y": 90 } },
+    { "when": { "none": "true" }, "apply": { "model": "cim:block/fluid_pipe_arm", "y": 180 } },
+    { "when": { "none": "true" }, "apply": { "model": "cim:block/fluid_pipe_arm", "y": 270 } },
+    { "when": { "none": "true" }, "apply": { "model": "cim:block/fluid_pipe_arm", "x": 270 } },
+    { "when": { "none": "true" }, "apply": { "model": "cim:block/fluid_pipe_arm", "x": 90 } },
+
+    { "when": { "north": "true", "south": "false", "east": "false", "west": "false", "up": "false", "down": "false" }, "apply": { "model": "cim:block/fluid_pipe_arm", "y": 180 } },
+    { "when": { "north": "false", "south": "true", "east": "false", "west": "false", "up": "false", "down": "false" }, "apply": { "model": "cim:block/fluid_pipe_arm" } },
+    { "when": { "north": "false", "south": "false", "east": "true", "west": "false", "up": "false", "down": "false" }, "apply": { "model": "cim:block/fluid_pipe_arm", "y": 270 } },
+    { "when": { "north": "false", "south": "false", "east": "false", "west": "true", "up": "false", "down": "false" }, "apply": { "model": "cim:block/fluid_pipe_arm", "y": 90 } },
+    { "when": { "north": "false", "south": "false", "east": "false", "west": "false", "up": "true", "down": "false" }, "apply": { "model": "cim:block/fluid_pipe_arm", "x": 90 } },
+    { "when": { "north": "false", "south": "false", "east": "false", "west": "false", "up": "false", "down": "true" }, "apply": { "model": "cim:block/fluid_pipe_arm", "x": 270 } }
+  ]
+}
