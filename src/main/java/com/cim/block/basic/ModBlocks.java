@@ -72,8 +72,8 @@ public class ModBlocks {
 
     //трубы
 
-    public static final RegistryObject<Block> COPPER_FLUID_PIPE = registerBlock("copper_fluid_pipe",
-            () -> new FluidPipeBlock(PipeTier.COPPER, BlockBehaviour.Properties.copy(Blocks.COPPER_BLOCK).noOcclusion()));
+    public static final RegistryObject<Block> BRONZE_FLUID_PIPE = registerBlock("bronze_fluid_pipe",
+            () -> new FluidPipeBlock(PipeTier.BRONZE, BlockBehaviour.Properties.copy(Blocks.COPPER_BLOCK).noOcclusion()));
 
     // Стальная труба
     public static final RegistryObject<Block> STEEL_FLUID_PIPE = registerBlock("steel_fluid_pipe",
@@ -82,6 +82,9 @@ public class ModBlocks {
     // Свинцовая труба
     public static final RegistryObject<Block> LEAD_FLUID_PIPE = registerBlock("lead_fluid_pipe",
             () -> new FluidPipeBlock(PipeTier.LEAD, BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).noOcclusion()));
+
+    public static final RegistryObject<Block> TUNGSTEN_FLUID_PIPE = registerBlock("tungsten_fluid_pipe",
+            () -> new FluidPipeBlock(PipeTier.TUNGSTEN, BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).noOcclusion()));
 
 
 

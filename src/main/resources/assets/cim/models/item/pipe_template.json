@@ -1,7 +1,4 @@
 {
-  "loader": "forge:obj",
-  "model": "cim:models/item/fluid_pipe_inventory.obj",
-  "flip_v": true,
   "display": {
     "gui": {
       "rotation": [ 30, 225, 0 ],

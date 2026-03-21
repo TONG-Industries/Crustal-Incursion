@@ -105,6 +105,11 @@ public class ModBlockStateProvider extends BlockStateProvider {
                 modLoc("block/deco_beam_top")
         );
 
+        fluidPipeBlock(ModBlocks.BRONZE_FLUID_PIPE, "bronze");
+        fluidPipeBlock(ModBlocks.STEEL_FLUID_PIPE, "steel");
+        fluidPipeBlock(ModBlocks.LEAD_FLUID_PIPE, "lead");
+        fluidPipeBlock(ModBlocks.TUNGSTEN_FLUID_PIPE, "tungsten");
+
 
         //ПОВОРОТ ДЛЯ 3Д МОДЕЛИ, ПРИМЕР:
         // customModelBlockWithItem(ModBlocks.TURRET_BASE);
@@ -174,6 +179,93 @@ public class ModBlockStateProvider extends BlockStateProvider {
         simpleBlockItem(block.get(), models()
                 .cross(block.getId().getPath() + "_bottom", modLoc("block/" + block.getId().getPath() + "_bottom"))
                 .renderType("cutout"));
+    }
+
+    // Метод генерации сложных труб (Блокстейт + Модели)
+    public void fluidPipeBlock(RegistryObject<Block> block, String objPrefix) {
+        String name = block.getId().getPath(); // например "copper_fluid_pipe"
+
+        // ==========================================
+        // 1. ГЕНЕРИРУЕМ JSON-ФАЙЛЫ МОДЕЛЕЙ БЛОКА
+        // ==========================================
+        ModelFile coreModel = models().getBuilder(name + "_core")
+                .customLoader(net.minecraftforge.client.model.generators.loaders.ObjModelBuilder::begin)
+                .modelLocation(modLoc("models/block/" + objPrefix + "_pipe_core.obj"))
+                .flipV(true)
+                .end();
+
+        ModelFile armModel = models().getBuilder(name + "_arm")
+                .customLoader(net.minecraftforge.client.model.generators.loaders.ObjModelBuilder::begin)
+                .modelLocation(modLoc("models/block/" + objPrefix + "_pipe.obj"))
+                .flipV(true)
+                .end();
+
+        // ==========================================
+        // 2. ГЕНЕРИРУЕМ MULTIPART БЛОКСТЕЙТ
+        // ==========================================
+        var builder = getMultipartBuilder(block.get());
+
+        // Ядро (всегда рендерится)
+        builder.part().modelFile(coreModel).addModel().end();
+
+        // Основные 6 рукавов (если есть подключение)
+        builder.part().modelFile(armModel).addModel().condition(com.cim.block.basic.fluids.FluidPipeBlock.NORTH, true).end();
+        builder.part().modelFile(armModel).rotationY(90).addModel().condition(com.cim.block.basic.fluids.FluidPipeBlock.EAST, true).end();
+        builder.part().modelFile(armModel).rotationY(180).addModel().condition(com.cim.block.basic.fluids.FluidPipeBlock.SOUTH, true).end();
+        builder.part().modelFile(armModel).rotationY(270).addModel().condition(com.cim.block.basic.fluids.FluidPipeBlock.WEST, true).end();
+        builder.part().modelFile(armModel).rotationX(270).addModel().condition(com.cim.block.basic.fluids.FluidPipeBlock.UP, true).end();
+        builder.part().modelFile(armModel).rotationX(90).addModel().condition(com.cim.block.basic.fluids.FluidPipeBlock.DOWN, true).end();
+
+        // NONE (когда труба стоит одна - рисуем все 6 рукавов)
+        builder.part().modelFile(armModel).addModel().condition(com.cim.block.basic.fluids.FluidPipeBlock.NONE, true).end();
+        builder.part().modelFile(armModel).rotationY(90).addModel().condition(com.cim.block.basic.fluids.FluidPipeBlock.NONE, true).end();
+        builder.part().modelFile(armModel).rotationY(180).addModel().condition(com.cim.block.basic.fluids.FluidPipeBlock.NONE, true).end();
+        builder.part().modelFile(armModel).rotationY(270).addModel().condition(com.cim.block.basic.fluids.FluidPipeBlock.NONE, true).end();
+        builder.part().modelFile(armModel).rotationX(270).addModel().condition(com.cim.block.basic.fluids.FluidPipeBlock.NONE, true).end();
+        builder.part().modelFile(armModel).rotationX(90).addModel().condition(com.cim.block.basic.fluids.FluidPipeBlock.NONE, true).end();
+
+        // ЗАГЛУШКИ (противоположный рукав, если подключена только с одной стороны)
+        builder.part().modelFile(armModel).rotationY(180).addModel()
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.NORTH, true).condition(com.cim.block.basic.fluids.FluidPipeBlock.SOUTH, false)
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.EAST, false).condition(com.cim.block.basic.fluids.FluidPipeBlock.WEST, false)
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.UP, false).condition(com.cim.block.basic.fluids.FluidPipeBlock.DOWN, false).end();
+
+        builder.part().modelFile(armModel).addModel()
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.NORTH, false).condition(com.cim.block.basic.fluids.FluidPipeBlock.SOUTH, true)
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.EAST, false).condition(com.cim.block.basic.fluids.FluidPipeBlock.WEST, false)
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.UP, false).condition(com.cim.block.basic.fluids.FluidPipeBlock.DOWN, false).end();
+
+        builder.part().modelFile(armModel).rotationY(270).addModel()
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.NORTH, false).condition(com.cim.block.basic.fluids.FluidPipeBlock.SOUTH, false)
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.EAST, true).condition(com.cim.block.basic.fluids.FluidPipeBlock.WEST, false)
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.UP, false).condition(com.cim.block.basic.fluids.FluidPipeBlock.DOWN, false).end();
+
+        builder.part().modelFile(armModel).rotationY(90).addModel()
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.NORTH, false).condition(com.cim.block.basic.fluids.FluidPipeBlock.SOUTH, false)
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.EAST, false).condition(com.cim.block.basic.fluids.FluidPipeBlock.WEST, true)
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.UP, false).condition(com.cim.block.basic.fluids.FluidPipeBlock.DOWN, false).end();
+
+        builder.part().modelFile(armModel).rotationX(90).addModel()
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.NORTH, false).condition(com.cim.block.basic.fluids.FluidPipeBlock.SOUTH, false)
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.EAST, false).condition(com.cim.block.basic.fluids.FluidPipeBlock.WEST, false)
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.UP, true).condition(com.cim.block.basic.fluids.FluidPipeBlock.DOWN, false).end();
+
+        builder.part().modelFile(armModel).rotationX(270).addModel()
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.NORTH, false).condition(com.cim.block.basic.fluids.FluidPipeBlock.SOUTH, false)
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.EAST, false).condition(com.cim.block.basic.fluids.FluidPipeBlock.WEST, false)
+                .condition(com.cim.block.basic.fluids.FluidPipeBlock.UP, false).condition(com.cim.block.basic.fluids.FluidPipeBlock.DOWN, true).end();
+
+        // ==========================================
+        // 3. ГЕНЕРИРУЕМ МОДЕЛЬ ПРЕДМЕТА (ДЛЯ ИНВЕНТАРЯ)
+        // ==========================================
+        itemModels().getBuilder(name)
+                // Указываем наш шаблон как родителя (он даст настройки камеры)
+                .parent(new net.minecraftforge.client.model.generators.ModelFile.UncheckedModelFile(modLoc("item/pipe_template")))
+                // Указываем конкретную OBJ модель и лоадер
+                .customLoader(net.minecraftforge.client.model.generators.loaders.ObjModelBuilder::begin)
+                .modelLocation(modLoc("models/item/" + objPrefix + "_pipe_inventory.obj"))
+                .flipV(true)
+                .end();
     }
 
 

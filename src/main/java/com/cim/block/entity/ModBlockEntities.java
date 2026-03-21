@@ -125,7 +125,14 @@ public class ModBlockEntities {
 
     public static final RegistryObject<BlockEntityType<FluidPipeBlockEntity>> FLUID_PIPE_BE =
             BLOCK_ENTITIES.register("fluid_pipe_be",
-                    () -> BlockEntityType.Builder.of(FluidPipeBlockEntity::new, ModBlocks.FLUID_PIPE.get()).build(null));
+                    () -> BlockEntityType.Builder.of(FluidPipeBlockEntity::new,
+                            // Просто перечисляем все наши трубы через запятую:
+                            ModBlocks.BRONZE_FLUID_PIPE.get(),
+                            ModBlocks.STEEL_FLUID_PIPE.get(),
+                            ModBlocks.LEAD_FLUID_PIPE.get(),
+                            ModBlocks.TUNGSTEN_FLUID_PIPE.get()
+                            // ... и любые другие трубы, которые ты добавишь в будущем
+                    ).build(null));
 
 
     public static final RegistryObject<BlockEntityType<BeamCollisionBlockEntity>> BEAM_COLLISION_BE =

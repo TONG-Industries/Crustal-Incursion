@@ -29,7 +29,7 @@ public class ModFluids {
     public static final RegistryObject<FluidType> HYDROGEN_PEROXIDE_TYPE = FLUID_TYPES.register("hydrogen_peroxide",
             () -> new BaseFluidType(FluidType.Properties.create().density(1450).viscosity(1100).temperature(300),
                     WATER_STILL, WATER_FLOW, 0xAAFFFFFF,
-                    10,
+                    5,
                     0));
 
     public static final RegistryObject<FlowingFluid> HYDROGEN_PEROXIDE_SOURCE = FLUIDS.register("hydrogen_peroxide",
@@ -48,7 +48,7 @@ public class ModFluids {
     public static final RegistryObject<FluidType> SULFURIC_ACID_TYPE = FLUID_TYPES.register("sulfuric_acid",
             () -> new BaseFluidType(FluidType.Properties.create().density(1830).viscosity(2000).temperature(350),
                     WATER_STILL, WATER_FLOW, 0xCCAAAA00,
-                    60,
+                    25,
                     0));
 
     public static final RegistryObject<FlowingFluid> SULFURIC_ACID_SOURCE = FLUIDS.register("sulfuric_acid",
