@@ -7,6 +7,7 @@ import com.cim.multiblock.system.MultiblockStructureHelper;
 import com.cim.multiblock.system.PartRole;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
@@ -28,6 +29,7 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
@@ -110,6 +112,19 @@ public class HeaterBlock extends BaseEntityBlock implements IMultiblockControlle
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock()) && !level.isClientSide) {
+            BlockEntity blockEntity = level.getBlockEntity(pos);
+            if (blockEntity instanceof HeaterBlockEntity heater) {
+                // Дропаем содержимое инвентаря вручную
+                ItemStackHandler inventory = heater.getInventory();
+                for (int i = 0; i < inventory.getSlots(); i++) {
+                    ItemStack stack = inventory.getStackInSlot(i);
+                    if (!stack.isEmpty()) {
+                        Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), stack);
+                    }
+                }
+            }
+
+            // Удаляем структуру мультиблока
             Direction facing = state.getValue(FACING);
             getStructureHelper().destroyStructure(level, pos, facing);
         }
@@ -120,9 +135,14 @@ public class HeaterBlock extends BaseEntityBlock implements IMultiblockControlle
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof HeaterBlockEntity heater) {
-            return heater.onUse(player);
+            net.minecraftforge.network.NetworkHooks.openScreen(
+                    (net.minecraft.server.level.ServerPlayer) player,
+                    heater,
+                    pos
+            );
+            return InteractionResult.CONSUME;
         }
-        return InteractionResult.SUCCESS;
+        return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
     @Nullable

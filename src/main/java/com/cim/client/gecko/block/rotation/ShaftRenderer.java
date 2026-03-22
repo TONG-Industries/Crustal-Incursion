@@ -6,8 +6,8 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
-import com.cim.block.basic.rotation.ShaftBlock;
-import com.cim.block.entity.rotation.ShaftBlockEntity;
+import com.cim.block.basic.industrial.rotation.ShaftBlock;
+import com.cim.block.entity.industrial.rotation.ShaftBlockEntity;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.renderer.GeoBlockRenderer;
 

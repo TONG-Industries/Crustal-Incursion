@@ -19,7 +19,7 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import com.cim.block.basic.explosives.IDetonatable;
+import com.cim.block.basic.weapons.explosives.IDetonatable;
 import com.cim.sound.ModSounds;
 
 import javax.annotation.Nullable;

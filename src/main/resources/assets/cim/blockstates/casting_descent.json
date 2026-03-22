@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "cim:block/casting_descent" },
+    "facing=east":  { "model": "cim:block/casting_descent", "y": 90 },
+    "facing=south": { "model": "cim:block/casting_descent", "y": 180 },
+    "facing=west":  { "model": "cim:block/casting_descent", "y": 270 }
+  }
+}

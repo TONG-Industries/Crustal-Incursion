@@ -25,6 +25,9 @@ public class ModMenuTypes {
                 return new TurretLightMenu(windowId, inv, data);
             }));
 
+    public static final RegistryObject<MenuType<HeaterMenu>> HEATER_MENU =
+            MENUS.register("heater_menu", () -> IForgeMenuType.create(HeaterMenu::create));
+
     public static final RegistryObject<MenuType<ShaftPlacerMenu>> SHAFT_PLACER_MENU =
             MENUS.register("shaft_placer_menu",
                     () -> IForgeMenuType.create(ShaftPlacerMenu::new));

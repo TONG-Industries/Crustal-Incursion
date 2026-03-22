@@ -1,6 +1,6 @@
 package com.cim.api.energy;
 
-import com.cim.block.entity.energy.ConnectorBlockEntity;
+import com.cim.block.entity.industrial.energy.ConnectorBlockEntity;
 import com.cim.capability.ModCapabilities;
 import com.google.common.collect.Sets;
 import com.mojang.logging.LogUtils;
@@ -101,7 +101,7 @@ public class EnergyNetworkManager extends SavedData {
                 // P2P-сосед через провод (ИСПРАВЛЕНО ДЛЯ МНОЖЕСТВА ПОДКЛЮЧЕНИЙ)
                 if (level.isLoaded(currentNode.getPos())) {
                     BlockEntity be = level.getBlockEntity(currentNode.getPos());
-                    if (be instanceof com.cim.block.entity.energy.ConnectorBlockEntity connector) {
+                    if (be instanceof ConnectorBlockEntity connector) {
                         for (BlockPos linkedPos : connector.getConnections()) {
                             if (linkedPos != null) {
                                 EnergyNode linkedNeighbor = allNodes.get(linkedPos.asLong());
@@ -210,7 +210,7 @@ public class EnergyNetworkManager extends SavedData {
         // ============================================================
         if (level.isLoaded(pos)) {
             BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof com.cim.block.entity.energy.ConnectorBlockEntity connector) {
+            if (be instanceof ConnectorBlockEntity connector) {
                 for (BlockPos linkedPos : connector.getConnections()) {
                     if (linkedPos != null && level.isLoaded(linkedPos)) {
                         long linkedLong = linkedPos.asLong();
@@ -218,7 +218,7 @@ public class EnergyNetworkManager extends SavedData {
 
                         if (linkedNeighbor == null) {
                             BlockEntity linkedBe = level.getBlockEntity(linkedPos);
-                            if (linkedBe instanceof com.cim.block.entity.energy.ConnectorBlockEntity) {
+                            if (linkedBe instanceof ConnectorBlockEntity) {
                                 pendingNodes.add(new AddNodeRequest(linkedPos, null));
                             }
                         } else if (linkedNeighbor.getNetwork() != null) {

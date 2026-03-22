@@ -2,7 +2,7 @@ package com.cim.entity.weapons.grenades;
 
 
 import com.cim.block.basic.ModBlocks;
-import com.cim.block.basic.explosives.IDetonatable;
+import com.cim.block.basic.weapons.explosives.IDetonatable;
 import com.cim.entity.ModEntities;
 import com.cim.item.ModItems;
 

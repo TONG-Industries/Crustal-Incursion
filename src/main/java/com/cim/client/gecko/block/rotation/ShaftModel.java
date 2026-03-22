@@ -1,8 +1,8 @@
 package com.cim.client.gecko.block.rotation;
-import com.cim.block.basic.rotation.ShaftType;
+import com.cim.block.basic.industrial.rotation.ShaftType;
 import net.minecraft.resources.ResourceLocation;
-import com.cim.block.basic.rotation.ShaftBlock;
-import com.cim.block.entity.rotation.ShaftBlockEntity;
+import com.cim.block.basic.industrial.rotation.ShaftBlock;
+import com.cim.block.entity.industrial.rotation.ShaftBlockEntity;
 import com.cim.main.CrustalIncursionMod;
 import software.bernie.geckolib.model.GeoModel;
 

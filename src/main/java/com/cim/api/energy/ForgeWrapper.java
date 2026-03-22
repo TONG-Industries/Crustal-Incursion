@@ -2,7 +2,7 @@ package com.cim.api.energy;
 
 
 import net.minecraftforge.energy.IEnergyStorage;
-import com.cim.block.entity.energy.ConverterBlockEntity;
+import com.cim.block.entity.industrial.energy.ConverterBlockEntity;
 
 public class ForgeWrapper implements IEnergyStorage {
 

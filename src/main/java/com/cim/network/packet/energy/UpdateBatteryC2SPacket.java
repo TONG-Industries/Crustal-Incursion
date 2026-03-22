@@ -5,7 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
-import com.cim.block.entity.energy.MachineBatteryBlockEntity;
+import com.cim.block.entity.industrial.energy.MachineBatteryBlockEntity;
 
 import java.util.function.Supplier;
 

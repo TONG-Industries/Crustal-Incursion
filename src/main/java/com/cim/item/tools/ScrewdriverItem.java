@@ -11,12 +11,12 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import com.cim.block.basic.rotation.GearPortBlock;
-import com.cim.block.basic.rotation.Mode;
-import com.cim.block.basic.rotation.ShaftBlock;
-import com.cim.block.basic.rotation.TachometerBlock;
-import com.cim.block.entity.rotation.GearPortBlockEntity;
-import com.cim.block.entity.rotation.TachometerBlockEntity;
+import com.cim.block.basic.industrial.rotation.GearPortBlock;
+import com.cim.block.basic.industrial.rotation.Mode;
+import com.cim.block.basic.industrial.rotation.ShaftBlock;
+import com.cim.block.basic.industrial.rotation.TachometerBlock;
+import com.cim.block.entity.industrial.rotation.GearPortBlockEntity;
+import com.cim.block.entity.industrial.rotation.TachometerBlockEntity;
 
 public class ScrewdriverItem extends Item {
 

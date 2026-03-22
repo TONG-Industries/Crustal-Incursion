@@ -6,11 +6,11 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.Nullable;
-import com.cim.block.basic.rotation.AdderBlock;
-import com.cim.block.basic.rotation.MotorElectroBlock;
-import com.cim.block.entity.rotation.AdderBlockEntity;
-import com.cim.block.entity.rotation.MotorElectroBlockEntity;
-import com.cim.block.entity.rotation.WindGenFlugerBlockEntity;
+import com.cim.block.basic.industrial.rotation.AdderBlock;
+import com.cim.block.basic.industrial.rotation.MotorElectroBlock;
+import com.cim.block.entity.industrial.rotation.AdderBlockEntity;
+import com.cim.block.entity.industrial.rotation.MotorElectroBlockEntity;
+import com.cim.block.entity.industrial.rotation.WindGenFlugerBlockEntity;
 
 import java.util.HashSet;
 import java.util.Set;

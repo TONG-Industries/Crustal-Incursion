@@ -1,0 +1,55 @@
+{
+  "loader": "forge:composite",
+  "textures": {
+    "particle": "cim:block/smelter"
+  },
+  "children": {
+    "smelter_model": {
+      "loader": "forge:obj",
+      "model": "cim:models/block/smelter.obj",
+      "flip_v": true,
+      "textures": {
+        "default": "cim:block/smelter"
+      }
+    }
+  },
+  "transform": {
+    "translation": [0.50, 0.0, 0.5],
+    "rotation": [0, 0, 0],
+    "scale": 1.0
+  },
+  "display": {
+    "thirdperson_righthand": {
+      "translation": [0, 0.75, 0],
+      "scale": [0.1, 0.1, 0.1]
+    },
+    "thirdperson_lefthand": {
+      "scale": [0.1, 0.1, 0.1]
+    },
+    "firstperson_righthand": {
+      "rotation": [0, 39.25, 0],
+      "scale": [0.2, 0.2, 0.2]
+    },
+    "firstperson_lefthand": {
+      "rotation": [0, -51, 0],
+      "scale": [0.2, 0.2, 0.2]
+    },
+    "ground": {
+      "translation": [0, 0.75, 0],
+      "scale": [0.1, 0.1, 0.1]
+    },
+    "gui": {
+      "rotation": [-151, 44.7, -180],
+      "translation": [0, -0.75, 0],
+      "scale": [0.22, 0.22, 0.22]
+    },
+    "head": {
+      "translation": [0, 7.25, 0],
+      "scale": [0.1, 0.1, 0.1]
+    },
+    "fixed": {
+      "rotation": [-90, 0, 0],
+      "scale": [0.25, 0.25, 0.25]
+    }
+  }
+}

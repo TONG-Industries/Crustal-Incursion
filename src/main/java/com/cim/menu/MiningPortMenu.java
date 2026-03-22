@@ -9,7 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.SlotItemHandler;
-import com.cim.block.entity.rotation.MiningPortBlockEntity;
+import com.cim.block.entity.industrial.rotation.MiningPortBlockEntity;
 
 public class MiningPortMenu extends AbstractContainerMenu {
     private final MiningPortBlockEntity blockEntity;

@@ -1,9 +1,10 @@
 package com.cim.block.entity;
 
 import com.cim.block.entity.deco.BeamCollisionBlockEntity;
-import com.cim.block.entity.energy.*;
 import com.cim.block.entity.fluids.FluidBarrelBlockEntity;
-import com.cim.block.entity.rotation.*;
+import com.cim.block.entity.industrial.casting.CastingPotBlockEntity;
+import com.cim.block.entity.industrial.energy.*;
+import com.cim.block.entity.industrial.rotation.*;
 
 import com.cim.multiblock.industrial.HeaterBlockEntity;
 import com.cim.multiblock.system.MultiblockPartEntity;
@@ -85,6 +86,11 @@ public class ModBlockEntities {
     public static final RegistryObject<BlockEntityType<WindGenFlugerBlockEntity>> WIND_GEN_FLUGER_BE =
             BLOCK_ENTITIES.register("wind_gen_fluger",
                     () -> BlockEntityType.Builder.of(WindGenFlugerBlockEntity::new, ModBlocks.WIND_GEN_FLUGER.get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<CastingPotBlockEntity>> CASTING_POT =
+            BLOCK_ENTITIES.register("casting_pot",
+                    () -> BlockEntityType.Builder.of(CastingPotBlockEntity::new,
+                            com.cim.block.basic.ModBlocks.CASTING_POT.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<TachometerBlockEntity>> TACHOMETER_BE =
             BLOCK_ENTITIES.register("tachometer",

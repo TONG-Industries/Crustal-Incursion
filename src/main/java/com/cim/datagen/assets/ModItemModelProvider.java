@@ -70,6 +70,8 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(ModItems.GRENADEHE);
         simpleItem(ModItems.GRENADEFIRE);
 
+        simpleItem(ModItems.MOLD_INGOT);
+
         simpleItem(ModItems.GRENADE_NUC);
         simpleItem(ModItems.GRENADE_IF_HE);
         simpleItem(ModItems.GRENADE_IF_FIRE);
@@ -79,11 +81,12 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(ModItems.COFFEE);
         simpleItem(ModItems.MORY_LAH);
         simpleItem(ModItems.FIREBRICK);
+        simpleItem(ModItems.REINFORCEDBRICK);
         simpleItem(ModItems.INFINITE_FLUID_BARREL);
         simpleBlockItem(ModBlocks.CONNECTOR);
         simpleBlockItem(ModBlocks.MEDIUM_CONNECTOR);
         simpleBlockItem(ModBlocks.LARGE_CONNECTOR);
-
+        simpleItem(ModItems.FUEL_ASH);
         complexBlockItem(ModBlocks.FLUID_BARREL);
 
         // Пример регистрации блоков как предметов (если это обычный куб)

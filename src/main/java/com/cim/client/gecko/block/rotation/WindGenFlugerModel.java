@@ -2,7 +2,7 @@ package com.cim.client.gecko.block.rotation;
 
 
 import net.minecraft.resources.ResourceLocation;
-import com.cim.block.entity.rotation.WindGenFlugerBlockEntity;
+import com.cim.block.entity.industrial.rotation.WindGenFlugerBlockEntity;
 import com.cim.main.CrustalIncursionMod;
 import software.bernie.geckolib.core.animatable.model.CoreGeoBone;
 import software.bernie.geckolib.core.animation.AnimationState;

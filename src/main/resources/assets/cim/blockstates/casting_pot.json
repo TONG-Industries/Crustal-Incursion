@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "cim:block/casting_pot"
+    }
+  }
+}

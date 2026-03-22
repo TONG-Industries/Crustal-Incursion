@@ -1,7 +1,10 @@
 {
   "variants": {
-    "": {
-      "model": "cim:block/steel_props"
-    }
+    "facing=up":    { "model": "cim:block/steel_props" },
+    "facing=down":  { "model": "cim:block/steel_props", "x": 180 },
+    "facing=north": { "model": "cim:block/steel_props", "x": 90 },
+    "facing=south": { "model": "cim:block/steel_props", "x": 90, "y": 180 },
+    "facing=west":  { "model": "cim:block/steel_props", "x": 90, "y": 270 },
+    "facing=east":  { "model": "cim:block/steel_props", "x": 90, "y": 90 }
   }
 }
