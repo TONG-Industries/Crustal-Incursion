@@ -83,9 +83,15 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
                 return stack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).isPresent();
             }
             if (slot >= DRAIN_IN_START && slot < DRAIN_IN_END) {
+                // ================= НОВОЕ =================
+                // Пропускаем нашу бесконечную бочку-болванку без проверки Capability
+                if (stack.getItem() instanceof com.cim.item.tools.InfiniteFluidBarrelItem) {
+                    return true;
+                }
+                // =========================================
                 return stack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).isPresent();
             }
-            if (slot == 16) return true; // Можно добавить строгую проверку на предметы-защитники
+            if (slot == 16) return true; // Слот защитника
 
             return false; // В аутпуты руками класть нельзя
         }
@@ -124,6 +130,23 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
         for (int i = DRAIN_IN_START; i < DRAIN_IN_END; i++) {
             ItemStack inStack = itemHandler.getStackInSlot(i);
             if (inStack.isEmpty()) continue;
+
+            if (inStack.getItem() instanceof com.cim.item.tools.InfiniteFluidBarrelItem) {
+                // Работает только если на бочке установлен фильтр
+                if (!this.fluidFilter.equals("none")) {
+                    net.minecraft.world.level.material.Fluid filterFluid = net.minecraftforge.registries.ForgeRegistries.FLUIDS.getValue(new net.minecraft.resources.ResourceLocation(this.fluidFilter));
+
+                    if (filterFluid != null && filterFluid != net.minecraft.world.level.material.Fluids.EMPTY) {
+                        int space = fluidTank.getSpace();
+                        if (space > 0) {
+                            // Заливаем жидкость из фильтра на всё свободное место!
+                            fluidTank.fill(new net.minecraftforge.fluids.FluidStack(filterFluid, space), net.minecraftforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+                        }
+                    }
+                }
+                // Прерываем дальнейшую логику для этого слота: предмет НЕ опустошается и НЕ двигается!
+                continue;
+            }
 
             // Пытаемся вылить жидкость ИЗ предмета В бочку
             var result = FluidUtil.tryEmptyContainer(inStack, fluidTank, fluidTank.getSpace(), null, true);

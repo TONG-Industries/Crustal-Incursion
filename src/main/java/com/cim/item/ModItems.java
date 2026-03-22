@@ -94,6 +94,9 @@ public class ModItems {
             () -> new Item(new Item.Properties().stacksTo(1)));
 
 
+    public static final RegistryObject<Item> INFINITE_FLUID_BARREL = ITEMS.register("infinite_fluid_barrel",
+            () -> new com.cim.item.tools.InfiniteFluidBarrelItem(new Item.Properties()));
+
 
 
     //ОРУЖИЕ
