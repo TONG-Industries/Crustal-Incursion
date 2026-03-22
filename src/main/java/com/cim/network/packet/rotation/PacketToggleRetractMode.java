@@ -6,7 +6,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.network.NetworkEvent;
-import com.cim.block.entity.rotation.ShaftPlacerBlockEntity;
+import com.cim.block.entity.industrial.rotation.ShaftPlacerBlockEntity;
 
 import java.util.function.Supplier;
 

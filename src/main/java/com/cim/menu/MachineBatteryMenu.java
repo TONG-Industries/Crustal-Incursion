@@ -15,8 +15,8 @@ import net.minecraftforge.energy.IEnergyStorage;
 import net.minecraftforge.items.SlotItemHandler;
 import net.minecraftforge.network.PacketDistributor;
 import com.cim.api.energy.ILongEnergyMenu;
-import com.cim.block.basic.energy.MachineBatteryBlock;
-import com.cim.block.entity.energy.MachineBatteryBlockEntity;
+import com.cim.block.basic.industrial.energy.MachineBatteryBlock;
+import com.cim.block.entity.industrial.energy.MachineBatteryBlockEntity;
 import com.cim.network.ModPacketHandler;
 import com.cim.network.packet.energy.PacketSyncEnergy;
 

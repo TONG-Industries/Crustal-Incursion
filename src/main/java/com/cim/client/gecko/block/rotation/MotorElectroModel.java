@@ -2,7 +2,7 @@ package com.cim.client.gecko.block.rotation;
 
 
 import net.minecraft.resources.ResourceLocation;
-import com.cim.block.entity.rotation.MotorElectroBlockEntity;
+import com.cim.block.entity.industrial.rotation.MotorElectroBlockEntity;
 import com.cim.main.CrustalIncursionMod;
 import software.bernie.geckolib.model.GeoModel;
 

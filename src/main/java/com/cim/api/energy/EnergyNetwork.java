@@ -1,6 +1,6 @@
 package com.cim.api.energy;
 
-import com.cim.block.entity.energy.ConnectorBlockEntity;
+import com.cim.block.entity.industrial.energy.ConnectorBlockEntity;
 import com.mojang.logging.LogUtils;
 
 import net.minecraft.core.BlockPos;
@@ -8,7 +8,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.slf4j.Logger;
-import com.cim.block.entity.energy.MachineBatteryBlockEntity;
+import com.cim.block.entity.industrial.energy.MachineBatteryBlockEntity;
 import com.cim.capability.ModCapabilities;
 
 import java.util.*;

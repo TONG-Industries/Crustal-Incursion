@@ -9,7 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.SlotItemHandler;
-import com.cim.block.entity.rotation.ShaftPlacerBlockEntity;
+import com.cim.block.entity.industrial.rotation.ShaftPlacerBlockEntity;
 
 public class ShaftPlacerMenu extends AbstractContainerMenu {
     private final ShaftPlacerBlockEntity blockEntity;

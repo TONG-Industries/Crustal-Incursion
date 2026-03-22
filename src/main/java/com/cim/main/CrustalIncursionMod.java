@@ -130,6 +130,10 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.REINFORCEDBRICK_SLAB.get());
             event.accept(ModBlocks.REINFORCEDBRICK_STAIRS.get());
 
+            event.accept(ModBlocks.SEQUOIA_PLANKS.get());
+            event.accept(ModBlocks.SEQUOIA_SLAB.get());
+            event.accept(ModBlocks.SEQUOIA_STAIRS.get());
+
             event.accept(ModBlocks.MORY_BLOCK);
             event.accept(ModBlocks.ANTON_CHIGUR);
 
@@ -140,7 +144,6 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.DECO_BEAM.get());
             event.accept(ModBlocks.BEAM_BLOCK.get());
             event.accept(ModBlocks.STEEL_PROPS.get());
-            event.accept(ModBlocks.PIPE_TEST.get());
             // Другие строительные блоки
             event.accept(ModBlocks.CRATE.get());
             event.accept(ModBlocks.CRATE_AMMO.get());
@@ -204,6 +207,10 @@ public class CrustalIncursionMod {
         if (event.getTab() == ModCreativeTabs.CIM_WEAPONS_TAB.get()) {
 
             event.accept(ModBlocks.DET_MINER);
+            event.accept(ModItems.DETONATOR);
+            event.accept(ModItems.MULTI_DETONATOR);
+            event.accept(ModItems.RANGE_DETONATOR);
+            event.accept(ModItems.TURRET_CHIP);
             event.accept(ModItems.TURRET_LIGHT_PORTATIVE_PLACER);
             event.accept(ModItems.MACHINEGUN);
             event.accept(ModBlocks.TURRET_LIGHT_PLACER);
@@ -239,20 +246,13 @@ public class CrustalIncursionMod {
             event.accept(ModItems.PROTECTOR_TUNGSTEN);
 
 
-            event.accept(ModItems.TURRET_CHIP);
-
-            event.accept(ModItems.DETONATOR);
-            event.accept(ModItems.MULTI_DETONATOR);
-            event.accept(ModItems.RANGE_DETONATOR);
             event.accept(ModItems.FIREBRICK.get());
             event.accept(ModItems.REINFORCEDBRICK.get());
-            event.accept(ModItems.MORY_FOOD.get());
-            event.accept(ModItems.COFFEE.get());
+            event.accept(ModItems.MOLD_INGOT.get());
         }
 
         if (event.getTab() == ModCreativeTabs.CIM_NATURE_TAB.get()) {
 
-            event.accept(ModBlocks.SEQUOIA_PLANKS.get());
             event.accept(ModBlocks.SEQUOIA_BARK.get());
             event.accept(ModBlocks.SEQUOIA_HEARTWOOD.get());
             event.accept(ModBlocks.SEQUOIA_LEAVES.get());

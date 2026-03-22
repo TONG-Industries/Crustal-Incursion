@@ -13,7 +13,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.network.NetworkEvent;
-import com.cim.block.basic.explosives.IDetonatable;
+import com.cim.block.basic.weapons.explosives.IDetonatable;
 import com.cim.item.activators.MultiDetonatorItem;
 import com.cim.sound.ModSounds;
 

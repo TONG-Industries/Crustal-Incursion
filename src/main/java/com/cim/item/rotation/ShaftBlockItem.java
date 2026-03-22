@@ -4,8 +4,8 @@ import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.client.extensions.common.IClientItemExtensions;
-import com.cim.block.basic.rotation.ShaftBlock;
-import com.cim.block.basic.rotation.ShaftType;
+import com.cim.block.basic.industrial.rotation.ShaftBlock;
+import com.cim.block.basic.industrial.rotation.ShaftType;
 
 import com.cim.client.gecko.item.rotation.ShaftItemRenderer;
 import software.bernie.geckolib.animatable.GeoItem;

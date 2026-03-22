@@ -1,7 +1,7 @@
 package com.cim.client.gecko.block.energy;
 
 import net.minecraft.resources.ResourceLocation;
-import com.cim.block.entity.energy.MachineBatteryBlockEntity;
+import com.cim.block.entity.industrial.energy.MachineBatteryBlockEntity;
 import com.cim.main.CrustalIncursionMod;
 import software.bernie.geckolib.model.GeoModel;
 

@@ -2,13 +2,12 @@ package com.cim.client.gecko.block.energy;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
-import com.cim.block.basic.energy.MachineBatteryBlock;
-import com.cim.block.entity.energy.MachineBatteryBlockEntity;
+import com.cim.block.basic.industrial.energy.MachineBatteryBlock;
+import com.cim.block.entity.industrial.energy.MachineBatteryBlockEntity;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.renderer.GeoBlockRenderer;

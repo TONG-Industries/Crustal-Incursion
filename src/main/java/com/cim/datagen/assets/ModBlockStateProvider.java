@@ -119,6 +119,7 @@ public class ModBlockStateProvider extends BlockStateProvider {
                 modLoc("block/sequoia_trapdoor"), true, "cutout");
 
         stairsAndSlabs(ModBlocks.FIREBRICK_BLOCK.get(), ModBlocks.FIREBRICK_STAIRS.get(), ModBlocks.FIREBRICK_SLAB.get());
+        stairsAndSlabs(ModBlocks.SEQUOIA_PLANKS.get(), ModBlocks.SEQUOIA_STAIRS.get(), ModBlocks.SEQUOIA_SLAB.get());
         stairsAndSlabs(ModBlocks.REINFORCEDBRICK_BLOCK.get(), ModBlocks.REINFORCEDBRICK_STAIRS.get(), ModBlocks.REINFORCEDBRICK_SLAB.get());
         stairsAndSlabs(ModBlocks.CONCRETE.get(), ModBlocks.CONCRETE_STAIRS.get(), ModBlocks.CONCRETE_SLAB.get());
         stairsAndSlabs(ModBlocks.CONCRETE_RED.get(), ModBlocks.CONCRETE_RED_STAIRS.get(), ModBlocks.CONCRETE_RED_SLAB.get());

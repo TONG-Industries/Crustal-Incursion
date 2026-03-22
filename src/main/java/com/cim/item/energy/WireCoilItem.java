@@ -1,6 +1,6 @@
 package com.cim.item.energy;
 
-import com.cim.block.entity.energy.ConnectorBlockEntity;
+import com.cim.block.entity.industrial.energy.ConnectorBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;

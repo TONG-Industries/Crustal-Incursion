@@ -14,7 +14,7 @@ import net.minecraftforge.client.model.data.ModelData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
-import com.cim.block.basic.energy.WireBlock;
+import com.cim.block.basic.industrial.energy.WireBlock;
 
 import java.util.*;
 

@@ -6,7 +6,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.network.NetworkEvent;
-import com.cim.block.entity.rotation.MotorElectroBlockEntity;
+import com.cim.block.entity.industrial.rotation.MotorElectroBlockEntity;
 
 import java.util.function.Supplier;
 

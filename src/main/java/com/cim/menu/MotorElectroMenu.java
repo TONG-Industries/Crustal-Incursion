@@ -8,7 +8,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import com.cim.block.entity.rotation.MotorElectroBlockEntity;
+import com.cim.block.entity.industrial.rotation.MotorElectroBlockEntity;
 
 public class MotorElectroMenu extends AbstractContainerMenu {
     private final MotorElectroBlockEntity blockEntity;
