@@ -11,6 +11,7 @@ import com.cim.block.basic.industrial.rotation.*;
 import com.cim.block.basic.necrosis.hive.HiveRootsBlock;
 
 import com.cim.multiblock.industrial.HeaterBlock;
+import com.cim.multiblock.industrial.SmelterBlock;
 import com.cim.multiblock.system.MultiblockPartBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -105,7 +106,7 @@ public class ModBlocks {
             () -> new Block(BlockBehaviour.Properties.of()
                     .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
     public static final RegistryObject<Block> SMELTER = registerBlock("smelter",
-            () -> new Block(BlockBehaviour.Properties.of()
+            () -> new SmelterBlock(BlockBehaviour.Properties.of()
                     .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops().noCollission()));
     public static final RegistryObject<Block> CONCRETE_RED = registerBlock("concrete_red",
             () -> new Block(BlockBehaviour.Properties.of()

@@ -7,6 +7,7 @@ import com.cim.block.entity.industrial.energy.*;
 import com.cim.block.entity.industrial.rotation.*;
 
 import com.cim.multiblock.industrial.HeaterBlockEntity;
+import com.cim.multiblock.industrial.SmelterBlockEntity;
 import com.cim.multiblock.system.MultiblockPartEntity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -76,6 +77,8 @@ public class ModBlockEntities {
     // 2. BlockEntity для Нагревателя
     public static final RegistryObject<BlockEntityType<HeaterBlockEntity>> HEATER_BE = BLOCK_ENTITIES.register("heater_be",
             () -> BlockEntityType.Builder.of(HeaterBlockEntity::new, ModBlocks.HEATER.get()).build(null));
+    public static final RegistryObject<BlockEntityType<SmelterBlockEntity>> SMELTER_BE = BLOCK_ENTITIES.register("smelter_be",
+            () -> BlockEntityType.Builder.of(SmelterBlockEntity::new, ModBlocks.SMELTER.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<SwitchBlockEntity>> SWITCH_BE =
             BLOCK_ENTITIES.register("switch_be", () ->

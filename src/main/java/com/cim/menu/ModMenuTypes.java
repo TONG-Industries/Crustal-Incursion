@@ -3,6 +3,7 @@ package com.cim.menu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraftforge.common.extensions.IForgeMenuType;
 import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.network.IContainerFactory;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -31,6 +32,9 @@ public class ModMenuTypes {
     public static final RegistryObject<MenuType<ShaftPlacerMenu>> SHAFT_PLACER_MENU =
             MENUS.register("shaft_placer_menu",
                     () -> IForgeMenuType.create(ShaftPlacerMenu::new));
+
+    public static final RegistryObject<MenuType<SmelterMenu>> SMELTER_MENU =
+            MENUS.register("smelter_menu", () -> IForgeMenuType.create(SmelterMenu::create));
 
     public static final RegistryObject<MenuType<MiningPortMenu>> MINING_PORT_MENU =
             MENUS.register("mining_port_menu",
