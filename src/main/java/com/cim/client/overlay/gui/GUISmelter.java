@@ -194,76 +194,118 @@ public class GUISmelter extends AbstractContainerScreen<SmelterMenu> {
         if (metals.isEmpty()) {
             lines.add(Component.literal("§7Пусто"));
         } else {
+            boolean showExact = hasShiftDown();
+
             for (SmelterBlockEntity.MetalStack stack : metals) {
                 int mb = stack.amount;
                 Metal metal = stack.metal;
                 int color = metal.getColor();
-
-                // Конвертация с автоматическим переносом
-                MetalUnits.MetalStack amount = MetalUnits.convert(mb);
-
-                // Переносим самородки в слитки
-                int finalIngots = amount.ingots() + (amount.nuggets() / 9);
-                int finalNuggets = amount.nuggets() % 9;
-
-                // Переносим слитки в блоки
-                int finalBlocks = amount.blocks() + (finalIngots / 9);
-                finalIngots = finalIngots % 9;
-
-                // Строим строку объема
-                StringBuilder volumeSb = new StringBuilder();
-                boolean hasVolume = false;
-
-                if (finalBlocks > 0) {
-                    volumeSb.append(finalBlocks).append("б ");
-                    hasVolume = true;
-                }
-                if (finalIngots > 0) {
-                    volumeSb.append(finalIngots).append("сл ");
-                    hasVolume = true;
-                }
-                if (finalNuggets > 0) {
-                    volumeSb.append(finalNuggets).append("см");
-                    hasVolume = true;
-                }
-
-                if (!hasVolume) {
-                    volumeSb.append("<1см");
-                }
-
-                // Название металла с его цветом + объем
                 String name = Component.translatable(metal.getTranslationKey()).getString();
 
-                // Создаем компонент с цветом металла
-                Component metalLine = Component.literal(name + ": ")
-                        .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(color)))
-                        .append(Component.literal(volumeSb.toString().trim())
-                                .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(0xFFFFFF))));
+                if (showExact) {
+                    // Точное значение в мб
+                    Component metalLine = Component.literal(name + ": ")
+                            .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(color)))
+                            .append(Component.literal(mb + " мб")
+                                    .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(0xFFFFFF))));
+                    lines.add(metalLine);
+                } else {
+                    // Конвертация с автоматическим переносом
+                    MetalUnits.MetalStack amount = MetalUnits.convert(mb);
 
-                lines.add(metalLine);
+                    // Переносим самородки в слитки
+                    int finalIngots = amount.ingots() + (amount.nuggets() / 9);
+                    int finalNuggets = amount.nuggets() % 9;
+
+                    // Переносим слитки в блоки
+                    int finalBlocks = amount.blocks() + (finalIngots / 9);
+                    finalIngots = finalIngots % 9;
+
+                    // Строим строку объема ПОЛНЫМИ словами
+                    StringBuilder volumeSb = new StringBuilder();
+                    boolean first = true;
+
+                    if (finalBlocks > 0) {
+                        volumeSb.append(finalBlocks).append(" ").append(decline(finalBlocks, "блок", "блока", "блоков"));
+                        first = false;
+                    }
+                    if (finalIngots > 0) {
+                        if (!first) volumeSb.append(", ");
+                        volumeSb.append(finalIngots).append(" ").append(decline(finalIngots, "слиток", "слитка", "слитков"));
+                        first = false;
+                    }
+                    if (finalNuggets > 0) {
+                        if (!first) volumeSb.append(", ");
+                        volumeSb.append(finalNuggets).append(" ").append(decline(finalNuggets, "самородок", "самородка", "самородков"));
+                        first = false;
+                    }
+
+                    if (first) {
+                        volumeSb.append("< 1 самородка");
+                    }
+
+                    Component metalLine = Component.literal(name + ": ")
+                            .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(color)))
+                            .append(Component.literal(volumeSb.toString())
+                                    .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(0xFFFFFF))));
+                    lines.add(metalLine);
+                }
             }
 
             // Общая заполненность
             int total = menu.getBlockEntity().getTotalMetalAmount();
-            MetalUnits.MetalStack totalAmount = MetalUnits.convert(total);
             int maxBlocks = menu.getBlockEntity().getBlockCapacity();
 
-            int finalTotalIngots = totalAmount.ingots() + (totalAmount.nuggets() / 9);
-            int finalTotalNuggets = totalAmount.nuggets() % 9;
-            int finalTotalBlocks = totalAmount.blocks() + (finalTotalIngots / 9);
-            finalTotalIngots = finalTotalIngots % 9;
+            if (showExact) {
+                lines.add(Component.literal(String.format("§7Всего: §f%d§7 мб / §f%d§7 мб", total, maxBlocks * 1000)));
+            } else {
+                MetalUnits.MetalStack totalAmount = MetalUnits.convert(total);
 
-            StringBuilder totalSb = new StringBuilder("§7Всего: §f");
-            if (finalTotalBlocks > 0) totalSb.append(finalTotalBlocks).append("§7б ");
-            if (finalTotalIngots > 0) totalSb.append(finalTotalIngots).append("§7сл ");
-            if (finalTotalNuggets > 0) totalSb.append(finalTotalNuggets).append("§7см");
-            totalSb.append(" §8/ ").append(maxBlocks).append("§7б");
+                int finalTotalIngots = totalAmount.ingots() + (totalAmount.nuggets() / 9);
+                int finalTotalNuggets = totalAmount.nuggets() % 9;
+                int finalTotalBlocks = totalAmount.blocks() + (finalTotalIngots / 9);
+                finalTotalIngots = finalTotalIngots % 9;
 
-            lines.add(Component.literal(totalSb.toString().trim()));
-            lines.add(Component.literal("§8[Shift] точное значение"));
+                StringBuilder totalSb = new StringBuilder("§7Всего: §f");
+                boolean first = true;
+
+                if (finalTotalBlocks > 0) {
+                    totalSb.append(finalTotalBlocks).append(" ").append(decline(finalTotalBlocks, "блок", "блока", "блоков"));
+                    first = false;
+                }
+                if (finalTotalIngots > 0) {
+                    if (!first) totalSb.append(", ");
+                    totalSb.append(finalTotalIngots).append(" ").append(decline(finalTotalIngots, "слиток", "слитка", "слитков"));
+                    first = false;
+                }
+                if (finalTotalNuggets > 0) {
+                    if (!first) totalSb.append(", ");
+                    totalSb.append(finalTotalNuggets).append(" ").append(decline(finalTotalNuggets, "самородок", "самородка", "самородков"));
+                    first = false;
+                }
+                if (first) {
+                    totalSb.append("0 блоков");
+                }
+
+                totalSb.append(" §8/ ").append(maxBlocks).append(" ").append(decline(maxBlocks, "блок", "блока", "блоков"));
+                lines.add(Component.literal(totalSb.toString()));
+            }
+
+            lines.add(Component.literal(showExact ? "§8[Shift] скрыть точное значение" : "§8[Shift] точное значение"));
         }
 
         gui.renderComponentTooltip(this.font, lines, mx, my);
+    }
+
+    // Склонение слов
+    private String decline(int count, String one, String two, String five) {
+        int absCount = Math.abs(count) % 100;
+        int lastDigit = absCount % 10;
+
+        if (absCount >= 11 && absCount <= 19) return five;
+        if (lastDigit == 1) return one;
+        if (lastDigit >= 2 && lastDigit <= 4) return two;
+        return five;
     }
 
     private static int getTempColor(float percent) {

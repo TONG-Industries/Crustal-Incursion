@@ -46,7 +46,6 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
             setChanged();
             if (level != null && !level.isClientSide) {
                 level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
-                recalculateSmelting();
             }
         }
 
@@ -63,7 +62,7 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
     private final Map<Metal, Integer> metalTank = new HashMap<>();
     private int totalMetalAmount = 0;
     private int temperature = 0;
-
+    private int lastInventoryHash = 0;
     private final int[] smeltProgress = new int[2];
     private final int[] smeltMaxProgress = new int[2];
     private final boolean[] isSmelting = new boolean[2];
@@ -83,6 +82,13 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, SmelterBlockEntity be) {
+        // Проверяем изменения инвентаря и сбрасываем плавку если нужно
+        int currentHash = be.calculateInventoryHash();
+        if (currentHash != be.lastInventoryHash) {
+            be.lastInventoryHash = currentHash;
+            be.resetSmeltingIfChanged();
+        }
+
         // Тепло
         int baseCooling = (be.temperature * be.temperature) / 512000;
         if (baseCooling == 0 && be.temperature > 0) baseCooling = 1;
@@ -121,18 +127,37 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
         }
     }
 
-    private void recalculateSmelting() {
-        if (isSmelting[0] && currentTopRecipe != null) {
-            ItemStack[] inputs = new ItemStack[4];
-            for (int i = 0; i < 4; i++) inputs[i] = inventory.getStackInSlot(i);
-            if (!currentTopRecipe.matches(inputs)) {
-                smeltProgress[0] = 0;
-                isSmelting[0] = false;
-                currentTopRecipe = null;
-                requiredTempTop = 0;
-            }
+    // Хеш инвентаря для отслеживания изменений
+    private int calculateInventoryHash() {
+        int hash = 0;
+        for (int i = 0; i < inventory.getSlots(); i++) {
+            ItemStack stack = inventory.getStackInSlot(i);
+            hash = hash * 31 + (stack.isEmpty() ? 0 : stack.getItem().hashCode() + stack.getCount());
+        }
+        return hash;
+    }
+
+    // Сброс плавки при изменении инвентаря
+    private void resetSmeltingIfChanged() {
+        // Сбрасываем верхний ряд
+        if (isSmelting[0] || currentTopRecipe != null) {
+            smeltProgress[0] = 0;
+            smeltMaxProgress[0] = 0;
+            isSmelting[0] = false;
+            currentTopRecipe = null;
+            requiredTempTop = 0;
+        }
+
+        // Сбрасываем нижний ряд
+        if (isSmelting[1]) {
+            smeltProgress[1] = 0;
+            smeltMaxProgress[1] = 0;
+            isSmelting[1] = false;
+            currentBottomRecipe = null;
+            requiredTempBottom = 0;
         }
     }
+
 
 
 
@@ -163,29 +188,28 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
 
     private void tickBottomRow() {
         if (totalMetalAmount >= TANK_CAPACITY) {
-            isSmelting[1] = false;
-            currentBottomRecipe = null;
+            if (requiredTempBottom != 0) requiredTempBottom = 0;
             return;
         }
 
-        // Собираем предметы по 1 из каждого слота (не стаки!)
         Map<MetallurgyRegistry.SimpleSmeltingRecipe, Integer> recipeCounts = new HashMap<>();
         int totalOutput = 0;
+        boolean hasAnyItem = false;
 
         for (int i = 4; i < 8; i++) {
             ItemStack stack = inventory.getStackInSlot(i);
             if (!stack.isEmpty()) {
+                hasAnyItem = true;
                 var recipe = MetallurgyRegistry.findSimpleRecipe(stack.getItem());
                 if (recipe != null) {
-                    // Только 1 предмет из слота за раз!
                     recipeCounts.merge(recipe, 1, Integer::sum);
                     totalOutput += recipe.outputMb();
                 }
             }
         }
 
-        if (recipeCounts.isEmpty()) {
-            if (isSmelting[1]) {
+        if (!hasAnyItem || recipeCounts.isEmpty()) {
+            if (isSmelting[1] || requiredTempBottom != 0) {
                 smeltProgress[1] = 0;
                 smeltMaxProgress[1] = 0;
                 isSmelting[1] = false;
@@ -195,7 +219,6 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
             return;
         }
 
-        // Максимальная температура из всех рецептов
         int maxMinTemp = recipeCounts.keySet().stream()
                 .mapToInt(r -> r.minTemp())
                 .max()
@@ -204,6 +227,13 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
         requiredTempBottom = maxMinTemp;
 
         if (temperature < maxMinTemp) {
+            isSmelting[1] = false;
+            smeltProgress[1] = 0;
+            // Показываем макс прогресс для отображения времени
+            int totalHeat = recipeCounts.entrySet().stream()
+                    .mapToInt(e -> e.getKey().totalHeat() * e.getValue())
+                    .sum();
+            smeltMaxProgress[1] = totalHeat;
             return;
         }
 
@@ -244,12 +274,9 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
             }
         }
     }
-
     private void tickTopRow() {
         if (totalMetalAmount >= TANK_CAPACITY) {
-            isSmelting[0] = false;
-            currentTopRecipe = null;
-            requiredTempTop = 0;
+            if (requiredTempTop != 0) requiredTempTop = 0;
             return;
         }
 
@@ -261,7 +288,8 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
         SmeltingRecipe recipe = MetallurgyRegistry.findAlloyRecipe(inputs);
 
         if (recipe == null) {
-            if (isSmelting[0]) {
+            // Нет рецепта - сбрасываем если было что-то
+            if (isSmelting[0] || requiredTempTop != 0) {
                 smeltProgress[0] = 0;
                 smeltMaxProgress[0] = 0;
                 isSmelting[0] = false;
@@ -271,10 +299,14 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
             return;
         }
 
-        // Показываем температуру даже если не плавим
+        // Есть рецепт - показываем температуру ВСЕГДА
         requiredTempTop = recipe.getMinTemp();
 
         if (temperature < recipe.getMinTemp()) {
+            // Температура недостаточна - не плавим, но показываем прогрессбар
+            isSmelting[0] = false;
+            smeltProgress[0] = 0;
+            smeltMaxProgress[0] = recipe.getTotalHeat();
             return;
         }
 
@@ -283,6 +315,7 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
             return;
         }
 
+        // Начинаем/продолжаем плавку
         if (!isSmelting[0] || currentTopRecipe != recipe) {
             isSmelting[0] = true;
             currentTopRecipe = recipe;
@@ -308,6 +341,7 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
             }
         }
     }
+
 
     private void completeTopRecipe(SmeltingRecipe recipe) {
         // Удаляем предметы согласно рецепту (с учетом количества!)

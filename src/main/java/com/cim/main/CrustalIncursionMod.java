@@ -83,12 +83,11 @@ public class CrustalIncursionMod {
 
     private void commonSetup(final FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
+            MetallurgyRegistry.init();
             ModPacketHandler.register();
             Regions.register(new ModOverworldRegion(new ResourceLocation(MOD_ID, "overworld"), 5));
             SurfaceRuleManager.addSurfaceRules(SurfaceRuleManager.RuleCategory.OVERWORLD, "cim", ModSurfaceRules.makeRules());
 
-            // Используем новый объединенный регистр вместо старого MetalRegistry
-            MetallurgyRegistry.init();
         });
     }
 

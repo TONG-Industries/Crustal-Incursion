@@ -81,7 +81,10 @@ public class SmelterMenu extends AbstractContainerMenu {
     public int getMaxProgressBottom() { return data.get(4); }
     public boolean isSmeltingTop() { return data.get(5) > 0; }
     public boolean isSmeltingBottom() { return data.get(6) > 0; }
-    public boolean hasTopRecipe() { return data.get(7) > 0; }
+    public boolean hasTopRecipe() {
+        // Проверяем есть ли рецепт прямо сейчас
+        return data.get(7) > 0 || getRequiredTempTop() > 0;
+    }
     public boolean hasBottomRecipe() { return data.get(8) > 0; }
     public int getRequiredTempTop() { return data.get(9); }
     public int getRequiredTempBottom() { return data.get(10); }
