@@ -23,7 +23,8 @@ public class MetallurgyRegistry {
     public static Metal NETHERITE;
     public static Metal STEEL;
     public static Metal BRONZE;
-    public static Metal CAST_IRON; // Чугун
+    public static Metal CAST_IRON;
+    public static Metal COAL; // Вспомогательный материал
 
     public static void init() {
         // Ванильные металлы
@@ -48,6 +49,10 @@ public class MetallurgyRegistry {
 
         CAST_IRON = register("cast_iron", 0x434B4D, 1200,
                 Items.IRON_BLOCK, null, null);
+
+        // Вспомогательный материал (не плавится, используется в рецептах)
+        COAL = register("coal", 0x2D2D2D, 1,
+                Items.COAL, null, null);
 
         generateVanillaRecipes();
         registerAlloys();
@@ -78,47 +83,44 @@ public class MetallurgyRegistry {
         addSimple(Items.DEEPSLATE_COPPER_ORE, COPPER, 1, 0, 0, 700, 3, 500);
         addSimple(Items.RAW_COPPER, COPPER, 1, 0, 0, 500, 3, 350);
 
-        // Незерит (из скрапа - 4 скрапа = 1 слиток, но мы даем 4 слитка за скрап? Нет, логичнее 1 слиток)
-        // На самом деле в ванили 4 скрапа + 4 золота = 1 незерит. Тут пусть будет 1 слиток за скрап для простоты
+        // Незерит
         addSimple(Items.NETHERITE_SCRAP, NETHERITE, 0, 1, 0, 1200, 5, 1000);
 
-        // Утильсырьё (переплавка с потерями - даем меньше чем затраты на крафт)
-        addSimple(Items.IRON_HELMET, IRON, 0, 2, 0, 900, 4, 800);      // 5->2
-        addSimple(Items.IRON_CHESTPLATE, IRON, 0, 5, 0, 900, 4, 1200);   // 8->5
-        addSimple(Items.IRON_LEGGINGS, IRON, 0, 4, 0, 900, 4, 1000);     // 7->4
-        addSimple(Items.IRON_BOOTS, IRON, 0, 2, 0, 900, 4, 600);         // 4->2
-        addSimple(Items.IRON_PICKAXE, IRON, 0, 1, 0, 900, 4, 600);       // 3->1
-        addSimple(Items.IRON_SWORD, IRON, 0, 1, 0, 900, 4, 400);         // 2->1
+        // Утильсырьё
+        addSimple(Items.IRON_HELMET, IRON, 0, 2, 0, 900, 4, 800);
+        addSimple(Items.IRON_CHESTPLATE, IRON, 0, 5, 0, 900, 4, 1200);
+        addSimple(Items.IRON_LEGGINGS, IRON, 0, 4, 0, 900, 4, 1000);
+        addSimple(Items.IRON_BOOTS, IRON, 0, 2, 0, 900, 4, 600);
+        addSimple(Items.IRON_PICKAXE, IRON, 0, 1, 0, 900, 4, 600);
+        addSimple(Items.IRON_SWORD, IRON, 0, 1, 0, 900, 4, 400);
     }
 
     private static void registerAlloys() {
-        // СТАЛЬ: железо + уголь + железо + уголь = 2 слитка стали
-        // По твоему примеру: красный(0):слиток, желтый(1):уголь, зеленый(2):слиток, синий(3):уголь
+        // СТАЛЬ: 2 железа + 2 угля = 2 слитка стали
         addAlloy("steel_alloy", 1200, 5, 1500)
-                .slot(0, Items.IRON_INGOT)   // Красный
-                .slot(1, Items.COAL)          // Желтый
-                .slot(2, Items.IRON_INGOT)   // Зеленый
-                .slot(3, Items.COAL)          // Синий
-                .output(STEEL, 0, 2, 0)       // 2 слитка стали
+                .slot(0, Items.IRON_INGOT, 1)   // Красный - 1 слиток
+                .slot(1, Items.COAL, 1)           // Желтый - 1 уголь
+                .slot(2, Items.IRON_INGOT, 1)   // Зеленый - 1 слиток
+                .slot(3, Items.COAL, 1)           // Синий - 1 уголь
+                .output(STEEL, 0, 2, 0)          // 2 слитка стали
                 .desc("Сплав железа с углем");
 
-        // БРОНЗА: медь + олово(золото) + медь + пусто = 2 слитка бронзы
+        // БРОНЗА: 2 меди + 1 олово(золото) = 2 слитка бронзы
         addAlloy("bronze_alloy", 900, 3, 800)
-                .slot(0, Items.COPPER_INGOT)
-                .slot(1, Items.GOLD_INGOT)    // placeholder для олова
-                .slot(2, Items.COPPER_INGOT)
-                .slot(3, null)                // Пусто
+                .slot(0, Items.COPPER_INGOT, 1)
+                .slot(1, Items.GOLD_INGOT, 1)     // placeholder для олова - 1 слиток
+                .slot(2, Items.COPPER_INGOT, 1)
+                .slot(3, null, 0)                  // Пусто
                 .output(BRONZE, 0, 2, 0)
                 .desc("Сплав меди и олова");
 
-        // ЧУГУН: железо + уголь + железо + железо = 4 слитка чугуна (или 1 блок)
-        // Можно сделать блок, но с 1 углем вместо блока угля
+        // ЧУГУН: 3 железа + 1 уголь = 4 слитка чугуна
         addAlloy("cast_iron", 1400, 8, 2000)
-                .slot(0, Items.IRON_INGOT)
-                .slot(1, Items.COAL)          // Обычный уголь вместо блока
-                .slot(2, Items.IRON_INGOT)
-                .slot(3, Items.IRON_INGOT)
-                .output(CAST_IRON, 0, 4, 0)   // 4 слитка чугуна (или 0,1,0 для блока)
+                .slot(0, Items.IRON_INGOT, 1)
+                .slot(1, Items.COAL, 1)           // Обычный уголь
+                .slot(2, Items.IRON_INGOT, 1)
+                .slot(3, Items.IRON_INGOT, 1)     // Третье железо
+                .output(CAST_IRON, 0, 4, 0)
                 .desc("Высокоуглеродистое железо");
     }
 
@@ -148,16 +150,21 @@ public class MetallurgyRegistry {
             Arrays.fill(slots, SmeltingRecipe.Slot.EMPTY);
         }
 
-        // УПРОЩЕННЫЙ МЕТОД - всегда 1 предмет
-        public AlloyBuilder slot(int index, @Nullable Item item) {
+        // Новый метод с количеством
+        public AlloyBuilder slot(int index, @Nullable Item item, int count) {
             if (index >= 0 && index < 4) {
-                if (item == null || item == Items.AIR) {
+                if (item == null || item == Items.AIR || count <= 0) {
                     this.slots[index] = SmeltingRecipe.Slot.EMPTY;
                 } else {
-                    this.slots[index] = new SmeltingRecipe.Slot(item, 1); // Всегда count=1
+                    this.slots[index] = new SmeltingRecipe.Slot(item, count);
                 }
             }
             return this;
+        }
+
+        // Старый метод для совместимости (всегда count=1)
+        public AlloyBuilder slot(int index, @Nullable Item item) {
+            return slot(index, item, 1);
         }
 
         public AlloyBuilder output(Metal metal, int blocks, int ingots, int nuggets) {

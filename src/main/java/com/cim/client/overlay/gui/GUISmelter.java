@@ -1,12 +1,10 @@
 package com.cim.client.overlay.gui;
 
 import com.cim.api.metal.Metal;
-import com.cim.api.metal.MetalType;
 import com.cim.api.metal.MetalUnits;
 import com.cim.main.CrustalIncursionMod;
 import com.cim.menu.SmelterMenu;
 import com.cim.multiblock.industrial.SmelterBlockEntity;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
@@ -14,7 +12,6 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraftforge.fluids.FluidStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +19,23 @@ import java.util.List;
 public class GUISmelter extends AbstractContainerScreen<SmelterMenu> {
     private static final ResourceLocation TEXTURE = new ResourceLocation(
             CrustalIncursionMod.MOD_ID, "textures/gui/machine/smelter_gui.png");
+
+    private static final int TOP_PROGRESS_X = 95;
+    private static final int TOP_PROGRESS_Y = 7;
+    private static final int BOTTOM_PROGRESS_X = 95;
+    private static final int BOTTOM_PROGRESS_Y = 39;
+    private static final int PROGRESS_WIDTH = 70;
+    private static final int PROGRESS_HEIGHT = 3;
+
+    private static final int TANK_X = 33;
+    private static final int TANK_Y = 8;
+    private static final int TANK_WIDTH = 48;
+    private static final int TANK_HEIGHT = 70;
+
+    // Цвет для мигания недостаточной температуры
+    private static final int LOW_TEMP_COLOR = 0x910000;
+    private static final int OK_TEMP_COLOR = 0x00FF00;
+    private static final int GRAY_COLOR = 0x808080;
 
     public GUISmelter(SmelterMenu menu, Inventory inv, Component title) {
         super(menu, inv, title);
@@ -34,7 +48,6 @@ public class GUISmelter extends AbstractContainerScreen<SmelterMenu> {
         int x = (this.width - this.imageWidth) / 2;
         int y = (this.height - this.imageHeight) / 2;
 
-        // Фон
         gui.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight);
 
         // Температура
@@ -49,27 +62,26 @@ public class GUISmelter extends AbstractContainerScreen<SmelterMenu> {
         }
 
         // Прогресс верхний
-        if (menu.isSmeltingTop()) {
+        if (menu.isSmeltingTop() || menu.hasTopRecipe()) {
             int progress = menu.getProgressTop();
             int maxProgress = menu.getMaxProgressTop();
-            int fillWidth = maxProgress > 0 ? (progress * 70) / maxProgress : 0;
-            if (fillWidth > 0) {
-                gui.blit(TEXTURE, x + 95, y + 7, 176, 0, fillWidth, 3);
+            int fillWidth = maxProgress > 0 ? (progress * PROGRESS_WIDTH) / maxProgress : 0;
+            if (fillWidth > 0 || menu.hasTopRecipe()) {
+                gui.blit(TEXTURE, x + TOP_PROGRESS_X, y + TOP_PROGRESS_Y, 176, 0, fillWidth, PROGRESS_HEIGHT);
             }
         }
 
         // Прогресс нижний
-        if (menu.isSmeltingBottom()) {
+        if (menu.isSmeltingBottom() || menu.hasBottomRecipe()) {
             int progress = menu.getProgressBottom();
             int maxProgress = menu.getMaxProgressBottom();
-            int fillWidth = maxProgress > 0 ? (progress * 70) / maxProgress : 0;
-            if (fillWidth > 0) {
-                gui.blit(TEXTURE, x + 95, y + 39, 176, 0, fillWidth, 3);
+            int fillWidth = maxProgress > 0 ? (progress * PROGRESS_WIDTH) / maxProgress : 0;
+            if (fillWidth > 0 || menu.hasBottomRecipe()) {
+                gui.blit(TEXTURE, x + BOTTOM_PROGRESS_X, y + BOTTOM_PROGRESS_Y, 176, 0, fillWidth, PROGRESS_HEIGHT);
             }
         }
 
-        // Буфер металлов
-        renderMetalTank(gui, x + 33, y + 8, 48, 70);
+        renderMetalTank(gui, x + TANK_X, y + TANK_Y, TANK_WIDTH, TANK_HEIGHT);
     }
 
     private void renderMetalTank(GuiGraphics gui, int x, int y, int width, int height) {
@@ -79,7 +91,6 @@ public class GUISmelter extends AbstractContainerScreen<SmelterMenu> {
         int totalCapacity = SmelterBlockEntity.TANK_CAPACITY;
         int currentY = y + height;
 
-        // Сортируем по количеству (опционально)
         metals.sort((a, b) -> Integer.compare(b.amount, a.amount));
 
         for (SmelterBlockEntity.MetalStack stack : metals) {
@@ -91,12 +102,10 @@ public class GUISmelter extends AbstractContainerScreen<SmelterMenu> {
             float g = ((color >> 8) & 0xFF) / 255f;
             float b = (color & 0xFF) / 255f;
 
-            // Рисуем сегмент с цветом металла
             gui.setColor(r, g, b, 1.0f);
             gui.blit(TEXTURE, x, currentY - segmentHeight, 50, 185, width, segmentHeight);
             gui.setColor(1.0f, 1.0f, 1.0f, 1.0f);
 
-            // Обводка
             gui.fill(x, currentY - segmentHeight, x + width, currentY - segmentHeight + 1, 0x40FFFFFF);
 
             currentY -= segmentHeight;
@@ -105,7 +114,7 @@ public class GUISmelter extends AbstractContainerScreen<SmelterMenu> {
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        // Убраны название и "инвентарь"
+        // Пусто
     }
 
     @Override
@@ -116,25 +125,68 @@ public class GUISmelter extends AbstractContainerScreen<SmelterMenu> {
         int x = (this.width - this.imageWidth) / 2;
         int y = (this.height - this.imageHeight) / 2;
 
-        // Тултип температуры
+        // Тултип общей температуры
         if (this.isHovering(12, 17, 15, 51, mouseX, mouseY)) {
-            int temp = menu.getTemperature();
-            float percent = temp / 1600f;
-            int color = getTempColor(percent);
-            Component text = Component.literal(String.format("%d / %d °C", temp, 1600))
-                    .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(color)));
-            gui.renderTooltip(this.font, text, mouseX, mouseY);
+            renderTemperatureTooltip(gui, mouseX, mouseY);
         }
-
-        // Тултип металлов - ОБНОВЛЁННЫЙ
-        if (this.isHovering(33, 8, 48, 70, mouseX, mouseY)) {
-            renderMetalTooltip(gui, mouseX, mouseY);
+        // Тултип верхнего прогресса (сплавы)
+        else if (this.isHovering(TOP_PROGRESS_X, TOP_PROGRESS_Y, PROGRESS_WIDTH, PROGRESS_HEIGHT, mouseX, mouseY)) {
+            renderProgressTooltip(gui, mouseX, mouseY, true);
+        }
+        // Тултип нижнего прогресса (обычная плавка)
+        else if (this.isHovering(BOTTOM_PROGRESS_X, BOTTOM_PROGRESS_Y, PROGRESS_WIDTH, PROGRESS_HEIGHT, mouseX, mouseY)) {
+            renderProgressTooltip(gui, mouseX, mouseY, false);
+        }
+        // Тултип буфера металлов - ВСЕ МЕТАЛЛЫ ЦВЕТНЫМИ
+        else if (this.isHovering(TANK_X, TANK_Y, TANK_WIDTH, TANK_HEIGHT, mouseX, mouseY)) {
+            renderMetalTankTooltip(gui, mouseX, mouseY);
         } else {
             this.renderTooltip(gui, mouseX, mouseY);
         }
     }
 
-    private void renderMetalTooltip(GuiGraphics gui, int mx, int my) {
+    private void renderTemperatureTooltip(GuiGraphics gui, int mx, int my) {
+        int temp = menu.getTemperature();
+        float percent = temp / 1600f;
+        int color = getTempColor(percent);
+        Component text = Component.literal(String.format("%d / %d °C", temp, 1600))
+                .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(color)));
+        gui.renderTooltip(this.font, text, mx, my);
+    }
+
+    private void renderProgressTooltip(GuiGraphics gui, int mx, int my, boolean isTop) {
+        List<Component> lines = new ArrayList<>();
+
+        int currentTemp = menu.getTemperature();
+        int requiredTemp = isTop ? menu.getRequiredTempTop() : menu.getRequiredTempBottom();
+        int progress = isTop ? menu.getProgressTop() : menu.getProgressBottom();
+        int maxProgress = isTop ? menu.getMaxProgressTop() : menu.getMaxProgressBottom();
+
+        // Температура с мигающей индикацией если недостаточно
+        boolean hasEnoughTemp = currentTemp >= requiredTemp;
+        int tempColor;
+        if (hasEnoughTemp) {
+            tempColor = OK_TEMP_COLOR;
+        } else {
+            tempColor = (System.currentTimeMillis() / 500 % 2 == 0) ? LOW_TEMP_COLOR : GRAY_COLOR;
+        }
+
+        lines.add(Component.literal(String.format("Температура: %d/%d °C", currentTemp, requiredTemp))
+                .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(tempColor))));
+
+        // Время плавки
+        if (maxProgress > 0) {
+            int remaining = maxProgress - progress;
+            float seconds = remaining / 400.0f;
+            lines.add(Component.literal(String.format("Осталось: %.1fс", Math.max(0, seconds)))
+                    .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(0xAAAAAA))));
+        }
+
+        gui.renderComponentTooltip(this.font, lines, mx, my);
+    }
+
+    // Общий тултип для всего танка с цветными металлами
+    private void renderMetalTankTooltip(GuiGraphics gui, int mx, int my) {
         List<Component> lines = new ArrayList<>();
         lines.add(Component.literal("§6§lРасплавленные металлы:"));
 
@@ -145,53 +197,66 @@ public class GUISmelter extends AbstractContainerScreen<SmelterMenu> {
             for (SmelterBlockEntity.MetalStack stack : metals) {
                 int mb = stack.amount;
                 Metal metal = stack.metal;
+                int color = metal.getColor();
 
-                // Цвет металла
-                String hexColor = String.format("%06X", metal.getColor() & 0xFFFFFF);
+                // Конвертация с автоматическим переносом
+                MetalUnits.MetalStack amount = MetalUnits.convert(mb);
+
+                // Переносим самородки в слитки
+                int finalIngots = amount.ingots() + (amount.nuggets() / 9);
+                int finalNuggets = amount.nuggets() % 9;
+
+                // Переносим слитки в блоки
+                int finalBlocks = amount.blocks() + (finalIngots / 9);
+                finalIngots = finalIngots % 9;
+
+                // Строим строку объема
+                StringBuilder volumeSb = new StringBuilder();
+                boolean hasVolume = false;
+
+                if (finalBlocks > 0) {
+                    volumeSb.append(finalBlocks).append("б ");
+                    hasVolume = true;
+                }
+                if (finalIngots > 0) {
+                    volumeSb.append(finalIngots).append("сл ");
+                    hasVolume = true;
+                }
+                if (finalNuggets > 0) {
+                    volumeSb.append(finalNuggets).append("см");
+                    hasVolume = true;
+                }
+
+                if (!hasVolume) {
+                    volumeSb.append("<1см");
+                }
+
+                // Название металла с его цветом + объем
                 String name = Component.translatable(metal.getTranslationKey()).getString();
 
-                if (hasShiftDown()) {
-                    // Для отладки: показываем точное количество мб
-                    lines.add(Component.literal(String.format("§#%s%s§f: §e%d мб", hexColor, name, mb)));
-                } else {
-                    // НОВОЕ: используем MetalUnits.convert для разбиения на блоки/слитки/самородки
-                    MetalUnits.MetalStack amount = MetalUnits.convert(mb);
-                    StringBuilder sb = new StringBuilder();
-                    sb.append(String.format("§#%s%s§f: ", hexColor, name));
+                // Создаем компонент с цветом металла
+                Component metalLine = Component.literal(name + ": ")
+                        .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(color)))
+                        .append(Component.literal(volumeSb.toString().trim())
+                                .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(0xFFFFFF))));
 
-                    boolean hasContent = false;
-
-                    if (amount.blocks() > 0) {
-                        sb.append("§e").append(amount.blocks()).append("§7б ");
-                        hasContent = true;
-                    }
-                    if (amount.ingots() > 0) {
-                        sb.append("§e").append(amount.ingots()).append("§7сл ");
-                        hasContent = true;
-                    }
-                    if (amount.nuggets() > 0) {
-                        sb.append("§e").append(amount.nuggets()).append("§7см");
-                        hasContent = true;
-                    }
-
-                    // Если есть остаток (< 12мб) и ничего больше не показали
-                    if (!hasContent && amount.leftover() > 0) {
-                        sb.append("§e<1§7см");
-                    }
-
-                    lines.add(Component.literal(sb.toString().trim()));
-                }
+                lines.add(metalLine);
             }
 
-            // Общая заполненность в блоках/слитках
+            // Общая заполненность
             int total = menu.getBlockEntity().getTotalMetalAmount();
             MetalUnits.MetalStack totalAmount = MetalUnits.convert(total);
             int maxBlocks = menu.getBlockEntity().getBlockCapacity();
 
-            StringBuilder totalSb = new StringBuilder("§7Всего: §e");
-            if (totalAmount.blocks() > 0) totalSb.append(totalAmount.blocks()).append("§7б ");
-            if (totalAmount.ingots() > 0) totalSb.append(totalAmount.ingots()).append("§7сл ");
-            if (totalAmount.nuggets() > 0) totalSb.append(totalAmount.nuggets()).append("§7см");
+            int finalTotalIngots = totalAmount.ingots() + (totalAmount.nuggets() / 9);
+            int finalTotalNuggets = totalAmount.nuggets() % 9;
+            int finalTotalBlocks = totalAmount.blocks() + (finalTotalIngots / 9);
+            finalTotalIngots = finalTotalIngots % 9;
+
+            StringBuilder totalSb = new StringBuilder("§7Всего: §f");
+            if (finalTotalBlocks > 0) totalSb.append(finalTotalBlocks).append("§7б ");
+            if (finalTotalIngots > 0) totalSb.append(finalTotalIngots).append("§7сл ");
+            if (finalTotalNuggets > 0) totalSb.append(finalTotalNuggets).append("§7см");
             totalSb.append(" §8/ ").append(maxBlocks).append("§7б");
 
             lines.add(Component.literal(totalSb.toString().trim()));

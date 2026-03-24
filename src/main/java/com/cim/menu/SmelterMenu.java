@@ -27,14 +27,17 @@ public class SmelterMenu extends AbstractContainerMenu {
         this.data = data;
         this.levelAccess = ContainerLevelAccess.create(entity.getLevel(), entity.getBlockPos());
 
-        // УБРАНО: вызов init отсюда. Теперь он только в FMLCommonSetupEvent!
-
         // Верхний ряд (0-3): для сплавов
         for (int i = 0; i < 4; i++) {
             this.addSlot(new SlotItemHandler(entity.getInventory(), i, 95 + i * 18, 13) {
                 @Override
                 public boolean mayPlace(ItemStack stack) {
-                    return !stack.isEmpty();
+                    return !stack.isEmpty(); // Любое количество!
+                }
+
+                @Override
+                public int getMaxStackSize() {
+                    return 64; // Стандартный размер стака
                 }
             });
         }
@@ -44,7 +47,6 @@ public class SmelterMenu extends AbstractContainerMenu {
             this.addSlot(new SlotItemHandler(entity.getInventory(), 4 + i, 95 + i * 18, 45) {
                 @Override
                 public boolean mayPlace(ItemStack stack) {
-                    // Проверка безопасна, т.к. init уже вызван в startup
                     return MetallurgyRegistry.findSimpleRecipe(stack.getItem()) != null;
                 }
             });
@@ -66,10 +68,12 @@ public class SmelterMenu extends AbstractContainerMenu {
     public static SmelterMenu create(int id, Inventory inv, FriendlyByteBuf buf) {
         BlockPos pos = buf.readBlockPos();
         BlockEntity entity = inv.player.level().getBlockEntity(pos);
-        SimpleContainerData data = new SimpleContainerData(9);
+        // Увеличили с 9 до 11 для хранения требуемых температур
+        SimpleContainerData data = new SimpleContainerData(11);
         return new SmelterMenu(id, inv, (SmelterBlockEntity) entity, data);
     }
 
+    // Геттеры для данных
     public int getTemperature() { return data.get(0); }
     public int getProgressTop() { return data.get(1); }
     public int getMaxProgressTop() { return data.get(2); }
@@ -79,6 +83,8 @@ public class SmelterMenu extends AbstractContainerMenu {
     public boolean isSmeltingBottom() { return data.get(6) > 0; }
     public boolean hasTopRecipe() { return data.get(7) > 0; }
     public boolean hasBottomRecipe() { return data.get(8) > 0; }
+    public int getRequiredTempTop() { return data.get(9); }
+    public int getRequiredTempBottom() { return data.get(10); }
 
     public SmelterBlockEntity getBlockEntity() { return blockEntity; }
 
@@ -97,25 +103,33 @@ public class SmelterMenu extends AbstractContainerMenu {
             returnStack = stack.copy();
 
             if (index < 8) {
+                // Из печи в инвентарь
                 if (!this.moveItemStackTo(stack, 8, 44, true)) {
                     return ItemStack.EMPTY;
                 }
             } else {
+                // Из инвентаря в печь
                 if (MetallurgyRegistry.findSimpleRecipe(stack.getItem()) != null) {
+                    // Сначала пробуем нижний ряд (обычная плавка)
                     if (!this.moveItemStackTo(stack, 4, 8, false)) {
+                        // Если не поместилось - верхний ряд
                         if (!this.moveItemStackTo(stack, 0, 4, false)) {
                             return ItemStack.EMPTY;
                         }
                     }
                 } else {
+                    // Не плавильный предмет - только в верхний ряд
                     if (!this.moveItemStackTo(stack, 0, 4, false)) {
                         return ItemStack.EMPTY;
                     }
                 }
             }
 
-            if (stack.isEmpty()) slot.set(ItemStack.EMPTY);
-            else slot.setChanged();
+            if (stack.isEmpty()) {
+                slot.set(ItemStack.EMPTY);
+            } else {
+                slot.setChanged();
+            }
         }
         return returnStack;
     }
