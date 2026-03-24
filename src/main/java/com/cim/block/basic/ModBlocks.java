@@ -5,6 +5,7 @@ import com.cim.block.basic.deco.BeamBlock;
 import com.cim.block.basic.deco.BeamCollisionBlock;
 import com.cim.block.basic.direction.SideOBlock;
 import com.cim.block.basic.fluids.FluidBarrelBlock;
+import com.cim.block.basic.industrial.casting.CastingDescentBlock;
 import com.cim.block.basic.industrial.casting.CastingPotBlock;
 import com.cim.block.basic.industrial.energy.*;
 import com.cim.block.basic.industrial.rotation.*;
@@ -168,7 +169,7 @@ public class ModBlocks {
             () -> new Block(BlockBehaviour.Properties.of()
                     .strength(0.5F, 6.0F).sound(SoundType.NETHERITE_BLOCK).requiresCorrectToolForDrops()));
     public static final RegistryObject<Block> CASTING_DESCENT = registerBlock("casting_descent",
-            () -> new SideOBlock(BlockBehaviour.Properties.of()
+            () -> new CastingDescentBlock(BlockBehaviour.Properties.of()
                     .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops().noOcclusion()));
     public static final RegistryObject<Block> CASTING_POT = registerBlock("casting_pot",
             () -> new CastingPotBlock(BlockBehaviour.Properties.of()

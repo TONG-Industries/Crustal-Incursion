@@ -29,11 +29,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.items.ItemStackHandler;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
     public static final int MAX_TEMP = 1600;
@@ -59,7 +55,7 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
         }
     };
 
-    private final Map<Metal, Integer> metalTank = new HashMap<>();
+    private final Map<Metal, Integer> metalTank = new LinkedHashMap<>();
     private int totalMetalAmount = 0;
     private int temperature = 0;
     private int lastInventoryHash = 0;
@@ -508,5 +504,43 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
     @Override
     public AbstractContainerMenu createMenu(int id, Inventory inv, Player player) {
         return new SmelterMenu(id, inv, this, data);
+    }
+
+    // В SmelterBlockEntity.java добавь:
+
+    /**
+     * Извлекает металл из буфера (используется каналом отливки)
+     * @param metal металл для извлечения
+     * @param maxAmount максимальное количество мб
+     * @return фактически извлеченное количество мб
+     */
+    public int extractMetal(Metal metal, int maxAmount) {
+        Integer current = metalTank.get(metal);
+        if (current == null || current <= 0) return 0;
+
+        int toExtract = Math.min(maxAmount, current);
+        if (toExtract <= 0) return 0;
+
+        if (current <= toExtract) {
+            metalTank.remove(metal);
+        } else {
+            metalTank.put(metal, current - toExtract);
+        }
+
+        recalculateTotal();
+        setChanged();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+        }
+
+        return toExtract;
+    }
+
+
+    // Исправь метод getBottomMetal() - берём первый добавленный (самый нижний)
+    public Metal getBottomMetal() {
+        if (metalTank.isEmpty()) return null;
+        // LinkedHashMap сохраняет порядок вставки, берём первый элемент
+        return metalTank.keySet().iterator().next();
     }
 }

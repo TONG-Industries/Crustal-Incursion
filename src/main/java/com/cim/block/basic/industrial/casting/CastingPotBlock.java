@@ -1,5 +1,6 @@
 package com.cim.block.basic.industrial.casting;
 
+import com.cim.block.entity.ModBlockEntities;
 import com.cim.block.entity.industrial.casting.CastingPotBlockEntity;
 import com.cim.item.ModItems;
 import net.minecraft.core.BlockPos;
@@ -15,13 +16,15 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
-import net.minecraft.world.level.pathfinder.PathComputationType;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
@@ -31,6 +34,11 @@ public class CastingPotBlock extends BaseEntityBlock {
     public CastingPotBlock(BlockBehaviour.Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
+    }
+
+    @Override
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return Shapes.block(); // Полный блок 1x1x1
     }
 
     @Nullable
@@ -65,6 +73,12 @@ public class CastingPotBlock extends BaseEntityBlock {
         return new CastingPotBlockEntity(pos, state);
     }
 
+    @Nullable
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+        return level.isClientSide ? null : createTickerHelper(type, ModBlockEntities.CASTING_POT.get(), CastingPotBlockEntity::serverTick);
+    }
+
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (level.isClientSide) {
@@ -77,22 +91,31 @@ public class CastingPotBlock extends BaseEntityBlock {
         }
 
         ItemStack heldItem = player.getItemInHand(hand);
+
+        // Приоритет: забор готового предмета
+        if (!pot.getOutputItem().isEmpty()) {
+            if (heldItem.isEmpty()) {
+                // Забираем рукой
+                player.setItemInHand(hand, pot.takeOutput());
+                level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
+                return InteractionResult.CONSUME;
+            } else if (player.getInventory().add(pot.takeOutput())) {
+                // Или добавляем в инвентарь если есть место
+                level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
+                return InteractionResult.CONSUME;
+            }
+            return InteractionResult.PASS;
+        }
+
         ItemStack moldStack = pot.getMold();
 
         // Отвёртка извлекает форму
         if (heldItem.is(ModItems.SCREWDRIVER.get())) {
-            if (!moldStack.isEmpty()) {
-                // Выдаем игроку
+            if (!moldStack.isEmpty() && pot.canRemoveMold()) {
                 if (!player.getInventory().add(moldStack.copy())) {
                     player.drop(moldStack.copy(), false);
                 }
-
-                // Убираем из блока - критично: сначала убираем, потом обновляем
                 pot.setMold(ItemStack.EMPTY);
-
-                // Принудительно обновляем блок в мире для гарантии синхронизации
-                level.updateNeighbourForOutputSignal(pos, this);
-
                 level.playSound(null, pos, SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 1.0F, 1.0F);
                 return InteractionResult.CONSUME;
             }
@@ -110,8 +133,8 @@ public class CastingPotBlock extends BaseEntityBlock {
                 return InteractionResult.CONSUME;
             }
         } else {
-            // Забор пустой рукой
-            if (heldItem.isEmpty()) {
+            // Забор пустой рукой только если нет металла
+            if (heldItem.isEmpty() && pot.canRemoveMold()) {
                 player.setItemInHand(hand, moldStack.copy());
                 pot.setMold(ItemStack.EMPTY);
                 level.playSound(null, pos, SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 1.0F, 1.0F);
@@ -130,6 +153,10 @@ public class CastingPotBlock extends BaseEntityBlock {
                 if (!pot.getMold().isEmpty()) {
                     popResource(level, pos, pot.getMold());
                 }
+                if (!pot.getOutputItem().isEmpty()) {
+                    popResource(level, pos, pot.getOutputItem());
+                }
+                // Металл теряется при разрушении
             }
             super.onRemove(state, level, pos, newState, isMoving);
         }
