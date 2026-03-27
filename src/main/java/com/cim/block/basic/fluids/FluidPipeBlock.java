@@ -1,134 +1,91 @@
 package com.cim.block.basic.fluids;
 
+import com.cim.api.fluids.FluidNetwork;
+import com.cim.api.fluids.FluidNetworkManager;
+import com.cim.api.fluids.FluidNode;
 import com.cim.api.fluids.PipeTier;
 import com.cim.block.entity.fluids.FluidPipeBlockEntity;
+import com.cim.item.tools.FluidIdentifierItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
-import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import org.jetbrains.annotations.Nullable;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.registries.ForgeRegistries;
 
-import java.util.Map;
-
-public class FluidPipeBlock extends BaseEntityBlock {
+public class FluidPipeBlock extends Block implements EntityBlock {
 
     public static final BooleanProperty NORTH = BlockStateProperties.NORTH;
-    public static final BooleanProperty EAST = BlockStateProperties.EAST;
     public static final BooleanProperty SOUTH = BlockStateProperties.SOUTH;
+    public static final BooleanProperty EAST = BlockStateProperties.EAST;
     public static final BooleanProperty WEST = BlockStateProperties.WEST;
     public static final BooleanProperty UP = BlockStateProperties.UP;
     public static final BooleanProperty DOWN = BlockStateProperties.DOWN;
-
-
-    // Показывает полную крестовину, если никуда не подключено
     public static final BooleanProperty NONE = BooleanProperty.create("none");
-    // Канал (цвет) трубы для визуального разделения сетей
-    public static final IntegerProperty CHANNEL = IntegerProperty.create("channel", 0, 15);
 
     private final PipeTier tier;
 
-    // Хитбоксы для толщины трубы в 6 пикселей (5 - 11)
-    private static final VoxelShape CORE_SHAPE = Block.box(5.0, 5.0, 5.0, 11.0, 11.0, 11.0);
-    private static final Map<Direction, VoxelShape> ARM_SHAPES = Map.of(
-            Direction.NORTH, Block.box(5.0, 5.0, 0.0, 11.0, 11.0, 5.0),
-            Direction.SOUTH, Block.box(5.0, 5.0, 11.0, 11.0, 11.0, 16.0),
-            Direction.WEST, Block.box(0.0, 5.0, 5.0, 5.0, 11.0, 11.0),
-            Direction.EAST, Block.box(11.0, 5.0, 5.0, 16.0, 11.0, 11.0),
-            Direction.UP, Block.box(5.0, 11.0, 5.0, 11.0, 16.0, 11.0),
-            Direction.DOWN, Block.box(5.0, 0.0, 5.0, 11.0, 5.0, 11.0)
-    );
+    // ==========================================
+    // VOXEL SHAPES (ИДЕАЛЬНАЯ 3D-КОЛЛИЗИЯ)
+    // ==========================================
+    private static final VoxelShape CORE = Block.box(5.0D, 5.0D, 5.0D, 11.0D, 11.0D, 11.0D);
+    private static final VoxelShape UP_SHAPE = Block.box(5.0D, 11.0D, 5.0D, 11.0D, 16.0D, 11.0D);
+    private static final VoxelShape DOWN_SHAPE = Block.box(5.0D, 0.0D, 5.0D, 11.0D, 5.0D, 11.0D);
+    private static final VoxelShape NORTH_SHAPE = Block.box(5.0D, 5.0D, 0.0D, 11.0D, 11.0D, 5.0D);
+    private static final VoxelShape SOUTH_SHAPE = Block.box(5.0D, 5.0D, 11.0D, 11.0D, 11.0D, 16.0D);
+    private static final VoxelShape WEST_SHAPE = Block.box(0.0D, 5.0D, 5.0D, 5.0D, 11.0D, 11.0D);
+    private static final VoxelShape EAST_SHAPE = Block.box(11.0D, 5.0D, 5.0D, 16.0D, 11.0D, 11.0D);
 
     public FluidPipeBlock(PipeTier tier, Properties properties) {
         super(properties);
-        this.tier = tier; // Сохраняем тир при создании блока
-
+        this.tier = tier;
         this.registerDefaultState(this.stateDefinition.any()
-                .setValue(NORTH, false).setValue(EAST, false).setValue(SOUTH, false)
-                .setValue(WEST, false).setValue(UP, false).setValue(DOWN, false)
-                .setValue(NONE, true)
-                .setValue(CHANNEL, 0)
-        );
-    }
-
-    // Метод, чтобы Сеть могла узнать характеристики этой трубы
-    public PipeTier getTier() {
-        return tier;
+                .setValue(NORTH, false).setValue(SOUTH, false)
+                .setValue(EAST, false).setValue(WEST, false)
+                .setValue(UP, false).setValue(DOWN, false)
+                .setValue(NONE, true));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(NORTH, EAST, SOUTH, WEST, UP, DOWN, NONE, CHANNEL);
+        builder.add(NORTH, SOUTH, EAST, WEST, UP, DOWN, NONE);
     }
 
-    @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        ItemStack stack = player.getItemInHand(hand);
-
-        // Проверяем, что в руке именно твой Идентификатор
-        if (stack.getItem() instanceof com.cim.item.tools.FluidIdentifierItem) {
-            if (level.getBlockEntity(pos) instanceof com.cim.block.entity.fluids.FluidPipeBlockEntity be) {
-                if (!level.isClientSide) {
-                    if (player.isCrouching()) {
-                        // Shift + ПКМ = Сброс фильтра
-                        be.setFilterFluid(net.minecraft.world.level.material.Fluids.EMPTY);
-                        player.displayClientMessage(net.minecraft.network.chat.Component.literal("§eФильтр сброшен (Труба принимает всё)"), true);
-                    } else {
-                        // Обычный клик = Читаем NBT из Идентификатора
-                        String fluidId = com.cim.item.tools.FluidIdentifierItem.getSelectedFluid(stack);
-
-                        if (!fluidId.equals("none")) {
-                            net.minecraft.world.level.material.Fluid fluid = net.minecraftforge.registries.ForgeRegistries.FLUIDS.getValue(new net.minecraft.resources.ResourceLocation(fluidId));
-
-                            if (fluid != null && fluid != net.minecraft.world.level.material.Fluids.EMPTY) {
-                                be.setFilterFluid(fluid);
-                                // Достаем переведенное название жидкости
-                                String fluidName = net.minecraft.client.resources.language.I18n.get(fluid.getFluidType().getDescriptionId());
-                                player.displayClientMessage(net.minecraft.network.chat.Component.literal("§aФильтр: §f" + fluidName), true);
-                            }
-                        } else {
-                            player.displayClientMessage(net.minecraft.network.chat.Component.literal("§cСначала выберите жидкость в Идентификаторе!"), true);
-                        }
-                    }
-                }
-                return InteractionResult.sidedSuccess(level.isClientSide);
-            }
-        }
-        return super.use(state, level, pos, player, hand, hit);
-    }
-
+    // ==========================================
+    // УМНЫЙ VOXELSHAPE (ИСПРАВЛЕННЫЙ)
+    // ==========================================
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        VoxelShape shape = CORE_SHAPE;
+        // 1. Центральное ядро всегда
+        VoxelShape shape = CORE;
 
+        // --- ФИКС 1: ОДИНОКАЯ КРЕСТОВИНА (Issue 1) ---
+        // Если труба никуда не подключена (NONE=true), коллизия должна быть во все стороны!
         if (state.getValue(NONE)) {
-            for (VoxelShape arm : ARM_SHAPES.values()) shape = Shapes.or(shape, arm);
-            return shape;
+            return Shapes.or(shape, NORTH_SHAPE, SOUTH_SHAPE, EAST_SHAPE, WEST_SHAPE, UP_SHAPE, DOWN_SHAPE);
         }
 
-        // Для удобства чтения кода
         boolean n = state.getValue(NORTH);
         boolean s = state.getValue(SOUTH);
         boolean e = state.getValue(EAST);
@@ -136,79 +93,185 @@ public class FluidPipeBlock extends BaseEntityBlock {
         boolean u = state.getValue(UP);
         boolean d = state.getValue(DOWN);
 
-        // 1. Стандартные хитбоксы подключений
-        if (n) shape = Shapes.or(shape, ARM_SHAPES.get(Direction.NORTH));
-        if (s) shape = Shapes.or(shape, ARM_SHAPES.get(Direction.SOUTH));
-        if (e) shape = Shapes.or(shape, ARM_SHAPES.get(Direction.EAST));
-        if (w) shape = Shapes.or(shape, ARM_SHAPES.get(Direction.WEST));
-        if (u) shape = Shapes.or(shape, ARM_SHAPES.get(Direction.UP));
-        if (d) shape = Shapes.or(shape, ARM_SHAPES.get(Direction.DOWN));
+        // 2. Стандартная логика коллизии (по подключенным сторонам)
+        if (n) shape = Shapes.or(shape, NORTH_SHAPE);
+        if (s) shape = Shapes.or(shape, SOUTH_SHAPE);
+        if (e) shape = Shapes.or(shape, EAST_SHAPE);
+        if (w) shape = Shapes.or(shape, WEST_SHAPE);
+        if (u) shape = Shapes.or(shape, UP_SHAPE);
+        if (d) shape = Shapes.or(shape, DOWN_SHAPE);
 
-        // 2. Хитбоксы "заглушек" (если подключение только с одной стороны)
-        if (n && !s && !e && !w && !u && !d) shape = Shapes.or(shape, ARM_SHAPES.get(Direction.SOUTH));
-        if (!n && s && !e && !w && !u && !d) shape = Shapes.or(shape, ARM_SHAPES.get(Direction.NORTH));
-        if (!n && !s && e && !w && !u && !d) shape = Shapes.or(shape, ARM_SHAPES.get(Direction.WEST));
-        if (!n && !s && !e && w && !u && !d) shape = Shapes.or(shape, ARM_SHAPES.get(Direction.EAST));
-        if (!n && !s && !e && !w && u && !d) shape = Shapes.or(shape, ARM_SHAPES.get(Direction.DOWN));
-        if (!n && !s && !e && !w && !u && d) shape = Shapes.or(shape, ARM_SHAPES.get(Direction.UP));
+        // --- ФИКС 2: "END-CAP" ПРОТИВОПОЛОЖНЫЕ РУКАВА (Issue 2) ---
+        // Модель рендерит противоположный рукав, чтобы скрыть ядро, если труба тупиковая.
+        // Мы добавляем коллизию этому "визуальному" рукаву, чтобы хитбокс соответствовал модели.
+
+        // Условие: подключено с NORTH, но не с SOUTH, и нет других горизонтальных подключений.
+        if (n && !s && !(e || w || u || d)) shape = Shapes.or(shape, SOUTH_SHAPE);
+        // Зеркально для SOUTH
+        if (s && !n && !(e || w || u || d)) shape = Shapes.or(shape, NORTH_SHAPE);
+
+        // Зеркально для EAST-WEST
+        if (e && !w && !(n || s || u || d)) shape = Shapes.or(shape, WEST_SHAPE);
+        if (w && !e && !(n || s || u || d)) shape = Shapes.or(shape, EAST_SHAPE);
+
+        // Зеркально для UP-DOWN
+        if (u && !d && !(n || s || e || w)) shape = Shapes.or(shape, DOWN_SHAPE);
+        if (d && !u && !(n || s || e || w)) shape = Shapes.or(shape, UP_SHAPE);
 
         return shape;
     }
 
+    @org.jetbrains.annotations.Nullable
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return updateConnections(this.defaultBlockState(), context.getLevel(), context.getClickedPos());
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new FluidPipeBlockEntity(pos, state);
+    }
+
+    // ==========================================
+    // ЛОГИКА СЕТИ (ОБЫЧНАЯ УСТАНОВКА)
+    // ==========================================
+    @Override
+    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
+        if (!level.isClientSide && !oldState.is(this)) {
+            FluidNetworkManager.get((ServerLevel) level).addNode(pos);
+        }
+        super.onPlace(state, level, pos, oldState, isMoving);
     }
 
     @Override
-    public BlockState updateShape(BlockState state, Direction facing, BlockState facingState,
-                                  LevelAccessor level, BlockPos currentPos, BlockPos facingPos) {
-        return updateConnections(state, level, currentPos);
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (!level.isClientSide && !state.is(newState.getBlock())) {
+            FluidNetworkManager.get((ServerLevel) level).removeNode(pos);
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
     }
 
-    private BlockState updateConnections(BlockState state, LevelAccessor level, BlockPos pos) {
-        boolean north = canConnectTo(level, pos, Direction.NORTH);
-        boolean south = canConnectTo(level, pos, Direction.SOUTH);
-        boolean east = canConnectTo(level, pos, Direction.EAST);
-        boolean west = canConnectTo(level, pos, Direction.WEST);
-        boolean up = canConnectTo(level, pos, Direction.UP);
-        boolean down = canConnectTo(level, pos, Direction.DOWN);
+    // ==========================================
+    // ИДЕНТИФИКАТОР + ШИФТ (Feature Request)
+    // ==========================================
+    @Override
+    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        net.minecraft.world.item.ItemStack stack = player.getItemInHand(hand);
 
-        boolean none = !(north || south || east || west || up || down);
+        if (!level.isClientSide && stack.getItem() instanceof FluidIdentifierItem) {
+            ServerLevel serverLevel = (ServerLevel) level;
+            String selectedFluidId = FluidIdentifierItem.getSelectedFluid(stack);
 
-        return state.setValue(NORTH, north).setValue(SOUTH, south)
-                .setValue(EAST, east).setValue(WEST, west)
-                .setValue(UP, up).setValue(DOWN, down)
+            // 1. Резолвим жидкость, которую хотим установить
+            Fluid fluidToSet = Fluids.EMPTY;
+            if (!selectedFluidId.equals("none")) {
+                fluidToSet = ForgeRegistries.FLUIDS.getValue(new net.minecraft.resources.ResourceLocation(selectedFluidId));
+                if (fluidToSet == null) fluidToSet = Fluids.EMPTY;
+            }
+
+            if (player.isCrouching()) {
+                // === ОБНОВЛЕНИЕ ВСЕЙ СЕТИ (Shift+ПКМ) ===
+
+                FluidNetwork network = FluidNetworkManager.get(serverLevel).getNetwork(pos);
+                if (network != null && !network.isEmpty()) {
+
+                    // Используем ArrayList, чтобы избежать ConcurrentModificationException при итерации
+                    java.util.List<BlockPos> positionsToUpdate = new java.util.ArrayList<>();
+                    for (FluidNode node : network.getNodes()) {
+                        positionsToUpdate.add(node.getPos());
+                    }
+
+                    int updateCount = 0;
+
+                    // А. Устанавливаем жидкость во все трубы сети (обновляет визуал-точки)
+                    for (BlockPos nodePos : positionsToUpdate) {
+                        if (serverLevel.isLoaded(nodePos) && serverLevel.getBlockEntity(nodePos) instanceof FluidPipeBlockEntity pipeBE) {
+                            pipeBE.setFilterFluid(fluidToSet);
+                            updateCount++;
+                        }
+                    }
+
+                    // Б. Логическая перезагрузка (Мердж/Сплит в менеджере) на всей сети!
+                    for (BlockPos nodePos : positionsToUpdate) {
+                        if (serverLevel.isLoaded(nodePos)) {
+                            FluidNetworkManager.get(serverLevel).removeNode(nodePos);
+                            FluidNetworkManager.get(serverLevel).addNode(nodePos);
+                            // Обновляем визуальные соединения соседей
+                            serverLevel.getBlockState(nodePos).updateNeighbourShapes(serverLevel, nodePos, 3);
+                        }
+                    }
+
+                    // Обратная связь
+                    boolean isResetting = selectedFluidId.equals("none");
+                    level.playSound(null, pos, isResetting ? SoundEvents.ENDERMAN_TELEPORT : SoundEvents.PLAYER_LEVELUP, SoundSource.BLOCKS, 1.0F, isResetting ? 0.8F : 1.2F);
+
+                    String fluidName = "EMPTY";
+                    if (fluidToSet != Fluids.EMPTY) {
+                        fluidName = Component.translatable(fluidToSet.getFluidType().getDescriptionId()).getString();
+                    }
+                    String msg = isResetting ? "Network filter reset." : "Network filter set: " + fluidName;
+                    player.displayClientMessage(Component.literal("§a" + msg + " §7(" + updateCount + " nodes)"), true);
+                }
+            } else {
+                // === ОБНОВЛЕНИЕ ТОЛЬКО ОДНОЙ ТРУБЫ (Обычный ПКМ) ===
+                if (selectedFluidId.equals("none")) {
+                    player.displayClientMessage(Component.literal("§cSelect fluid in Identifier first!"), true);
+                } else {
+                    if (level.getBlockEntity(pos) instanceof FluidPipeBlockEntity be) {
+                        // Устанавливаем жидкость (обновляет визуал-точки)
+                        be.setFilterFluid(fluidToSet);
+                        String fluidName = Component.translatable(fluidToSet.getFluidType().getDescriptionId()).getString();
+                        player.displayClientMessage(Component.literal("§aFilter: §f" + fluidName), true);
+                        level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.get(), SoundSource.BLOCKS, 1.0F, 1.2F);
+
+                        // Логическая перезагрузка и визуал-соединения (Одиночный сплит/мердж)
+                        level.setBlock(pos, this.updateConnections(level, pos, state), 3);
+                        FluidNetworkManager.get(serverLevel).removeNode(pos);
+                        FluidNetworkManager.get(serverLevel).addNode(pos);
+                    }
+                }
+            }
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+        return super.use(state, level, pos, player, hand, hit);
+    }
+
+    // ==========================================
+    // ЛОГИКА СОЕДИНЕНИЙ И ПРОВЕРКА ФИЛЬТРОВ
+    // ==========================================
+    private BlockState updateConnections(LevelAccessor level, BlockPos pos, BlockState state) {
+        boolean n = canConnectTo(level, pos, pos.north(), Direction.NORTH);
+        boolean s = canConnectTo(level, pos, pos.south(), Direction.SOUTH);
+        boolean e = canConnectTo(level, pos, pos.east(), Direction.EAST);
+        boolean w = canConnectTo(level, pos, pos.west(), Direction.WEST);
+        boolean u = canConnectTo(level, pos, pos.above(), Direction.UP);
+        boolean d = canConnectTo(level, pos, pos.below(), Direction.DOWN);
+        boolean none = !(n || s || e || w || u || d);
+
+        return state.setValue(NORTH, n).setValue(SOUTH, s)
+                .setValue(EAST, e).setValue(WEST, w)
+                .setValue(UP, u).setValue(DOWN, d)
                 .setValue(NONE, none);
     }
 
-    private boolean canConnectTo(LevelAccessor level, BlockPos pos, Direction direction) {
-        BlockPos neighborPos = pos.relative(direction);
-        BlockState neighborState = level.getBlockState(neighborPos);
-        BlockState myState = level.getBlockState(pos);
+    @Override
+    public BlockState updateShape(BlockState state, Direction dir, BlockState neighborState, LevelAccessor level, BlockPos currentPos, BlockPos neighborPos) {
+        return updateConnections(level, currentPos, state);
+    }
 
-        // 1. Соединяемся с другой трубой, ТОЛЬКО если совпадают каналы
+    private boolean canConnectTo(LevelAccessor level, BlockPos myPos, BlockPos neighborPos, Direction dir) {
+        BlockState neighborState = level.getBlockState(neighborPos);
+
         if (neighborState.getBlock() instanceof FluidPipeBlock) {
-            int myChannel = myState.hasProperty(CHANNEL) ? myState.getValue(CHANNEL) : 0;
-            int neighborChannel = neighborState.getValue(CHANNEL);
-            return myChannel == neighborChannel;
+            if (level.getBlockEntity(myPos) instanceof FluidPipeBlockEntity myBE &&
+                    level.getBlockEntity(neighborPos) instanceof FluidPipeBlockEntity neighborBE) {
+
+                Fluid myFluid = myBE.getFilterFluid();
+                Fluid neighborFluid = neighborBE.getFilterFluid();
+
+                return myFluid == neighborFluid || myFluid == Fluids.EMPTY || neighborFluid == Fluids.EMPTY;
+            }
         }
 
-        // Позже здесь мы добавим проверку на цистерны и помпы
-        // BlockEntity be = level.getBlockEntity(neighborPos);
-        // ...
-
+        BlockEntity neighborBE = level.getBlockEntity(neighborPos);
+        if (neighborBE != null) {
+            return neighborBE.getCapability(ForgeCapabilities.FLUID_HANDLER, dir.getOpposite()).isPresent();
+        }
         return false;
-    }
-
-    @Override
-    public RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL; // Говорим игре загрузить нашу JSON-солянку
-    }
-
-    @Nullable
-    @Override
-    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new com.cim.block.entity.fluids.FluidPipeBlockEntity(pos, state);
     }
 }

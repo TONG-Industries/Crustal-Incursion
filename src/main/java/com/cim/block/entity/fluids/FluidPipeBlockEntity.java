@@ -1,12 +1,15 @@
 package com.cim.block.entity.fluids;
 
+import com.cim.api.fluids.FluidNetworkManager;
 import com.cim.block.entity.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
@@ -17,20 +20,43 @@ import net.minecraftforge.registries.ForgeRegistries;
 
 public class FluidPipeBlockEntity extends BlockEntity {
 
-    // Свойство для передачи жидкости в рендер (PipeBakedModel)
     public static final ModelProperty<Fluid> FLUID_PROP = new ModelProperty<>();
-
     private Fluid filterFluid = Fluids.EMPTY;
 
     public FluidPipeBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.FLUID_PIPE_BE.get(), pos, state);
     }
 
+    // ==========================================
+    // ЛОГИКА ЖИДКОСТНОЙ СЕТИ (БЕЗ ТИКОВ!)
+    // ==========================================
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        // Добавляем трубу в сеть только один раз при прогрузке чанка
+        if (this.level != null && !this.level.isClientSide) {
+            FluidNetworkManager manager = FluidNetworkManager.get((ServerLevel) this.level);
+            if (!manager.hasNode(this.getBlockPos())) {
+                manager.addNode(this.getBlockPos());
+            }
+        }
+    }
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        // Удаляем трубу из сети при разрушении блока или выгрузке чанка
+        if (this.level != null && !this.level.isClientSide) {
+            FluidNetworkManager.get((ServerLevel) this.level).removeNode(this.getBlockPos());
+        }
+    }
+
+    // ==========================================
+    // ЛОГИКА ФИЛЬТРА И РЕНДЕРА
+    // ==========================================
     public void setFilterFluid(Fluid fluid) {
         this.filterFluid = fluid;
         this.setChanged();
-
-        // ПРИКАЗЫВАЕМ МАЙНКРАФТУ ПЕРЕРИСОВАТЬ ТРУБУ (ЭТО ВКЛЮЧИТ ПЯТНА!)
         this.requestModelDataUpdate();
 
         if (this.level != null && !this.level.isClientSide) {
@@ -42,7 +68,6 @@ public class FluidPipeBlockEntity extends BlockEntity {
         return filterFluid;
     }
 
-    // ОТДАЕМ ЖИДКОСТЬ В PipeBakedModel
     @Override
     public ModelData getModelData() {
         return ModelData.builder()
@@ -50,7 +75,9 @@ public class FluidPipeBlockEntity extends BlockEntity {
                 .build();
     }
 
-    // --- СОХРАНЕНИЕ В NBT ---
+    // ==========================================
+    // СОХРАНЕНИЕ И ПАКЕТЫ (NBT)
+    // ==========================================
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
@@ -64,8 +91,6 @@ public class FluidPipeBlockEntity extends BlockEntity {
         ResourceLocation fluidKey = new ResourceLocation(tag.getString("FilterFluid"));
         this.filterFluid = ForgeRegistries.FLUIDS.getValue(fluidKey);
         if (this.filterFluid == null) this.filterFluid = Fluids.EMPTY;
-
-        // Обновляем модель при загрузке мира
         this.requestModelDataUpdate();
     }
 
@@ -81,17 +106,12 @@ public class FluidPipeBlockEntity extends BlockEntity {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    // Перехватываем пакет обновления с сервера
     @Override
-    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket pkt) {
-        // Стандартная загрузка (она прочитает NBT и обновит this.filterFluid внутри load)
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt) {
         super.onDataPacket(net, pkt);
-
-        // Если мы на клиенте (у игрока) — принудительно заставляем чанк перерисоваться!
+        // Принудительно заставляем клиент перерисовать точки при получении пакета
         if (this.level != null && this.level.isClientSide) {
-            // 1. Обновляем кэш данных
             this.requestModelDataUpdate();
-            // 2. Волшебный пинок: говорим движку "Перестрой полигоны этого блока прямо сейчас!"
             this.level.sendBlockUpdated(this.getBlockPos(), this.getBlockState(), this.getBlockState(), 3);
         }
     }

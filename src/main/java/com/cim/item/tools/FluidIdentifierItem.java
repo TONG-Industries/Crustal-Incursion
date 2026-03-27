@@ -1,15 +1,18 @@
 package com.cim.item.tools;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
@@ -22,7 +25,33 @@ public class FluidIdentifierItem extends Item {
         super(pProperties.stacksTo(1)); // Идентификатор не стакается
     }
 
-    // Открываем GUI при ПКМ в воздух (только на клиенте)
+    // ==========================================
+    // ФИКС 1: РАЗРЕШАЕМ ШИФТ+ПКМ ПО ТРУБЕ
+    // ==========================================
+    @Override
+    public boolean doesSneakBypassUse(ItemStack stack, LevelReader level, BlockPos pos, Player player) {
+        // Если игрок на шифте кликает по нашей трубе - говорим игре:
+        // "Не открывай предмет, заставь сработать метод use() самой трубы!"
+        return level.getBlockState(pos).getBlock() instanceof com.cim.block.basic.fluids.FluidPipeBlock;
+    }
+
+    // ==========================================
+    // ФИКС 2: БЛОКИРУЕМ GUI ПРИ КЛИКЕ ПО БЛОКУ
+    // ==========================================
+    @Override
+    public InteractionResult useOn(UseOnContext pContext) {
+        // Если мы кликнули по трубе (а её метод use на клиенте вдруг вернул PASS из-за рассинхрона),
+        // мы принудительно гасим клик здесь, возвращая SUCCESS.
+        // Это не даст игре дойти до метода use() в воздухе и открыть GUI.
+        if (pContext.getLevel().getBlockState(pContext.getClickedPos()).getBlock() instanceof com.cim.block.basic.fluids.FluidPipeBlock) {
+            return InteractionResult.SUCCESS;
+        }
+        return super.useOn(pContext);
+    }
+
+    // ==========================================
+    // ОТКРЫТИЕ GUI (Только при клике в воздух)
+    // ==========================================
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         if (level.isClientSide) {
