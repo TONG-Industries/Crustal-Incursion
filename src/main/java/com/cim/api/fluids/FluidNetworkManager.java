@@ -87,7 +87,13 @@ public class FluidNetworkManager extends SavedData {
                             assignedNetwork = neighborNetwork;
                             assignedNetwork.addNode(newNode);
                         } else if (assignedNetwork != neighborNetwork) {
-                            assignedNetwork.merge(neighborNetwork);
+                            // --- ЗАЩИТА ОТ РАЗРЫВОВ ПРИ СЛИЯНИИ ---
+                            if (neighborNetwork.getNodeCount() > assignedNetwork.getNodeCount()) {
+                                neighborNetwork.merge(assignedNetwork);
+                                assignedNetwork = neighborNetwork; // <--- ОБЯЗАТЕЛЬНО!
+                            } else {
+                                assignedNetwork.merge(neighborNetwork);
+                            }
                         }
                     }
                 }

@@ -166,33 +166,31 @@ public class FluidPipeBlock extends Block implements EntityBlock {
 
             if (player.isCrouching()) {
                 // === ОБНОВЛЕНИЕ ВСЕЙ СЕТИ (Shift+ПКМ) ===
-
                 FluidNetwork network = FluidNetworkManager.get(serverLevel).getNetwork(pos);
                 if (network != null && !network.isEmpty()) {
 
-                    // Используем ArrayList, чтобы избежать ConcurrentModificationException при итерации
+                    // Сохраняем все позиции труб в список
                     java.util.List<BlockPos> positionsToUpdate = new java.util.ArrayList<>();
                     for (FluidNode node : network.getNodes()) {
                         positionsToUpdate.add(node.getPos());
                     }
 
-                    int updateCount = 0;
+                    FluidNetworkManager manager = FluidNetworkManager.get(serverLevel);
 
-                    // А. Устанавливаем жидкость во все трубы сети (обновляет визуал-точки)
+                    // ШАГ А: Сначала аккуратно выводим ВСЕ трубы из старой сети (она растворится)
                     for (BlockPos nodePos : positionsToUpdate) {
-                        if (serverLevel.isLoaded(nodePos) && serverLevel.getBlockEntity(nodePos) instanceof FluidPipeBlockEntity pipeBE) {
-                            pipeBE.setFilterFluid(fluidToSet);
-                            updateCount++;
-                        }
+                        manager.removeNode(nodePos);
                     }
 
-                    // Б. Логическая перезагрузка (Мердж/Сплит в менеджере) на всей сети!
+                    int updateCount = 0;
+                    // ШАГ Б: Меняем фильтр и добавляем их обратно (они соберутся в новую, единую сеть)
                     for (BlockPos nodePos : positionsToUpdate) {
-                        if (serverLevel.isLoaded(nodePos)) {
-                            FluidNetworkManager.get(serverLevel).removeNode(nodePos);
-                            FluidNetworkManager.get(serverLevel).addNode(nodePos);
-                            // Обновляем визуальные соединения соседей
+                        if (serverLevel.isLoaded(nodePos) && serverLevel.getBlockEntity(nodePos) instanceof FluidPipeBlockEntity pipeBE) {
+                            pipeBE.setFilterFluid(fluidToSet); // Меняет цвет точек
+                            manager.addNode(nodePos);          // Регистрирует в графе
+                            // Обновляем визуальные соединения с соседями
                             serverLevel.getBlockState(nodePos).updateNeighbourShapes(serverLevel, nodePos, 3);
+                            updateCount++;
                         }
                     }
 
@@ -213,16 +211,17 @@ public class FluidPipeBlock extends Block implements EntityBlock {
                     player.displayClientMessage(Component.literal("§cSelect fluid in Identifier first!"), true);
                 } else {
                     if (level.getBlockEntity(pos) instanceof FluidPipeBlockEntity be) {
-                        // Устанавливаем жидкость (обновляет визуал-точки)
+                        FluidNetworkManager manager = FluidNetworkManager.get(serverLevel);
+
+                        // Удаляем трубу, меняем жидкость, добавляем обратно
+                        manager.removeNode(pos);
                         be.setFilterFluid(fluidToSet);
+                        manager.addNode(pos);
+                        level.setBlock(pos, this.updateConnections(level, pos, state), 3);
+
                         String fluidName = Component.translatable(fluidToSet.getFluidType().getDescriptionId()).getString();
                         player.displayClientMessage(Component.literal("§aFilter: §f" + fluidName), true);
                         level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.get(), SoundSource.BLOCKS, 1.0F, 1.2F);
-
-                        // Логическая перезагрузка и визуал-соединения (Одиночный сплит/мердж)
-                        level.setBlock(pos, this.updateConnections(level, pos, state), 3);
-                        FluidNetworkManager.get(serverLevel).removeNode(pos);
-                        FluidNetworkManager.get(serverLevel).addNode(pos);
                     }
                 }
             }
