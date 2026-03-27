@@ -51,6 +51,7 @@ public class ModBlockStateProvider extends BlockStateProvider {
         cubeAllWithItem(ModBlocks.SWITCH);
         cubeAllWithItem(ModBlocks.CONVERTER_BLOCK);
         cubeAllWithItem(ModBlocks.GEAR_PORT);
+        cubeAllWithItem(ModBlocks.CONCRETE_TILE);
         cubeAllWithItem(ModBlocks.CONCRETE);
         cubeAllWithItem(ModBlocks.CONCRETE_RED);
         cubeAllWithItem(ModBlocks.CONCRETE_BLUE);
@@ -69,15 +70,22 @@ public class ModBlockStateProvider extends BlockStateProvider {
         cubeAllWithItem(ModBlocks.DECO_STEEL_DARK);
         cubeAllWithItem(ModBlocks.DECO_STEEL_SMOG);
         cubeAllWithItem(ModBlocks.DECO_LEAD);
-
+        cubeAllWithItem(ModBlocks.CONCRETE_NET);
         cubeAllWithItem(ModBlocks.DIRT_ROUGH);
         cubeAllWithItem(ModBlocks.BASALT_ROUGH);
 
         cubeAllWithItem(ModBlocks.CRATE);
         cubeAllWithItem(ModBlocks.CRATE_AMMO);
         simpleBlockWithItem(ModBlocks.WIRE_COATED.get(), models().getExistingFile(modLoc("block/wire_coated")));
-
+        cubeAllWithItem(ModBlocks.CONCRETE_REINFORCED);
+        cubeAllWithItem(ModBlocks.CONCRETE_REINFORCED_HEAVY);
+        cubeAllWithItem(ModBlocks.CONCRETE_STRIPPED);
+        cubeAllWithItem(ModBlocks.CONCRETE_TILE_ALT);
+        cubeAllWithItem(ModBlocks.CONCRETE_TILE_ALT_BLUE);
         hiveRootsBlock(ModBlocks.HIVE_ROOTS);
+
+        glassBlockWithItem(ModBlocks.CONCRETE_ARMED_GLASS, "concrete_armed_glass", "translucent");
+
 
         //СТАТИЧНИЫЕ БЛОКИ У КОТОРЫХ РАЗНОЕ ДНО/ВЕРХ, ПРИМЕР:
        columnBlockWithItem(ModBlocks.WASTE_LOG,
@@ -123,6 +131,14 @@ public class ModBlockStateProvider extends BlockStateProvider {
         trapdoorBlockWithRenderType((net.minecraft.world.level.block.TrapDoorBlock) ModBlocks.SEQUOIA_TRAPDOOR.get(),
                 modLoc("block/sequoia_trapdoor"), true, "cutout");
 
+
+
+        stairsAndSlabs(ModBlocks.CONCRETE_TILE_ALT.get(), ModBlocks.CONCRETE_TILE_ALT_STAIRS.get(), ModBlocks.CONCRETE_TILE_ALT_SLAB.get());
+        stairsAndSlabs(ModBlocks.CONCRETE_TILE_ALT_BLUE.get(), ModBlocks.CONCRETE_TILE_ALT_BLUE_STAIRS.get(), ModBlocks.CONCRETE_TILE_ALT_BLUE_SLAB.get());
+        stairsAndSlabs(ModBlocks.CONCRETE_REINFORCED.get(), ModBlocks.CONCRETE_REINFORCED_STAIRS.get(), ModBlocks.CONCRETE_REINFORCED_SLAB.get());
+        stairsAndSlabs(ModBlocks.CONCRETE_REINFORCED_HEAVY.get(), ModBlocks.CONCRETE_REINFORCED_HEAVY_STAIRS.get(), ModBlocks.CONCRETE_REINFORCED_HEAVY_SLAB.get());
+        stairsAndSlabs(ModBlocks.CONCRETE_STRIPPED.get(), ModBlocks.CONCRETE_STRIPPED_STAIRS.get(), ModBlocks.CONCRETE_STRIPPED_SLAB.get());
+        stairsAndSlabs(ModBlocks.CONCRETE_TILE.get(), ModBlocks.CONCRETE_TILE_STAIRS.get(), ModBlocks.CONCRETE_TILE_SLAB.get());
         stairsAndSlabs(ModBlocks.FIREBRICK_BLOCK.get(), ModBlocks.FIREBRICK_STAIRS.get(), ModBlocks.FIREBRICK_SLAB.get());
         stairsAndSlabs(ModBlocks.SEQUOIA_PLANKS.get(), ModBlocks.SEQUOIA_STAIRS.get(), ModBlocks.SEQUOIA_SLAB.get());
         stairsAndSlabs(ModBlocks.REINFORCEDBRICK_BLOCK.get(), ModBlocks.REINFORCEDBRICK_STAIRS.get(), ModBlocks.REINFORCEDBRICK_SLAB.get());
@@ -269,6 +285,19 @@ public class ModBlockStateProvider extends BlockStateProvider {
                 .modelLocation(modLoc("models/item/" + objPrefix + "_pipe_inventory.obj"))
                 .flipV(true)
                 .end();
+    }
+
+    // Метод для прозрачных блоков (стекло, решётки и т.д.)
+// Рендерит все 6 сторон одной текстурой, использует renderType "cutout" или "translucent"
+    public void glassBlockWithItem(RegistryObject<Block> block, String textureName, String renderType) {
+        String name = block.getId().getPath();
+        ResourceLocation texture = modLoc("block/" + textureName);
+
+        ModelFile model = models().cubeAll(name, texture)
+                .renderType(renderType);
+
+        simpleBlock(block.get(), model);
+        simpleBlockItem(block.get(), model);
     }
 
 

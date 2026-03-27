@@ -203,12 +203,46 @@ public class ModBlocks {
     public static final RegistryObject<Block> STEEL_PROPS = registerBlock("steel_props",
             () -> new FullOBlock(BlockBehaviour.Properties.of()
                     .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops().noOcclusion()));
+    public static final RegistryObject<Block> CONCRETE_TILE = registerBlock("concrete_tile",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
+    public static final RegistryObject<Block> CONCRETE_ARMED_GLASS = registerBlock("concrete_armed_glass",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops().noOcclusion()));
+    public static final RegistryObject<Block> CONCRETE_NET = registerBlock("concrete_net",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
+    public static final RegistryObject<Block> CONCRETE_REINFORCED = registerBlock("concrete_reinforced",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
+    public static final RegistryObject<Block> CONCRETE_REINFORCED_HEAVY = registerBlock("concrete_reinforced_heavy",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
+    public static final RegistryObject<Block> CONCRETE_STRIPPED = registerBlock("concrete_stripped",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
+    public static final RegistryObject<Block> CONCRETE_TILE_ALT = registerBlock("concrete_tile_alt",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
+    public static final RegistryObject<Block> CONCRETE_TILE_ALT_BLUE = registerBlock("concrete_tile_alt_blue",
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(0.5F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
+
 
 
     //СТУПЕНИ И ПОЛУБЛОКИ
+    public static final RegistryObject<StairBlock> CONCRETE_TILE_ALT_STAIRS = registerBlock("concrete_tile_alt_stairs",
+            () -> new StairBlock(CONCRETE_TILE_ALT.get().defaultBlockState(),
+                    BlockBehaviour.Properties.copy(CONCRETE_TILE_ALT.get())));
+    public static final RegistryObject<StairBlock> CONCRETE_TILE_ALT_BLUE_STAIRS = registerBlock("concrete_tile_alt_blue_stairs",
+            () -> new StairBlock(CONCRETE_TILE_ALT_BLUE.get().defaultBlockState(),
+                    BlockBehaviour.Properties.copy(CONCRETE_TILE_ALT_BLUE.get())));
     public static final RegistryObject<StairBlock> CONCRETE_STAIRS = registerBlock("concrete_stairs",
             () -> new StairBlock(CONCRETE.get().defaultBlockState(),
                     BlockBehaviour.Properties.copy(CONCRETE.get())));
+    public static final RegistryObject<StairBlock> CONCRETE_TILE_STAIRS = registerBlock("concrete_tile_stairs",
+            () -> new StairBlock(CONCRETE_TILE.get().defaultBlockState(),
+                    BlockBehaviour.Properties.copy(CONCRETE_TILE.get())));
     public static final RegistryObject<StairBlock> FIREBRICK_STAIRS = registerBlock("firebrick_stairs",
             () -> new StairBlock(FIREBRICK_BLOCK.get().defaultBlockState(),
                     BlockBehaviour.Properties.copy(FIREBRICK_BLOCK.get())));
@@ -230,8 +264,29 @@ public class ModBlocks {
     public static final RegistryObject<StairBlock> CONCRETE_GREEN_STAIRS = registerBlock("concrete_green_stairs",
             () -> new StairBlock(CONCRETE_GREEN.get().defaultBlockState(),
                     BlockBehaviour.Properties.copy(CONCRETE_GREEN.get())));
+    public static final RegistryObject<StairBlock> CONCRETE_STRIPPED_STAIRS = registerBlock("concrete_stripped_stairs",
+            () -> new StairBlock(CONCRETE_STRIPPED.get().defaultBlockState(),
+                    BlockBehaviour.Properties.copy(CONCRETE_STRIPPED.get())));
+    public static final RegistryObject<StairBlock> CONCRETE_REINFORCED_STAIRS = registerBlock("concrete_reinforced_stairs",
+            () -> new StairBlock(CONCRETE_REINFORCED.get().defaultBlockState(),
+                    BlockBehaviour.Properties.copy(CONCRETE_REINFORCED.get())));
+    public static final RegistryObject<StairBlock> CONCRETE_REINFORCED_HEAVY_STAIRS = registerBlock("concrete_reinforced_heavy_stairs",
+            () -> new StairBlock(CONCRETE_REINFORCED_HEAVY.get().defaultBlockState(),
+                    BlockBehaviour.Properties.copy(CONCRETE_REINFORCED_HEAVY.get())));
 
 
+    public static final RegistryObject<SlabBlock> CONCRETE_STRIPPED_SLAB = registerBlock("concrete_stripped_slab",
+            () -> new SlabBlock(BlockBehaviour.Properties.copy(CONCRETE_STRIPPED.get())));
+    public static final RegistryObject<SlabBlock> CONCRETE_REINFORCED_SLAB = registerBlock("concrete_reinforced_slab",
+            () -> new SlabBlock(BlockBehaviour.Properties.copy(CONCRETE_REINFORCED.get())));
+    public static final RegistryObject<SlabBlock> CONCRETE_REINFORCED_HEAVY_SLAB = registerBlock("concrete_reinforced_heavy_slab",
+            () -> new SlabBlock(BlockBehaviour.Properties.copy(CONCRETE_REINFORCED_HEAVY.get())));
+    public static final RegistryObject<SlabBlock> CONCRETE_TILE_SLAB = registerBlock("concrete_tile_slab",
+            () -> new SlabBlock(BlockBehaviour.Properties.copy(CONCRETE_TILE.get())));
+    public static final RegistryObject<SlabBlock> CONCRETE_TILE_ALT_SLAB = registerBlock("concrete_tile_alt_slab",
+            () -> new SlabBlock(BlockBehaviour.Properties.copy(CONCRETE_TILE_ALT.get())));
+    public static final RegistryObject<SlabBlock> CONCRETE_TILE_ALT_BLUE_SLAB = registerBlock("concrete_tile_alt_blue_slab",
+            () -> new SlabBlock(BlockBehaviour.Properties.copy(CONCRETE_TILE_ALT.get())));
     public static final RegistryObject<SlabBlock> CONCRETE_GREEN_SLAB = registerBlock("concrete_green_slab",
             () -> new SlabBlock(BlockBehaviour.Properties.copy(CONCRETE_GREEN.get())));
     public static final RegistryObject<SlabBlock> FIREBRICK_SLAB = registerBlock("firebrick_slab",
@@ -248,6 +303,10 @@ public class ModBlocks {
                     BlockBehaviour.Properties.copy(CONCRETE_HAZARD_OLD.get())));
     public static final RegistryObject<SlabBlock> CONCRETE_HAZARD_OLD_SLAB = registerBlock("concrete_hazard_old_slab",
             () -> new SlabBlock(BlockBehaviour.Properties.copy(CONCRETE_HAZARD_OLD.get())));
+
+
+
+
 
 
     // ДВЕРИ

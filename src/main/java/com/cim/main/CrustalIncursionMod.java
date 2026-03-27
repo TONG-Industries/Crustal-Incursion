@@ -96,35 +96,34 @@ public class CrustalIncursionMod {
         LOGGER.info("Building creative tab contents for: " + event.getTabKey());
 
         if (event.getTab() == ModCreativeTabs.CIM_BUILD_TAB.get()) {
-            // Concrete (обычный)
+
             event.accept(ModBlocks.CONCRETE.get());
             event.accept(ModBlocks.CONCRETE_SLAB.get());
             event.accept(ModBlocks.CONCRETE_STAIRS.get());
-
-            // Concrete Red
-            event.accept(ModBlocks.CONCRETE_RED.get());
-            event.accept(ModBlocks.CONCRETE_RED_SLAB.get());
-            event.accept(ModBlocks.CONCRETE_RED_STAIRS.get());
-
-            // Concrete Blue
-            event.accept(ModBlocks.CONCRETE_BLUE.get());
-            event.accept(ModBlocks.CONCRETE_BLUE_SLAB.get());
-            event.accept(ModBlocks.CONCRETE_BLUE_STAIRS.get());
-
-            // Concrete Green
-            event.accept(ModBlocks.CONCRETE_GREEN.get());
-            event.accept(ModBlocks.CONCRETE_GREEN_SLAB.get());
-            event.accept(ModBlocks.CONCRETE_GREEN_STAIRS.get());
-
-            // Concrete Hazard New
             event.accept(ModBlocks.CONCRETE_HAZARD_NEW.get());
             event.accept(ModBlocks.CONCRETE_HAZARD_NEW_SLAB.get());
             event.accept(ModBlocks.CONCRETE_HAZARD_NEW_STAIRS.get());
-
-            // Concrete Hazard Old
             event.accept(ModBlocks.CONCRETE_HAZARD_OLD.get());
             event.accept(ModBlocks.CONCRETE_HAZARD_OLD_SLAB.get());
             event.accept(ModBlocks.CONCRETE_HAZARD_OLD_STAIRS.get());
+            event.accept(ModBlocks.CONCRETE_TILE.get());
+            event.accept(ModBlocks.CONCRETE_TILE_SLAB.get());
+            event.accept(ModBlocks.CONCRETE_TILE_STAIRS.get());
+            event.accept(ModBlocks.CONCRETE_TILE_ALT.get());
+            event.accept(ModBlocks.CONCRETE_TILE_ALT_SLAB.get());
+            event.accept(ModBlocks.CONCRETE_TILE_ALT_STAIRS.get());
+            event.accept(ModBlocks.CONCRETE_TILE_ALT_BLUE.get());
+            event.accept(ModBlocks.CONCRETE_TILE_ALT_BLUE_SLAB.get());
+            event.accept(ModBlocks.CONCRETE_TILE_ALT_BLUE_STAIRS.get());
+            event.accept(ModBlocks.CONCRETE_STRIPPED.get());
+            event.accept(ModBlocks.CONCRETE_STRIPPED_SLAB.get());
+            event.accept(ModBlocks.CONCRETE_STRIPPED_STAIRS.get());
+            event.accept(ModBlocks.CONCRETE_REINFORCED.get());
+            event.accept(ModBlocks.CONCRETE_REINFORCED_SLAB.get());
+            event.accept(ModBlocks.CONCRETE_REINFORCED_STAIRS.get());
+            event.accept(ModBlocks.CONCRETE_REINFORCED_HEAVY.get());
+            event.accept(ModBlocks.CONCRETE_REINFORCED_HEAVY_SLAB.get());
+            event.accept(ModBlocks.CONCRETE_REINFORCED_HEAVY_STAIRS.get());
 
             event.accept(ModBlocks.FIREBRICK_BLOCK.get());
             event.accept(ModBlocks.FIREBRICK_SLAB.get());
@@ -141,6 +140,7 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.MORY_BLOCK);
             event.accept(ModBlocks.ANTON_CHIGUR);
 
+            event.accept(ModBlocks.CONCRETE_NET.get());
             event.accept(ModBlocks.DECO_STEEL.get());
             event.accept(ModBlocks.DECO_STEEL_DARK.get());
             event.accept(ModBlocks.DECO_STEEL_SMOG.get());
@@ -157,6 +157,7 @@ public class CrustalIncursionMod {
 
 
         if (event.getTab() == ModCreativeTabs.CIM_TECH_TAB.get()) {
+
             event.accept(ModItems.CROWBAR.get());
             event.accept(ModItems.BEAM_PLACER.get());
             event.accept(ModItems.SCREWDRIVER.get());
@@ -183,28 +184,15 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.CONVERTER_BLOCK);
             event.accept(ModBlocks.MACHINE_BATTERY);
             event.accept(ModItems.ENERGY_CELL_BASIC);
+
+
             event.accept(ModItems.CREATIVE_BATTERY);
-
-
             List<RegistryObject<Item>> batteriesToAdd = List.of(
                     ModItems.BATTERY,
                     ModItems.BATTERY_ADVANCED,
                     ModItems.BATTERY_LITHIUM,
                     ModItems.BATTERY_TRIXITE
-            );
-
-            for (RegistryObject<Item> batteryRegObj : batteriesToAdd) {
-                Item item = batteryRegObj.get();
-                if (item instanceof ModBatteryItem batteryItem) {
-                    ItemStack emptyStack = new ItemStack(batteryItem);
-                    event.accept(emptyStack);
-                    ItemStack chargedStack = new ItemStack(batteryItem);
-                    ModBatteryItem.setEnergy(chargedStack, batteryItem.getCapacity());
-                    event.accept(chargedStack);
-                }
-            }
-
-
+            ); for (RegistryObject<Item> batteryRegObj : batteriesToAdd) {Item item = batteryRegObj.get();if (item instanceof ModBatteryItem batteryItem) {ItemStack emptyStack = new ItemStack(batteryItem);event.accept(emptyStack);ItemStack chargedStack = new ItemStack(batteryItem);ModBatteryItem.setEnergy(chargedStack, batteryItem.getCapacity());event.accept(chargedStack);}}
 
             event.accept(ModItems.FLUID_IDENTIFIER.get());
             event.accept(ModItems.INFINITE_FLUID_BARREL);
