@@ -37,7 +37,7 @@ import com.cim.block.entity.ModBlockEntities;
 public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider {
 
     // ПРОПУСКНАЯ СПОСОБНОСТЬ СЕТИ: 1000 mB/tick (1 ведро в тик = 20 ведер в секунду)
-    public static final int MAX_TRANSFER_RATE = 1000;
+    public static final int MAX_TRANSFER_RATE = 200;
 
     // 0 = BOTH, 1 = INPUT, 2 = OUTPUT, 3 = DISABLED
     public int mode = 0;
@@ -62,6 +62,11 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
 
         @Override
         public boolean isFluidValid(FluidStack stack) {
+            // === НОВАЯ СТРОКА: БЛОКИРУЕМ БОЧКУ, ПОКА НЕ ТКНУЛИ ИДЕНТИФИКАТОРОМ ===
+            if (fluidFilter.equals("none")) {
+                return false;
+            }
+
             if (!fluidFilter.equals("none")) {
                 ResourceLocation stackLoc = ForgeRegistries.FLUIDS.getKey(stack.getFluid());
                 if (stackLoc != null && !stackLoc.toString().equals(fluidFilter)) {
@@ -213,14 +218,25 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
 
     public void setFilter(String newFilter) {
         this.fluidFilter = newFilter;
+
+        // Если фильтр изменился и в бочке есть чужая жидкость — уничтожаем её
         if (!newFilter.equals("none") && !fluidTank.isEmpty()) {
             ResourceLocation currentFluidLoc = ForgeRegistries.FLUIDS.getKey(fluidTank.getFluid().getFluid());
             if (currentFluidLoc != null && !currentFluidLoc.toString().equals(newFilter)) {
                 fluidTank.setFluid(FluidStack.EMPTY);
             }
         }
+
         setChanged();
-        if (level != null && !level.isClientSide) level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+
+            // === ВОЛШЕБНЫЙ ПИНОК СЕТИ ===
+            // Заставляем бочку переподключиться к трубам с новыми правилами
+            com.cim.api.fluids.FluidNetworkManager manager = com.cim.api.fluids.FluidNetworkManager.get((net.minecraft.server.level.ServerLevel) level);
+            manager.removeNode(this.getBlockPos());
+            manager.addNode(this.getBlockPos());
+        }
     }
 
     public void changeMode() {
