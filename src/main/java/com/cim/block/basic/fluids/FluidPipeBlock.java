@@ -147,7 +147,7 @@ public class FluidPipeBlock extends Block implements EntityBlock {
     }
 
     // ==========================================
-    // ИДЕНТИФИКАТОР + ШИФТ (Feature Request)
+    // ИДЕНТИФИКАТОР + ШИФТ (ОПТИМИЗИРОВАННЫЙ РЕБИЛД СЕТИ)
     // ==========================================
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
@@ -169,28 +169,34 @@ public class FluidPipeBlock extends Block implements EntityBlock {
                 FluidNetwork network = FluidNetworkManager.get(serverLevel).getNetwork(pos);
                 if (network != null && !network.isEmpty()) {
 
-                    // Сохраняем все позиции труб в список
                     java.util.List<BlockPos> positionsToUpdate = new java.util.ArrayList<>();
-                    for (FluidNode node : network.getNodes()) {
+                    for (com.cim.api.fluids.FluidNode node : network.getNodes()) {
                         positionsToUpdate.add(node.getPos());
                     }
 
                     FluidNetworkManager manager = FluidNetworkManager.get(serverLevel);
 
-                    // ШАГ А: Сначала аккуратно выводим ВСЕ трубы из старой сети (она растворится)
+                    // Выводим все трубы из сети
                     for (BlockPos nodePos : positionsToUpdate) {
                         manager.removeNode(nodePos);
                     }
 
                     int updateCount = 0;
-                    // ШАГ Б: Меняем фильтр и добавляем их обратно (они соберутся в новую, единую сеть)
                     for (BlockPos nodePos : positionsToUpdate) {
-                        if (serverLevel.isLoaded(nodePos) && serverLevel.getBlockEntity(nodePos) instanceof FluidPipeBlockEntity pipeBE) {
-                            pipeBE.setFilterFluid(fluidToSet); // Меняет цвет точек
-                            manager.addNode(nodePos);          // Регистрирует в графе
-                            // Обновляем визуальные соединения с соседями
+                        if (serverLevel.isLoaded(nodePos)) {
+                            BlockEntity nodeBe = serverLevel.getBlockEntity(nodePos);
+
+                            // Обновляем фильтр и у ТРУБ, и у БОЧЕК в сети!
+                            if (nodeBe instanceof FluidPipeBlockEntity pipeBE) {
+                                pipeBE.setFilterFluid(fluidToSet);
+                                updateCount++;
+                            } else if (nodeBe instanceof com.cim.block.entity.fluids.FluidBarrelBlockEntity barrelBE) {
+                                barrelBE.setFilter(selectedFluidId);
+                                updateCount++;
+                            }
+
+                            manager.addNode(nodePos);
                             serverLevel.getBlockState(nodePos).updateNeighbourShapes(serverLevel, nodePos, 3);
-                            updateCount++;
                         }
                     }
 
@@ -198,27 +204,24 @@ public class FluidPipeBlock extends Block implements EntityBlock {
                     boolean isResetting = selectedFluidId.equals("none");
                     level.playSound(null, pos, isResetting ? SoundEvents.ENDERMAN_TELEPORT : SoundEvents.PLAYER_LEVELUP, SoundSource.BLOCKS, 1.0F, isResetting ? 0.8F : 1.2F);
 
-                    String fluidName = "EMPTY";
-                    if (fluidToSet != Fluids.EMPTY) {
-                        fluidName = Component.translatable(fluidToSet.getFluidType().getDescriptionId()).getString();
-                    }
+                    String fluidName = isResetting ? "EMPTY" : Component.translatable(fluidToSet.getFluidType().getDescriptionId()).getString();
                     String msg = isResetting ? "Network filter reset." : "Network filter set: " + fluidName;
                     player.displayClientMessage(Component.literal("§a" + msg + " §7(" + updateCount + " nodes)"), true);
                 }
             } else {
                 // === ОБНОВЛЕНИЕ ТОЛЬКО ОДНОЙ ТРУБЫ (Обычный ПКМ) ===
-                if (selectedFluidId.equals("none")) {
-                    player.displayClientMessage(Component.literal("§cSelect fluid in Identifier first!"), true);
-                } else {
-                    if (level.getBlockEntity(pos) instanceof FluidPipeBlockEntity be) {
-                        FluidNetworkManager manager = FluidNetworkManager.get(serverLevel);
+                if (level.getBlockEntity(pos) instanceof FluidPipeBlockEntity be) {
+                    FluidNetworkManager manager = FluidNetworkManager.get(serverLevel);
 
-                        // Удаляем трубу, меняем жидкость, добавляем обратно
-                        manager.removeNode(pos);
-                        be.setFilterFluid(fluidToSet);
-                        manager.addNode(pos);
-                        level.setBlock(pos, this.updateConnections(level, pos, state), 3);
+                    manager.removeNode(pos);
+                    be.setFilterFluid(fluidToSet); // Ставит EMPTY, если выбрано "none"
+                    manager.addNode(pos);
+                    level.setBlock(pos, this.updateConnections(level, pos, state), 3);
 
+                    if (selectedFluidId.equals("none")) {
+                        player.displayClientMessage(Component.literal("§eFilter reset (Pipe accepts all)"), true);
+                        level.playSound(null, pos, SoundEvents.ENDERMAN_TELEPORT, SoundSource.BLOCKS, 1.0F, 0.8F);
+                    } else {
                         String fluidName = Component.translatable(fluidToSet.getFluidType().getDescriptionId()).getString();
                         player.displayClientMessage(Component.literal("§aFilter: §f" + fluidName), true);
                         level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.get(), SoundSource.BLOCKS, 1.0F, 1.2F);

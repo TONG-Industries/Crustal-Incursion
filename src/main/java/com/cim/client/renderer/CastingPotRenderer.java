@@ -44,7 +44,7 @@ public class CastingPotRenderer implements BlockEntityRenderer<CastingPotBlockEn
             poseStack.popPose();
         }
 
-        // 2. Жидкий металл
+       // 2. Жидкий металл
         if (blockEntity.getStoredMb() > 0 && output.isEmpty()) {
             float fillLevel = blockEntity.getFillLevel();
             float heightPixels = 0.1f + 1.9f * fillLevel;

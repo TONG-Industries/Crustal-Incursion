@@ -107,20 +107,35 @@ public class FluidNetworkManager extends SavedData {
         }
     }
 
-    // ==================== ПРОВЕРКА ФИЛЬТРОВ ====================
+    // ==================== ПРОВЕРКА ФИЛЬТРОВ И МАШИН ====================
     private boolean canConnectLogically(BlockPos pos1, BlockPos pos2) {
         BlockEntity be1 = level.getBlockEntity(pos1);
         BlockEntity be2 = level.getBlockEntity(pos2);
 
-        if (be1 instanceof com.cim.block.entity.fluids.FluidPipeBlockEntity pipe1 &&
-                be2 instanceof com.cim.block.entity.fluids.FluidPipeBlockEntity pipe2) {
+        boolean isPipe1 = be1 instanceof com.cim.block.entity.fluids.FluidPipeBlockEntity;
+        boolean isPipe2 = be2 instanceof com.cim.block.entity.fluids.FluidPipeBlockEntity;
 
-            Fluid f1 = pipe1.getFilterFluid();
-            Fluid f2 = pipe2.getFilterFluid();
-
-            // === ИЗМЕНЕНО: Разрешаем слияние графов только при полном совпадении ===
+        // 1. Если это две трубы - они должны иметь одинаковый фильтр
+        if (isPipe1 && isPipe2) {
+            net.minecraft.world.level.material.Fluid f1 = ((com.cim.block.entity.fluids.FluidPipeBlockEntity) be1).getFilterFluid();
+            net.minecraft.world.level.material.Fluid f2 = ((com.cim.block.entity.fluids.FluidPipeBlockEntity) be2).getFilterFluid();
             return f1 == f2;
         }
+
+        // 2. Если Труба соединяется с Бочкой (или любой другой машиной с баком)
+        if (isPipe1 && be2 != null) {
+            return be2.getCapability(net.minecraftforge.common.capabilities.ForgeCapabilities.FLUID_HANDLER).isPresent();
+        }
+        if (isPipe2 && be1 != null) {
+            return be1.getCapability(net.minecraftforge.common.capabilities.ForgeCapabilities.FLUID_HANDLER).isPresent();
+        }
+
+        // 3. Если две бочки/машины стоят впритык друг к другу
+        if (!isPipe1 && !isPipe2 && be1 != null && be2 != null) {
+            return be1.getCapability(net.minecraftforge.common.capabilities.ForgeCapabilities.FLUID_HANDLER).isPresent() &&
+                    be2.getCapability(net.minecraftforge.common.capabilities.ForgeCapabilities.FLUID_HANDLER).isPresent();
+        }
+
         return false;
     }
 

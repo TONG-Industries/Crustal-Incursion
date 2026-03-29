@@ -3,6 +3,8 @@ package com.cim.block.basic.fluids;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -22,6 +24,7 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.network.NetworkHooks;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
 import com.cim.block.entity.ModBlockEntities;
@@ -69,33 +72,35 @@ public class FluidBarrelBlock extends BaseEntityBlock {
         return RenderShape.MODEL;
     }
 
-    // ====================== ВЗАИМОДЕЙСТВИЕ (ОТКРЫТИЕ GUI) ======================
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        ItemStack heldItem = player.getItemInHand(hand);
+        net.minecraft.world.item.ItemStack stack = player.getItemInHand(hand);
 
-        // Если в руке идентификатор - НЕ ОТКРЫВАЕМ GUI бочки, а ставим фильтр
-        if (heldItem.getItem() instanceof com.cim.item.tools.FluidIdentifierItem) {
-            if (!level.isClientSide) {
-                String selected = com.cim.item.tools.FluidIdentifierItem.getSelectedFluid(heldItem);
-                BlockEntity be = level.getBlockEntity(pos);
+        // 1. Если кликаем Идентификатором
+        if (stack.getItem() instanceof com.cim.item.tools.FluidIdentifierItem) {
+            if (!level.isClientSide && level.getBlockEntity(pos) instanceof com.cim.block.entity.fluids.FluidBarrelBlockEntity be) {
+                String selectedFluidId = com.cim.item.tools.FluidIdentifierItem.getSelectedFluid(stack);
 
-                if (be instanceof FluidBarrelBlockEntity barrel) {
-                    barrel.setFilter(selected); // Устанавливаем фильтр и (если нужно) стираем жидкость
+                be.setFilter(selectedFluidId); // Поддерживает и "none", и обычные ID
 
-                    // Красивое сообщение в чат
-                    String msgName = selected.equals("none") ? "Ничего (Сброс фильтра)" : selected.replace("minecraft:", "").replace("cim:", "");
-                    player.displayClientMessage(Component.literal("§aФильтр бочки установлен: §e" + msgName), true);
+                if (selectedFluidId.equals("none")) {
+                    player.displayClientMessage(Component.literal("§eBarrel filter reset (Closed)"), true);
+                    level.playSound(null, pos, SoundEvents.ENDERMAN_TELEPORT, SoundSource.BLOCKS, 1.0F, 0.8F);
+                } else {
+                    net.minecraft.world.level.material.Fluid fluidToSet = ForgeRegistries.FLUIDS.getValue(new net.minecraft.resources.ResourceLocation(selectedFluidId));
+                    String fluidName = fluidToSet != null ? Component.translatable(fluidToSet.getFluidType().getDescriptionId()).getString() : selectedFluidId;
+                    player.displayClientMessage(Component.literal("§aBarrel Filter: §f" + fluidName), true);
+                    level.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK.get(), SoundSource.BLOCKS, 1.0F, 1.2F);
                 }
             }
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
 
+        // 2. Стандартный код (открытие GUI бочки)
         if (!level.isClientSide) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof FluidBarrelBlockEntity barrel) {
-                // Открываем GUI
-                NetworkHooks.openScreen((ServerPlayer) player, barrel, pos);
+            BlockEntity entity = level.getBlockEntity(pos);
+            if (entity instanceof com.cim.block.entity.fluids.FluidBarrelBlockEntity) {
+                net.minecraftforge.network.NetworkHooks.openScreen((net.minecraft.server.level.ServerPlayer) player, (com.cim.block.entity.fluids.FluidBarrelBlockEntity) entity, pos);
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
@@ -118,6 +123,95 @@ public class FluidBarrelBlock extends BaseEntityBlock {
                 // это можно добавить здесь, проверяя barrel.fluidTank.getFluid().
             }
             super.onRemove(state, level, pos, newState, isMoving);
+        }
+    }
+
+    // ==========================================
+    // СОХРАНЕНИЕ ДАННЫХ ПРИ СЛОМЕ И УСТАНОВКЕ
+    // ==========================================
+
+    // 1. Установка бочки (восстановление жидкости, фильтра и инвентаря)
+    @Override
+    public void setPlacedBy(net.minecraft.world.level.Level pLevel, net.minecraft.core.BlockPos pPos, net.minecraft.world.level.block.state.BlockState pState, @org.jetbrains.annotations.Nullable net.minecraft.world.entity.LivingEntity pPlacer, net.minecraft.world.item.ItemStack pStack) {
+        super.setPlacedBy(pLevel, pPos, pState, pPlacer, pStack);
+
+        if (!pLevel.isClientSide) {
+            net.minecraft.world.level.block.entity.BlockEntity be = pLevel.getBlockEntity(pPos);
+            if (be instanceof com.cim.block.entity.fluids.FluidBarrelBlockEntity barrelBE) {
+                net.minecraft.nbt.CompoundTag itemNbt = pStack.getTag();
+                // Если в предмете есть сохраненные внутренности — загружаем их!
+                if (itemNbt != null && itemNbt.contains("BlockEntityTag")) {
+                    barrelBE.load(itemNbt.getCompound("BlockEntityTag"));
+                    barrelBE.setChanged();
+                }
+            }
+        }
+    }
+
+    // 2. Дроп бочки с сохранением NBT при разрушении киркой (игнорирует стандартный лут)
+    @Override
+    @SuppressWarnings("deprecation")
+    public java.util.List<net.minecraft.world.item.ItemStack> getDrops(net.minecraft.world.level.block.state.BlockState pState, net.minecraft.world.level.storage.loot.LootParams.Builder pParams) {
+        net.minecraft.world.level.block.entity.BlockEntity blockEntity = pParams.getOptionalParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.BLOCK_ENTITY);
+
+        if (blockEntity instanceof com.cim.block.entity.fluids.FluidBarrelBlockEntity barrel) {
+            net.minecraft.world.item.ItemStack itemStack = new net.minecraft.world.item.ItemStack(this);
+            net.minecraft.nbt.CompoundTag nbt = new net.minecraft.nbt.CompoundTag();
+
+            // Сохраняем все жидкости, инвентарь и режимы в тег
+            barrel.saveAdditional(nbt);
+            itemStack.addTagElement("BlockEntityTag", nbt);
+
+            return java.util.Collections.singletonList(itemStack);
+        }
+
+        return super.getDrops(pState, pParams);
+    }
+
+    // 3. Красивый тултип в инвентаре (как у твоей батарейки)
+    @Override
+    public void appendHoverText(net.minecraft.world.item.ItemStack pStack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.BlockGetter pLevel, java.util.List<net.minecraft.network.chat.Component> pTooltip, net.minecraft.world.item.TooltipFlag pFlag) {
+        super.appendHoverText(pStack, pLevel, pTooltip, pFlag);
+
+        pTooltip.add(net.minecraft.network.chat.Component.literal("§7Хранилище жидкостей"));
+
+        net.minecraft.nbt.CompoundTag nbt = pStack.getTag();
+        if (nbt != null && nbt.contains("BlockEntityTag")) {
+            net.minecraft.nbt.CompoundTag beTag = nbt.getCompound("BlockEntityTag");
+
+            // Читаем жидкость
+            if (beTag.contains("FluidName")) {
+                String fluidName = beTag.getString("FluidName");
+                int amount = beTag.getInt("Amount");
+
+                if (!fluidName.equals("minecraft:empty") && amount > 0) {
+                    net.minecraft.world.level.material.Fluid fluid = net.minecraftforge.registries.ForgeRegistries.FLUIDS.getValue(new net.minecraft.resources.ResourceLocation(fluidName));
+                    if (fluid != null) {
+                        String localizedName = net.minecraft.network.chat.Component.translatable(fluid.getFluidType().getDescriptionId()).getString();
+                        pTooltip.add(net.minecraft.network.chat.Component.literal("§bЖидкость: §f" + localizedName));
+                        pTooltip.add(net.minecraft.network.chat.Component.literal("§eОбъем: §f" + amount + " / 16000 mB"));
+                    }
+                } else {
+                    pTooltip.add(net.minecraft.network.chat.Component.literal("§bЖидкость: §7Пусто"));
+                }
+            } else {
+                pTooltip.add(net.minecraft.network.chat.Component.literal("§bЖидкость: §7Пусто"));
+            }
+
+            // Читаем фильтр
+            String filter = beTag.getString("FluidFilter");
+            if (filter != null && !filter.isEmpty() && !filter.equals("none")) {
+                net.minecraft.world.level.material.Fluid f = net.minecraftforge.registries.ForgeRegistries.FLUIDS.getValue(new net.minecraft.resources.ResourceLocation(filter));
+                if (f != null) {
+                    String fName = net.minecraft.network.chat.Component.translatable(f.getFluidType().getDescriptionId()).getString();
+                    pTooltip.add(net.minecraft.network.chat.Component.literal("§aФильтр: §f" + fName));
+                }
+            } else {
+                pTooltip.add(net.minecraft.network.chat.Component.literal("§aФильтр: §cЗакрыто"));
+            }
+        } else {
+            pTooltip.add(net.minecraft.network.chat.Component.literal("§bЖидкость: §7Пусто"));
+            pTooltip.add(net.minecraft.network.chat.Component.literal("§aФильтр: §cЗакрыто"));
         }
     }
 }

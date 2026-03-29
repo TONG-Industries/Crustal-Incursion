@@ -8,6 +8,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -25,7 +26,6 @@ import net.minecraftforge.fluids.FluidUtil;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.fluids.capability.templates.FluidTank;
 import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
@@ -33,9 +33,11 @@ import org.jetbrains.annotations.Nullable;
 
 import com.cim.menu.FluidBarrelMenu;
 import com.cim.block.entity.ModBlockEntities;
-import com.cim.item.ModItems; // для защитников
 
 public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider {
+
+    // ПРОПУСКНАЯ СПОСОБНОСТЬ СЕТИ: 1000 mB/tick (1 ведро в тик = 20 ведер в секунду)
+    public static final int MAX_TRANSFER_RATE = 200;
 
     // 0 = BOTH, 1 = INPUT, 2 = OUTPUT, 3 = DISABLED
     public int mode = 0;
@@ -48,7 +50,7 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
 
     public String fluidFilter = "none";
 
-    // Хранилище жидкости (16 ведёр = 16000 mB)
+    // Физическое хранилище жидкости
     public final FluidTank fluidTank = new FluidTank(16000) {
         @Override
         protected void onContentsChanged() {
@@ -58,9 +60,13 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
             }
         }
 
-        // Проверка фильтра
         @Override
         public boolean isFluidValid(FluidStack stack) {
+            // === НОВАЯ СТРОКА: БЛОКИРУЕМ БОЧКУ, ПОКА НЕ ТКНУЛИ ИДЕНТИФИКАТОРОМ ===
+            if (fluidFilter.equals("none")) {
+                return false;
+            }
+
             if (!fluidFilter.equals("none")) {
                 ResourceLocation stackLoc = ForgeRegistries.FLUIDS.getKey(stack.getFluid());
                 if (stackLoc != null && !stackLoc.toString().equals(fluidFilter)) {
@@ -71,39 +77,64 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
         }
     };
 
-    // 0: Full in, 1: Empty out | 2: Empty in, 3: Full out | 4: Protector
+    // ==========================================
+    // СЕТЕВАЯ ОБЕРТКА (Лимиты + Режимы)
+    // ==========================================
+    private final IFluidHandler networkFluidHandler = new IFluidHandler() {
+        @Override
+        public int getTanks() { return fluidTank.getTanks(); }
+        @Override
+        public @NotNull FluidStack getFluidInTank(int tank) { return fluidTank.getFluidInTank(tank); }
+        @Override
+        public int getTankCapacity(int tank) { return fluidTank.getTankCapacity(tank); }
+        @Override
+        public boolean isFluidValid(int tank, @NotNull FluidStack stack) { return fluidTank.isFluidValid(tank, stack); }
+
+        @Override
+        public int fill(FluidStack resource, FluidAction action) {
+            if (mode == 2 || mode == 3) return 0; // В режиме OUTPUT или DISABLED нельзя принимать жидкость из трубы
+
+            FluidStack toFill = resource.copy();
+            toFill.setAmount(Math.min(toFill.getAmount(), MAX_TRANSFER_RATE));
+            return fluidTank.fill(toFill, action);
+        }
+
+        @Override
+        public @NotNull FluidStack drain(FluidStack resource, FluidAction action) {
+            if (mode == 1 || mode == 3) return FluidStack.EMPTY; // В режиме INPUT или DISABLED нельзя отдавать жидкость
+
+            int maxDrain = Math.min(resource.getAmount(), MAX_TRANSFER_RATE);
+            FluidStack toDrain = resource.copy();
+            toDrain.setAmount(maxDrain);
+            return fluidTank.drain(toDrain, action);
+        }
+
+        @Override
+        public @NotNull FluidStack drain(int maxDrain, FluidAction action) {
+            if (mode == 1 || mode == 3) return FluidStack.EMPTY;
+            return fluidTank.drain(Math.min(maxDrain, MAX_TRANSFER_RATE), action);
+        }
+    };
+
     public final ItemStackHandler itemHandler = new ItemStackHandler(TOTAL_SLOTS) {
         @Override
         protected void onContentsChanged(int slot) { setChanged(); }
 
         @Override
         public boolean isItemValid(int slot, @NotNull ItemStack stack) {
-            // Разрешаем класть вручную только во входные слоты (и в слот защитника)
-            if (slot >= FILL_IN_START && slot < FILL_IN_END) {
-                return stack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).isPresent();
-            }
+            if (slot >= FILL_IN_START && slot < FILL_IN_END) return stack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).isPresent();
             if (slot >= DRAIN_IN_START && slot < DRAIN_IN_END) {
-                // ================= НОВОЕ =================
-                // Пропускаем нашу бесконечную бочку-болванку без проверки Capability
-                if (stack.getItem() instanceof com.cim.item.tools.InfiniteFluidBarrelItem) {
-                    return true;
-                }
-                // =========================================
+                if (stack.getItem() instanceof com.cim.item.tools.InfiniteFluidBarrelItem) return true;
                 return stack.getCapability(ForgeCapabilities.FLUID_HANDLER_ITEM).isPresent();
             }
-            if (slot == 16) return true; // Слот защитника
-
-            return false; // В аутпуты руками класть нельзя
+            if (slot == 16) return true;
+            return false;
         }
 
         @Override
         public void deserializeNBT(CompoundTag nbt) {
             super.deserializeNBT(nbt);
-            // Защита от крашей при загрузке старых сохранений.
-            // Если Forge сжал инвентарь из-за старого NBT, восстанавливаем правильный размер!
-            if (this.getSlots() != TOTAL_SLOTS) {
-                this.setSize(TOTAL_SLOTS);
-            }
+            if (this.getSlots() != TOTAL_SLOTS) this.setSize(TOTAL_SLOTS);
         }
     };
 
@@ -126,62 +157,46 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
     }
 
     private void processBuckets() {
-        // 1. Опустошение предметов (Слоты 12-15 -> переходят в 8-11)
         for (int i = DRAIN_IN_START; i < DRAIN_IN_END; i++) {
             ItemStack inStack = itemHandler.getStackInSlot(i);
             if (inStack.isEmpty()) continue;
 
             if (inStack.getItem() instanceof com.cim.item.tools.InfiniteFluidBarrelItem) {
-                // Работает только если на бочке установлен фильтр
                 if (!this.fluidFilter.equals("none")) {
-                    net.minecraft.world.level.material.Fluid filterFluid = net.minecraftforge.registries.ForgeRegistries.FLUIDS.getValue(new net.minecraft.resources.ResourceLocation(this.fluidFilter));
-
+                    net.minecraft.world.level.material.Fluid filterFluid = ForgeRegistries.FLUIDS.getValue(new ResourceLocation(this.fluidFilter));
                     if (filterFluid != null && filterFluid != net.minecraft.world.level.material.Fluids.EMPTY) {
                         int space = fluidTank.getSpace();
                         if (space > 0) {
-                            // Заливаем жидкость из фильтра на всё свободное место!
-                            fluidTank.fill(new net.minecraftforge.fluids.FluidStack(filterFluid, space), net.minecraftforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);
+                            fluidTank.fill(new FluidStack(filterFluid, space), IFluidHandler.FluidAction.EXECUTE);
                         }
                     }
                 }
-                // Прерываем дальнейшую логику для этого слота: предмет НЕ опустошается и НЕ двигается!
                 continue;
             }
 
-            // Пытаемся вылить жидкость ИЗ предмета В бочку
             var result = FluidUtil.tryEmptyContainer(inStack, fluidTank, fluidTank.getSpace(), null, true);
             if (result.isSuccess()) {
                 ItemStack emptyOut = result.getResult();
-                // Ищем свободный выходной слот
-                if (insertToOutput(DRAIN_OUT_START, DRAIN_OUT_END, emptyOut)) {
-                    inStack.shrink(1); // Уничтожаем предмет во входе, если успешно переложили пустой
-                }
+                if (insertToOutput(DRAIN_OUT_START, DRAIN_OUT_END, emptyOut)) inStack.shrink(1);
             }
         }
 
-        // 2. Наполнение предметов (Слоты 0-3 -> переходят в 4-7)
         if (fluidTank.getFluidAmount() > 0) {
             for (int i = FILL_IN_START; i < FILL_IN_END; i++) {
                 ItemStack inStack = itemHandler.getStackInSlot(i);
                 if (inStack.isEmpty()) continue;
 
-                // Пытаемся залить жидкость ИЗ бочки В предмет
                 var result = FluidUtil.tryFillContainer(inStack, fluidTank, fluidTank.getFluidAmount(), null, true);
                 if (result.isSuccess()) {
                     ItemStack fullOut = result.getResult();
-                    // Ищем свободный выходной слот
-                    if (insertToOutput(FILL_OUT_START, FILL_OUT_END, fullOut)) {
-                        inStack.shrink(1); // Уничтожаем предмет во входе, если успешно переложили полный
-                    }
+                    if (insertToOutput(FILL_OUT_START, FILL_OUT_END, fullOut)) inStack.shrink(1);
                 }
             }
         }
     }
 
     private boolean insertToOutput(int startSlot, int endSlot, ItemStack stackToInsert) {
-        if (stackToInsert.isEmpty()) return true; // Ведро пропало (например, одноразовое), считаем успехом
-
-        // Сначала ищем слот с таким же предметом, чтобы застакать
+        if (stackToInsert.isEmpty()) return true;
         for (int i = startSlot; i < endSlot; i++) {
             ItemStack existing = itemHandler.getStackInSlot(i);
             if (!existing.isEmpty() && ItemStack.isSameItemSameTags(existing, stackToInsert)) {
@@ -191,8 +206,6 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
                 }
             }
         }
-
-        // Если не нашли куда стакнуть, ищем первый пустой слот
         for (int i = startSlot; i < endSlot; i++) {
             ItemStack existing = itemHandler.getStackInSlot(i);
             if (existing.isEmpty()) {
@@ -200,8 +213,7 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
                 return true;
             }
         }
-
-        return false; // Нет места
+        return false;
     }
 
     public void setFilter(String newFilter) {
@@ -218,22 +230,44 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
         setChanged();
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+
+            // === ВОЛШЕБНЫЙ ПИНОК СЕТИ ===
+            // Заставляем бочку переподключиться к трубам с новыми правилами
+            com.cim.api.fluids.FluidNetworkManager manager = com.cim.api.fluids.FluidNetworkManager.get((net.minecraft.server.level.ServerLevel) level);
+            manager.removeNode(this.getBlockPos());
+            manager.addNode(this.getBlockPos());
         }
     }
 
     public void changeMode() {
         this.mode = (this.mode + 1) % 4;
         setChanged();
+        if (level != null && !level.isClientSide) level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+    }
+
+    // ==========================================
+    // ЖИЗНЕННЫЙ ЦИКЛ БОЧКИ В СЕТИ
+    // ==========================================
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        // Используем нашу защитную обертку!
+        lazyFluidHandler = LazyOptional.of(() -> networkFluidHandler);
+        lazyItemHandler = LazyOptional.of(() -> itemHandler);
+
+        // Интегрируем бочку в жидкостную сеть при установке
         if (level != null && !level.isClientSide) {
-            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+            com.cim.api.fluids.FluidNetworkManager.get((ServerLevel) level).addNode(worldPosition);
         }
     }
 
     @Override
-    public void onLoad() {
-        super.onLoad();
-        lazyFluidHandler = LazyOptional.of(() -> fluidTank);
-        lazyItemHandler = LazyOptional.of(() -> itemHandler);
+    public void setRemoved() {
+        super.setRemoved();
+        // Удаляем бочку из жидкостной сети при разрушении
+        if (this.level != null && !this.level.isClientSide) {
+            com.cim.api.fluids.FluidNetworkManager.get((ServerLevel) this.level).removeNode(this.getBlockPos());
+        }
     }
 
     @Override
@@ -256,13 +290,11 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
         fluidTank.readFromNBT(tag);
         itemHandler.deserializeNBT(tag.getCompound("Inventory"));
         mode = tag.getInt("Mode");
-        if (tag.contains("FluidFilter")) {
-            this.fluidFilter = tag.getString("FluidFilter");
-        }
+        if (tag.contains("FluidFilter")) this.fluidFilter = tag.getString("FluidFilter");
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
+    public void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         fluidTank.writeToNBT(tag);
         tag.put("Inventory", itemHandler.serializeNBT());
@@ -271,15 +303,11 @@ public class FluidBarrelBlockEntity extends BlockEntity implements MenuProvider 
     }
 
     @Override
-    public CompoundTag getUpdateTag() {
-        return saveWithoutMetadata();
-    }
+    public CompoundTag getUpdateTag() { return saveWithoutMetadata(); }
 
     @Nullable
     @Override
-    public Packet<ClientGamePacketListener> getUpdatePacket() {
-        return ClientboundBlockEntityDataPacket.create(this);
-    }
+    public Packet<ClientGamePacketListener> getUpdatePacket() { return ClientboundBlockEntityDataPacket.create(this); }
 
     @Nullable
     @Override
