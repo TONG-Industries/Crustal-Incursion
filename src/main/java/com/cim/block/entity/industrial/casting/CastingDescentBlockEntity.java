@@ -40,6 +40,7 @@ public class CastingDescentBlockEntity extends BlockEntity {
         // 1. Уменьшаем кулдауны
         if (be.transferCooldown > 0) be.transferCooldown--;
 
+        // Таймер автоматического отключения струи (на случай если что-то пойдет не так)
         if (be.pouringTicks > 0) {
             be.pouringTicks--;
             if (be.pouringTicks <= 0) {
@@ -47,7 +48,7 @@ public class CastingDescentBlockEntity extends BlockEntity {
             }
         }
 
-        // Ограничиваем частоту логики (раз в 2 тика), чтобы не перегружать сервер
+        // Ограничиваем частоту логики передачи (раз в 2 тика)
         if (be.transferCooldown > 0) return;
 
         // 2. Ищем источник (Плавильня)
@@ -95,12 +96,12 @@ public class CastingDescentBlockEntity extends BlockEntity {
                 be.pouringTicks = POURING_TICKS;
                 be.transferCooldown = 2; // Кулдаун перед следующей порцией
             } else {
-                // Если в плавильне кончился металл — гасим струю
-                if (be.pouringTicks <= 0) be.setPouring(false, null);
+                // ИСПРАВЛЕНИЕ: Если в плавильне кончился металл — гасим струю МГНОВЕННО
+                be.setPouring(false, null);
             }
         } else {
-            // Если сеть полна или металлы несовместимы — гасим струю
-            if (be.pouringTicks <= 0) be.setPouring(false, null);
+            // ИСПРАВЛЕНИЕ: Если сеть полна или металлы несовместимы — гасим струю МГНОВЕННО
+            be.setPouring(false, null);
         }
     }
 

@@ -50,24 +50,21 @@ public class CastingPotBlockEntity extends BlockEntity {
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, CastingPotBlockEntity be) {
+        // 1. Уменьшаем кулдауны и таймер охлаждения
         if (be.transferCooldown > 0) be.transferCooldown--;
 
-        // Логика охлаждения (таймер и частицы)
         if (be.coolingTimer > 0) {
             be.coolingTimer--;
-            if (level.isClientSide && level.random.nextFloat() < 0.25f) {
-                level.addParticle(net.minecraft.core.particles.ParticleTypes.POOF,
-                        pos.getX() + 0.5, pos.getY() + 0.6, pos.getZ() + 0.5, 0, 0.03, 0);
-            }
+            // Убраны частицы отсюда - они теперь только при создании слитка
             be.setChanged();
-            // Когда остыло, обновляем блок, чтобы воронки "проснулись"
-            if (be.coolingTimer == 0) {
-                level.sendBlockUpdated(pos, state, state, 3);
-            }
+            if (be.coolingTimer == 0) level.sendBlockUpdated(pos, state, state, 3);
+            // Не выходим отсюда, но проверка ниже не даст забрать предмет
         }
 
+        // 2. Если в котле уже лежит готовый слиток — выходим
         if (!be.outputItem.isEmpty()) return;
 
+        // 3. Если формы нет — очищаем металл (испарение)
         if (be.mold.isEmpty()) {
             if (be.storedMb > 0) be.clearMetal();
             return;
@@ -75,7 +72,33 @@ public class CastingPotBlockEntity extends BlockEntity {
 
         be.updateCapacity();
 
-        if (be.storedMb >= be.capacity && be.capacity > 0) {
+        // 4. ЛОГИКА ПОСЛЕДОВАТЕЛЬНОЙ ПЕРЕДАЧИ СОСЕДЯМ
+        // Переливаем, только если мы полны или близки к этому, и нет процесса остывания
+        if (be.storedMb > 0 && be.coolingTimer <= 0) {
+            for (Direction dir : Direction.Plane.HORIZONTAL) {
+                BlockPos neighborPos = pos.relative(dir);
+                if (level.getBlockEntity(neighborPos) instanceof CastingPotBlockEntity neighborPot) {
+                    // Если сосед может принять этот металл и он не полон
+                    if (neighborPot.canAcceptMetal(be.currentMetal) && neighborPot.getRemainingCapacity() > 0) {
+                        int toTransfer = Math.min(10, be.storedMb); // Скорость перетекания
+                        int accepted = neighborPot.addMetal(be.currentMetal, toTransfer);
+
+                        if (accepted > 0) {
+                            be.storedMb -= accepted;
+                            be.transferCooldown = 5; // Блокируем застывание на 5 тиков
+                            if (be.storedMb <= 0) be.currentMetal = null;
+                            be.setChanged();
+                            level.sendBlockUpdated(pos, state, state, 3);
+                            break; // За тик передаем только одному соседу
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. ЛОГИКА ЗАСТЫВАНИЯ
+        // Застывает только если: полон, есть форма, и НЕ передает металл соседям (cooldown == 0)
+        if (be.storedMb >= be.capacity && be.capacity > 0 && be.transferCooldown <= 0) {
             if (be.solidifyTimer < SOLIDIFY_TIME) {
                 be.solidifyTimer++;
                 be.setChanged();
@@ -84,29 +107,63 @@ public class CastingPotBlockEntity extends BlockEntity {
                     level.sendBlockUpdated(pos, state, state, 3);
                 }
 
-                // МОМЕНТ ЗАВЕРШЕНИЯ ЛИТЬЯ
+                // МОМЕНТ ЗАВЕРШЕНИЯ
                 if (be.solidifyTimer >= SOLIDIFY_TIME) {
                     be.createOutputItem();
-                    be.storedMb = 0;       // Обнуляем металл
+                    be.storedMb = 0;
                     be.solidifyTimer = 0;
-                    be.coolingTimer = COOLING_TIME; // Запускаем 2 сек охлаждения
+                    be.coolingTimer = COOLING_TIME;
 
-                    // Звук "пшшш" (лава в воду)
-                    level.playSound(null, pos, net.minecraft.sounds.SoundEvents.LAVA_EXTINGUISH,
-                            net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 2.6f);
+                    // ЧАСТИЦЫ POOF при создании слитка (один раз!)
+                    for(int i = 0; i < 8; i++) {
+                        level.addParticle(ParticleTypes.POOF,
+                                pos.getX() + 0.2 + level.random.nextDouble() * 0.6,
+                                pos.getY() + 0.3,
+                                pos.getZ() + 0.2 + level.random.nextDouble() * 0.6,
+                                (level.random.nextDouble() - 0.5) * 0.1,
+                                0.05,
+                                (level.random.nextDouble() - 0.5) * 0.1);
+                    }
 
+                    level.playSound(null, pos, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.5f, 2.6f);
                     be.setChanged();
                     level.sendBlockUpdated(pos, state, state, 3);
+                    return; // Важно: выходим чтобы не продолжать тикать с пустым металлом
                 }
             }
         } else {
+            // Если металл начал убывать (перетекать к соседу), сбрасываем прогресс застывания
             if (be.solidifyTimer > 0) {
                 be.solidifyTimer = 0;
                 be.setChanged();
+                level.sendBlockUpdated(pos, state, state, 3);
             }
         }
     }
 
+
+    private void tryTransferToNeighbor() {
+        if (this.storedMb <= 0 || this.currentMetal == null) return;
+
+        for (Direction dir : Direction.Plane.HORIZONTAL) {
+            BlockEntity neighbor = level.getBlockEntity(worldPosition.relative(dir));
+            if (neighbor instanceof CastingPotBlockEntity neighborPot) {
+                // Если сосед может принять этот металл и он не полон
+                if (neighborPot.canAcceptMetal(this.currentMetal) && neighborPot.getRemainingCapacity() > 0) {
+                    int toTransfer = Math.min(10, this.storedMb); // Скорость перетекания
+                    int accepted = neighborPot.addMetal(this.currentMetal, toTransfer);
+
+                    if (accepted > 0) {
+                        this.storedMb -= accepted;
+                        this.transferCooldown = 2; // Блокирует застывание на время передачи
+                        if (this.storedMb <= 0) this.currentMetal = null;
+                        this.setChanged();
+                        return; // Передаем только одному за тик
+                    }
+                }
+            }
+        }
+    }
 
 
 
@@ -285,6 +342,7 @@ public class CastingPotBlockEntity extends BlockEntity {
         tag.put("Output", outputItem.save(new CompoundTag()));
         tag.putInt("StoredMb", storedMb);
         tag.putInt("SolidifyTimer", solidifyTimer);
+        tag.putInt("CoolingTimer", coolingTimer); // ДОБАВЬ ЭТО
         if (currentMetal != null) {
             tag.putString("MetalId", currentMetal.getId().toString());
         }
@@ -297,11 +355,17 @@ public class CastingPotBlockEntity extends BlockEntity {
         this.outputItem = ItemStack.of(tag.getCompound("Output"));
         this.storedMb = tag.getInt("StoredMb");
         this.solidifyTimer = tag.getInt("SolidifyTimer");
+        this.coolingTimer = tag.getInt("CoolingTimer"); // И ЭТО
         if (tag.contains("MetalId")) {
             ResourceLocation id = new ResourceLocation(tag.getString("MetalId"));
             MetallurgyRegistry.get(id).ifPresent(m -> this.currentMetal = m);
         }
         updateCapacity();
+    }
+
+    // Добавь геттер
+    public int getCoolingTimer() {
+        return coolingTimer;
     }
 
     @Override

@@ -103,14 +103,18 @@ public class CastingPotBlock extends BaseEntityBlock {
         ItemStack heldItem = player.getItemInHand(hand);
 
         // Приоритет: забор готового предмета
+        // Приоритет: забор готового предмета
         if (!pot.getOutputItem().isEmpty()) {
+            // БЛОКИРОВКА: нельзя забрать пока остывает
+            if (pot.getCoolingTimer() > 0) {
+                return InteractionResult.PASS; // Или CONSUME с сообщением "Горячо!"
+            }
+
             if (heldItem.isEmpty()) {
-                // Забираем рукой
                 player.setItemInHand(hand, pot.takeOutput());
                 level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
                 return InteractionResult.CONSUME;
             } else if (player.getInventory().add(pot.takeOutput())) {
-                // Или добавляем в инвентарь если есть место
                 level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
                 return InteractionResult.CONSUME;
             }

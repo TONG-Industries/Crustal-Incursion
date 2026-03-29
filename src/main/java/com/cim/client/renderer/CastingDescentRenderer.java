@@ -36,36 +36,44 @@ public class CastingDescentRenderer implements BlockEntityRenderer<CastingDescen
         int color = metal.getColor();
         float r = ((color >> 16) & 0xFF) / 255f, g = ((color >> 8) & 0xFF) / 255f, b = (color & 0xFF) / 255f;
 
-        // Базовое время для анимации
         float time = (be.getLevel().getGameTime() + partialTick) * 0.1f;
         VertexConsumer builder = buffer.getBuffer(RenderType.entityTranslucent(LIQUID_METAL_TEXTURE));
+
+        // СТРУЯ ВСЕГДА СВЕТИТСЯ В ТЕМНОТЕ
+        int glowLight = 15728880;
 
         poseStack.pushPose();
         poseStack.translate(0.5, 0.5, 0.5);
         poseStack.mulPose(Axis.YP.rotationDegrees(180f - facing.toYRot()));
         poseStack.translate(-0.5, -0.5, -0.5);
 
-        // СЕГМЕНТ 3: Течет ВПЕРЕД (положительный offset)
-        renderBox(poseStack, builder, packedLight, r, g, b, 1.0f, 6.1f/16f, 1.2f/16f, 12.15f/16f, 9.8f/16f, 2.4f/16f, 16.0f/16f, time, 0.3f);
+        // СЕГМЕНТ 3
+        renderBox(poseStack, builder, glowLight, r, g, b, 1.0f, 6.1f/16f, 1.2f/16f, 12.15f/16f, 9.8f/16f, 2.4f/16f, 16.0f/16f, time, 0.3f);
 
-        // СЕГМЕНТ 2: Течет ВПЕРЕД (положительный offset) + Правка ГЕОМЕТРИИ
+        // СЕГМЕНТ 2: Уменьшен на 0.001px и сдвинут на 0.1px назад
         poseStack.pushPose();
         poseStack.translate(8f/16f, 1.8f/16f, 12.15f/16f);
         poseStack.mulPose(Axis.XP.rotationDegrees(-22.5f));
         poseStack.translate(-8f/16f, -1.8f/16f, -12.15f/16f);
 
-        // z1 = 7.6 + 0.1 = 7.7 (укоротили со стороны струи)
-        // z2 = 12.15 + 0.1 = 12.25 (сдвинули к 3-му сегменту)
-        renderBox(poseStack, builder, packedLight, r, g, b, 1.0f, 6.1f/16f, 1.2f/16f, 7.7f/16f, 9.8f/16f, 2.4f/16f, 12.25f/16f, time, 0.4f);
+        // Корректировка: x сдвинуты на 0.0005 к центру (общее уменьшение 0.001)
+        // z сдвинуты на 0.1 пикселя назад (к сегменту 3)
+        float x1 = (6.1f + 0.0005f) / 16f;
+        float x2 = (9.8f - 0.0005f) / 16f;
+        float z1 = (7.7f + 0.1f) / 16f;
+        float z2 = (12.175f + 0.1f) / 16f;
+
+        renderBox(poseStack, builder, glowLight, r, g, b, 1.0f, x1, 1.2f/16f, z1, x2, 2.4f/16f, z2, time, 0.4f);
         poseStack.popPose();
 
-        // СЕГМЕНТ 1: Течет ВНИЗ (ОТРИЦАТЕЛЬНЫЙ offset)
+        // СЕГМЕНТ 1: Текстура вниз (-time)
         float s1TopY = 0.666f / 16f;
         if (streamEndY < s1TopY) {
-            renderBox(poseStack, builder, packedLight, r, g, b, 1.0f, 6.1f/16f, streamEndY, 7.9f/16f, 9.8f/16f, s1TopY, 7.9f/16f + 1.2f/16f, -time, s1TopY - streamEndY);
+            renderBox(poseStack, builder, glowLight, r, g, b, 1.0f, 6.1f/16f, streamEndY, 7.9f/16f, 9.8f/16f, s1TopY, 7.9f/16f + 1.2f/16f, -time, s1TopY - streamEndY);
         }
         poseStack.popPose();
     }
+
 
     // ИСПРАВЛЕННЫЙ renderBox (Добавлены North и South стороны)
     private void renderBox(PoseStack ps, VertexConsumer builder, int light, float r, float g, float b, float a, float x1, float y1, float z1, float x2, float y2, float z2, float offset, float len) {
