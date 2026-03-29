@@ -7,18 +7,28 @@ import com.cim.block.entity.ModBlockEntities;
 import com.cim.item.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.*;
 
 public class CastingPotBlockEntity extends BlockEntity {
     public static final int CAPACITY_MOLD_INGOT = MetalUnits.MB_PER_INGOT; // 111 мб
@@ -29,10 +39,10 @@ public class CastingPotBlockEntity extends BlockEntity {
     private Metal currentMetal = null;
     private int storedMb = 0;
     private int capacity = 0;
-
+    private int coolingTimer = 0;
     private int solidifyTimer = 0;
     private static final int SOLIDIFY_TIME = 100; // 5 секунд
-
+    private static final int COOLING_TIME = 40; // 2 секунды (40 тиков)
     private int transferCooldown = 0;
 
     public CastingPotBlockEntity(BlockPos pos, BlockState state) {
@@ -42,30 +52,62 @@ public class CastingPotBlockEntity extends BlockEntity {
     public static void serverTick(Level level, BlockPos pos, BlockState state, CastingPotBlockEntity be) {
         if (be.transferCooldown > 0) be.transferCooldown--;
 
+        // Логика охлаждения (таймер и частицы)
+        if (be.coolingTimer > 0) {
+            be.coolingTimer--;
+            if (level.isClientSide && level.random.nextFloat() < 0.25f) {
+                level.addParticle(net.minecraft.core.particles.ParticleTypes.POOF,
+                        pos.getX() + 0.5, pos.getY() + 0.6, pos.getZ() + 0.5, 0, 0.03, 0);
+            }
+            be.setChanged();
+            // Когда остыло, обновляем блок, чтобы воронки "проснулись"
+            if (be.coolingTimer == 0) {
+                level.sendBlockUpdated(pos, state, state, 3);
+            }
+        }
+
         if (!be.outputItem.isEmpty()) return;
 
         if (be.mold.isEmpty()) {
-            if (be.storedMb > 0) {
-                be.clearMetal();
-            }
+            if (be.storedMb > 0) be.clearMetal();
             return;
         }
 
         be.updateCapacity();
 
-        if (be.storedMb >= be.capacity && be.capacity > 0 && be.solidifyTimer < SOLIDIFY_TIME) {
-            be.solidifyTimer++;
-            be.setChanged();
+        if (be.storedMb >= be.capacity && be.capacity > 0) {
+            if (be.solidifyTimer < SOLIDIFY_TIME) {
+                be.solidifyTimer++;
+                be.setChanged();
 
-            if (be.solidifyTimer >= SOLIDIFY_TIME) {
-                be.createOutputItem();
+                if (be.solidifyTimer % 10 == 0) {
+                    level.sendBlockUpdated(pos, state, state, 3);
+                }
+
+                // МОМЕНТ ЗАВЕРШЕНИЯ ЛИТЬЯ
+                if (be.solidifyTimer >= SOLIDIFY_TIME) {
+                    be.createOutputItem();
+                    be.storedMb = 0;       // Обнуляем металл
+                    be.solidifyTimer = 0;
+                    be.coolingTimer = COOLING_TIME; // Запускаем 2 сек охлаждения
+
+                    // Звук "пшшш" (лава в воду)
+                    level.playSound(null, pos, net.minecraft.sounds.SoundEvents.LAVA_EXTINGUISH,
+                            net.minecraft.sounds.SoundSource.BLOCKS, 0.5f, 2.6f);
+
+                    be.setChanged();
+                    level.sendBlockUpdated(pos, state, state, 3);
+                }
+            }
+        } else {
+            if (be.solidifyTimer > 0) {
+                be.solidifyTimer = 0;
+                be.setChanged();
             }
         }
-
-        if (be.transferCooldown == 0 && be.storedMb > 0 && be.solidifyTimer == 0) {
-            be.tryTransferToNeighbor(level, pos);
-        }
     }
+
+
 
 
 
@@ -88,32 +130,85 @@ public class CastingPotBlockEntity extends BlockEntity {
         return toExtract;
     }
 
-    private void tryTransferToNeighbor(Level level, BlockPos pos) {
-        if (storedMb <= 0 || currentMetal == null || solidifyTimer > 0) return;
 
-        for (Direction dir : Direction.Plane.HORIZONTAL) {
-            BlockEntity neighbor = level.getBlockEntity(pos.relative(dir));
-            if (neighbor instanceof CastingPotBlockEntity neighborPot) {
-                // Используем canAcceptMetal с проверкой металла!
-                if (neighborPot.canAcceptMetal(currentMetal)) {
-                    int space = neighborPot.getRemainingCapacity();
-                    int toTransfer = Math.min(10, storedMb);
-                    int accepted = Math.min(toTransfer, space);
 
-                    if (accepted > 0) {
-                        this.storedMb -= accepted;
-                        neighborPot.addMetal(currentMetal, accepted);
-                        this.transferCooldown = 5;
+    private final ItemStackHandler itemHandler = new ItemStackHandler(1) {
+        @Override
+        public ItemStack getStackInSlot(int slot) { return outputItem; }
 
-                        if (this.storedMb <= 0) {
-                            this.currentMetal = null;
-                        }
-                        setChanged();
-                        return; // Передали в одного соседа, выходим
+        @Override
+        public void setStackInSlot(int slot, ItemStack stack) {
+            outputItem = stack;
+            setChanged();
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            // Блокировка: нельзя забрать, если есть металл, идет плавка ИЛИ предмет еще горячий
+            if (storedMb > 0 || solidifyTimer > 0 || coolingTimer > 0) {
+                return ItemStack.EMPTY;
+            }
+            ItemStack res = outputItem.copy().split(amount);
+            if (!simulate) {
+                outputItem.shrink(amount);
+                setChanged();
+            }
+            return res;
+        }
+    };
+
+    private final LazyOptional<IItemHandler> inventoryCap = LazyOptional.of(() -> itemHandler);
+
+    // ЛОГИКА СЕТИ (Поиск до 7 котлов)
+    public List<CastingPotBlockEntity> findNetwork() {
+        List<CastingPotBlockEntity> network = new ArrayList<>();
+        Queue<BlockPos> queue = new LinkedList<>();
+        Set<BlockPos> visited = new HashSet<>();
+        queue.add(worldPosition); visited.add(worldPosition);
+
+        while (!queue.isEmpty() && network.size() < 7) {
+            BlockPos curr = queue.poll();
+            if (level.getBlockEntity(curr) instanceof CastingPotBlockEntity pot) {
+                network.add(pot);
+                for (Direction d : Direction.Plane.HORIZONTAL) {
+                    BlockPos next = curr.relative(d);
+                    if (!visited.contains(next) && level.getBlockState(next).is(getBlockState().getBlock())) {
+                        visited.add(next); queue.add(next);
                     }
                 }
             }
         }
+        return network;
+    }
+
+    // ЗАПОЛНЕНИЕ СЕТИ (Вместо addMetal в Descent вызывай этот метод)
+    public int fillNetwork(Metal metal, int amount) {
+        List<CastingPotBlockEntity> network = findNetwork(); // Твой метод поиска из PDF
+
+        // Считаем общее свободное место во всей сети
+        int totalSpace = network.stream().mapToInt(CastingPotBlockEntity::getRemainingCapacity).sum();
+        if (totalSpace <= 0) return 0;
+
+        int toFillTotal = Math.min(amount, totalSpace);
+        int count = network.size();
+        int perPool = toFillTotal / count;
+        int remainder = toFillTotal % count;
+
+        // Раздаем металл поровну
+        for (CastingPotBlockEntity pool : network) {
+            int fillAmount = perPool + (remainder-- > 0 ? 1 : 0);
+            if (fillAmount > 0) {
+                pool.addMetal(metal, fillAmount); // Используем твой addMetal из PDF
+            }
+        }
+        return toFillTotal;
+    }
+
+
+    @Override
+    public <T> LazyOptional<T> getCapability(Capability<T> cap, @Nullable Direction side) {
+        if (cap == ForgeCapabilities.ITEM_HANDLER) return inventoryCap.cast();
+        return super.getCapability(cap, side);
     }
 
     private void updateCapacity() {
@@ -269,20 +364,26 @@ public class CastingPotBlockEntity extends BlockEntity {
         return capacity - storedMb;
     }
 
-    // Измени метод addMetal чтобы возвращал сколько реально добавлено
     public int addMetal(Metal metal, int amount) {
-        if (storedMb == 0) {
+        if (this.storedMb == 0) {
             this.currentMetal = metal;
         } else if (!this.currentMetal.equals(metal)) {
-            return 0; // Не совместимо - не добавляем ничего
+            return 0;
         }
 
-        int toAdd = Math.min(amount, capacity - storedMb);
+        int toAdd = Math.min(amount, this.capacity - this.storedMb);
         if (toAdd > 0) {
             this.storedMb += toAdd;
-            setChanged();
-            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            this.setChanged(); // Помечаем для сохранения на диск
+
+            if (this.level != null && !this.level.isClientSide) {
+                // Пакет для обновления рендера у игроков рядом
+                this.level.sendBlockUpdated(this.worldPosition, getBlockState(), getBlockState(), 3);
+            }
         }
-        return toAdd; // Возвращаем сколько реально добавили
+        return toAdd;
+    }
+    public float getCoolingProgress() {
+        return (float) coolingTimer / COOLING_TIME;
     }
 }

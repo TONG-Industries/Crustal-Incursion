@@ -26,95 +26,81 @@ public class CastingDescentRenderer implements BlockEntityRenderer<CastingDescen
     public CastingDescentRenderer(BlockEntityRendererProvider.Context context) {}
 
     @Override
-    public void render(CastingDescentBlockEntity be, float partialTick, PoseStack poseStack,
-                       MultiBufferSource buffer, int packedLight, int packedOverlay) {
+    public void render(CastingDescentBlockEntity be, float partialTick, PoseStack poseStack, MultiBufferSource buffer, int packedLight, int packedOverlay) {
         if (!be.isPouring()) return;
         Metal metal = be.getPouringMetal();
         if (metal == null) return;
 
-        Direction facing = be.getLevel().getBlockState(be.getBlockPos()).getValue(CastingDescentBlock.FACING);
+        Direction facing = be.getBlockState().getValue(CastingDescentBlock.FACING);
         float streamEndY = be.getStreamEndY();
-
         int color = metal.getColor();
-        float r = ((color >> 16) & 0xFF) / 255f;
-        float g = ((color >> 8) & 0xFF) / 255f;
-        float b = (color & 0xFF) / 255f;
+        float r = ((color >> 16) & 0xFF) / 255f, g = ((color >> 8) & 0xFF) / 255f, b = (color & 0xFF) / 255f;
 
-        // Отрицательный flowOffset заставляет текстуру течь ВНИЗ
-        float flowOffset = -(be.getLevel().getGameTime() + partialTick) * 0.1f;
+        // Базовое время для анимации
+        float time = (be.getLevel().getGameTime() + partialTick) * 0.1f;
         VertexConsumer builder = buffer.getBuffer(RenderType.entityTranslucent(LIQUID_METAL_TEXTURE));
 
         poseStack.pushPose();
-
-        // 1. РАЗВОРОТ: Добавляем 180 градусов к текущему повороту FACING
         poseStack.translate(0.5, 0.5, 0.5);
         poseStack.mulPose(Axis.YP.rotationDegrees(180f - facing.toYRot()));
         poseStack.translate(-0.5, -0.5, -0.5);
 
-        // 2. СЕГМЕНТ 3 (Горизонтальный "хвост")
-        renderBox(poseStack, builder, packedLight, r, g, b, 1.0f,
-                6.1f/16f, 1.2f/16f, 12.15f/16f,
-                (6.1f+3.7f)/16f, (1.2f+1.2f)/16f, 16.0f/16f,
-                flowOffset, 0.3f);
+        // СЕГМЕНТ 3: Течет ВПЕРЕД (положительный offset)
+        renderBox(poseStack, builder, packedLight, r, g, b, 1.0f, 6.1f/16f, 1.2f/16f, 12.15f/16f, 9.8f/16f, 2.4f/16f, 16.0f/16f, time, 0.3f);
 
-        // 3. СЕГМЕНТ 2 (Наклонный -22.5)
+        // СЕГМЕНТ 2: Течет ВПЕРЕД (положительный offset) + Правка ГЕОМЕТРИИ
         poseStack.pushPose();
         poseStack.translate(8f/16f, 1.8f/16f, 12.15f/16f);
         poseStack.mulPose(Axis.XP.rotationDegrees(-22.5f));
         poseStack.translate(-8f/16f, -1.8f/16f, -12.15f/16f);
 
-        renderBox(poseStack, builder, packedLight, r, g, b, 1.0f,
-                6.1f/16f, 1.2f/16f, 7.6f/16f,
-                (6.1f+3.7f)/16f, (1.2f+1.2f)/16f, 12.15f/16f,
-                flowOffset, 0.4f);
+        // z1 = 7.6 + 0.1 = 7.7 (укоротили со стороны струи)
+        // z2 = 12.15 + 0.1 = 12.25 (сдвинули к 3-му сегменту)
+        renderBox(poseStack, builder, packedLight, r, g, b, 1.0f, 6.1f/16f, 1.2f/16f, 7.7f/16f, 9.8f/16f, 2.4f/16f, 12.25f/16f, time, 0.4f);
         poseStack.popPose();
 
-        // 4. СЕГМЕНТ 1 (Вертикальная струя 3.7x1.2)
+        // СЕГМЕНТ 1: Течет ВНИЗ (ОТРИЦАТЕЛЬНЫЙ offset)
         float s1TopY = 0.666f / 16f;
         if (streamEndY < s1TopY) {
-            renderBox(poseStack, builder, packedLight, r, g, b, 1.0f,
-                    6.1f/16f, streamEndY, 7.9f/16f,
-                    (6.1f+3.7f)/16f, s1TopY, (7.9f+1.2f)/16f, // Z теперь 1.2 пикселя
-                    flowOffset, s1TopY - streamEndY);
+            renderBox(poseStack, builder, packedLight, r, g, b, 1.0f, 6.1f/16f, streamEndY, 7.9f/16f, 9.8f/16f, s1TopY, 7.9f/16f + 1.2f/16f, -time, s1TopY - streamEndY);
         }
-
         poseStack.popPose();
     }
 
-    private void renderBox(PoseStack poseStack, VertexConsumer builder, int packedLight,
-                           float r, float g, float b, float a,
-                           float minX, float minY, float minZ, float maxX, float maxY, float maxZ,
-                           float flowOffset, float length) {
-        Matrix4f m = poseStack.last().pose();
-        Matrix3f n = poseStack.last().normal();
+    // ИСПРАВЛЕННЫЙ renderBox (Добавлены North и South стороны)
+    private void renderBox(PoseStack ps, VertexConsumer builder, int light, float r, float g, float b, float a, float x1, float y1, float z1, float x2, float y2, float z2, float offset, float len) {
+        Matrix4f m = ps.last().pose(); Matrix3f n = ps.last().normal();
+        float u1 = 0, u2 = 1;
+        float vMax = offset % 1.0f, vMin = vMax + len;
 
-        float uMin = 0, uMax = 1;
-        float vMin = flowOffset % 1.0f;
-        float vMax = vMin + length;
+        // ВЕРХ
+        vertex(builder, m, n, x1, y2, z1, r, g, b, a, u1, vMax, light, 0, 1, 0);
+        vertex(builder, m, n, x1, y2, z2, r, g, b, a, u1, vMin, light, 0, 1, 0);
+        vertex(builder, m, n, x2, y2, z2, r, g, b, a, u2, vMin, light, 0, 1, 0);
+        vertex(builder, m, n, x2, y2, z1, r, g, b, a, u2, vMax, light, 0, 1, 0);
 
-        // Отрисовка всех сторон с сонаправленным UV (все текут "вперед" или "вниз")
-        // Верх (+Y)
-        vertex(builder, m, n, minX, maxY, minZ, r, g, b, a, uMin, vMin, packedLight, 0, 1, 0);
-        vertex(builder, m, n, minX, maxY, maxZ, r, g, b, a, uMin, vMax, packedLight, 0, 1, 0);
-        vertex(builder, m, n, maxX, maxY, maxZ, r, g, b, a, uMax, vMax, packedLight, 0, 1, 0);
-        vertex(builder, m, n, maxX, maxY, minZ, r, g, b, a, uMax, vMin, packedLight, 0, 1, 0);
+        // ПЕРЕД (ЮГ +Z) - Течет вниз
+        vertex(builder, m, n, x1, y1, z2, r, g, b, a, u1, vMin, light, 0, 0, 1);
+        vertex(builder, m, n, x2, y1, z2, r, g, b, a, u2, vMin, light, 0, 0, 1);
+        vertex(builder, m, n, x2, y2, z2, r, g, b, a, u2, vMax, light, 0, 0, 1);
+        vertex(builder, m, n, x1, y2, z2, r, g, b, a, u1, vMax, light, 0, 0, 1);
 
-        // Бока (Запад/Восток) - здесь V привязана к направлению течения
-        vertex(builder, m, n, minX, minY, minZ, r, g, b, a, 0, vMin, packedLight, -1, 0, 0);
-        vertex(builder, m, n, minX, minY, maxZ, r, g, b, a, 1, vMin, packedLight, -1, 0, 0);
-        vertex(builder, m, n, minX, maxY, maxZ, r, g, b, a, 1, vMax, packedLight, -1, 0, 0);
-        vertex(builder, m, n, minX, maxY, minZ, r, g, b, a, 0, vMax, packedLight, -1, 0, 0);
+        // ЗАД (СЕВЕР -Z) - Течет вниз (Добавлено!)
+        vertex(builder, m, n, x2, y1, z1, r, g, b, a, u1, vMin, light, 0, 0, -1);
+        vertex(builder, m, n, x1, y1, z1, r, g, b, a, u2, vMin, light, 0, 0, -1);
+        vertex(builder, m, n, x1, y2, z1, r, g, b, a, u2, vMax, light, 0, 0, -1);
+        vertex(builder, m, n, x2, y2, z1, r, g, b, a, u1, vMax, light, 0, 0, -1);
 
-        vertex(builder, m, n, maxX, minY, maxZ, r, g, b, a, 0, vMin, packedLight, 1, 0, 0);
-        vertex(builder, m, n, maxX, minY, minZ, r, g, b, a, 1, vMin, packedLight, 1, 0, 0);
-        vertex(builder, m, n, maxX, maxY, minZ, r, g, b, a, 1, vMax, packedLight, 1, 0, 0);
-        vertex(builder, m, n, maxX, maxY, maxZ, r, g, b, a, 0, vMax, packedLight, 1, 0, 0);
+        // БОКА (West/East)
+        vertex(builder, m, n, x1, y1, z1, r, g, b, a, 0, vMin, light, -1, 0, 0);
+        vertex(builder, m, n, x1, y1, z2, r, g, b, a, 1, vMin, light, -1, 0, 0);
+        vertex(builder, m, n, x1, y2, z2, r, g, b, a, 1, vMax, light, -1, 0, 0);
+        vertex(builder, m, n, x1, y2, z1, r, g, b, a, 0, vMax, light, -1, 0, 0);
 
-        // Лицевые (Север/Юг)
-        vertex(builder, m, n, minX, minY, minZ, r, g, b, a, 0, vMax, packedLight, 0, 0, -1);
-        vertex(builder, m, n, maxX, minY, minZ, r, g, b, a, 1, vMax, packedLight, 0, 0, -1);
-        vertex(builder, m, n, maxX, maxY, minZ, r, g, b, a, 1, vMin, packedLight, 0, 0, -1);
-        vertex(builder, m, n, minX, maxY, minZ, r, g, b, a, 0, vMin, packedLight, 0, 0, -1);
+        vertex(builder, m, n, x2, y1, z2, r, g, b, a, 0, vMin, light, 1, 0, 0);
+        vertex(builder, m, n, x2, y1, z1, r, g, b, a, 1, vMin, light, 1, 0, 0);
+        vertex(builder, m, n, x2, y2, z1, r, g, b, a, 1, vMax, light, 1, 0, 0);
+        vertex(builder, m, n, x2, y2, z2, r, g, b, a, 0, vMax, light, 1, 0, 0);
     }
 
     private void vertex(VertexConsumer b, Matrix4f m, Matrix3f n, float x, float y, float z,

@@ -18,6 +18,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
+import java.util.List;
+
 public class CastingDescentBlockEntity extends BlockEntity {
     private static final int TRANSFER_RATE = 10;
     private static final int POURING_TICKS = 10;
@@ -35,9 +37,9 @@ public class CastingDescentBlockEntity extends BlockEntity {
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, CastingDescentBlockEntity be) {
+        // 1. Уменьшаем кулдауны
         if (be.transferCooldown > 0) be.transferCooldown--;
 
-        // Уменьшаем таймер струи
         if (be.pouringTicks > 0) {
             be.pouringTicks--;
             if (be.pouringTicks <= 0) {
@@ -45,16 +47,12 @@ public class CastingDescentBlockEntity extends BlockEntity {
             }
         }
 
+        // Ограничиваем частоту логики (раз в 2 тика), чтобы не перегружать сервер
         if (be.transferCooldown > 0) return;
 
+        // 2. Ищем источник (Плавильня)
         SmelterBlockEntity smelter = be.findSmelter(level, pos);
         if (smelter == null) {
-            be.setPouring(false, null);
-            return;
-        }
-
-        CastingPotBlockEntity pot = be.findPotBelow(level, pos);
-        if (pot == null) {
             be.setPouring(false, null);
             return;
         }
@@ -65,31 +63,47 @@ public class CastingDescentBlockEntity extends BlockEntity {
             return;
         }
 
-        if (!pot.canAcceptMetal(metalToTransfer)) {
+        // 3. Ищем вход в сеть (Котел прямо под спуском)
+        CastingPotBlockEntity mainPot = be.findPotBelow(level, pos);
+        if (mainPot == null) {
             be.setPouring(false, null);
             return;
         }
 
-        int spaceAvailable = pot.getRemainingCapacity();
-        if (spaceAvailable <= 0) {
-            be.setPouring(false, null);
-            return;
-        }
+        // 4. ЛОГИКА СЕТИ: Получаем все котлы в линии
+        List<CastingPotBlockEntity> network = mainPot.findNetwork();
 
-        int toTransfer = Math.min(TRANSFER_RATE, spaceAvailable);
-        int extracted = smelter.extractMetal(metalToTransfer, toTransfer);
+        // Считаем общую свободную емкость всей линии (до 7 блоков)
+        int totalNetworkSpace = network.stream().mapToInt(CastingPotBlockEntity::getRemainingCapacity).sum();
 
-        if (extracted > 0) {
-            pot.addMetal(metalToTransfer, extracted);
+        // Проверяем, может ли ХОТЯ БЫ ОДИН котел в этой сети принять наш металл
+        boolean canAnyPoolAccept = network.stream().anyMatch(p -> p.canAcceptMetal(metalToTransfer));
 
-            be.lastKnownFillLevel = pot.getFillLevel();
-            be.setPouring(true, metalToTransfer);
-            be.pouringTicks = POURING_TICKS;
-            be.transferCooldown = 2;
+        // 5. ПЕРЕДАЧА: Если место есть и металл подходит
+        if (canAnyPoolAccept && totalNetworkSpace > 0) {
+            int toTransfer = Math.min(TRANSFER_RATE, totalNetworkSpace);
+            int extracted = smelter.extractMetal(metalToTransfer, toTransfer);
+
+            if (extracted > 0) {
+                // Распределяем металл по всем котлам в сети одновременно
+                mainPot.fillNetwork(metalToTransfer, extracted);
+
+                // Обновляем данные для рендера струи (высота зависит от котла прямо под нами)
+                be.lastKnownFillLevel = mainPot.getFillLevel();
+                be.setPouring(true, metalToTransfer);
+
+                be.pouringTicks = POURING_TICKS;
+                be.transferCooldown = 2; // Кулдаун перед следующей порцией
+            } else {
+                // Если в плавильне кончился металл — гасим струю
+                if (be.pouringTicks <= 0) be.setPouring(false, null);
+            }
         } else {
-            be.setPouring(false, null);
+            // Если сеть полна или металлы несовместимы — гасим струю
+            if (be.pouringTicks <= 0) be.setPouring(false, null);
         }
     }
+
 
     private void setPouring(boolean pouring, Metal metal) {
         if (this.isPouring != pouring || this.pouringMetal != metal) {
