@@ -5,12 +5,14 @@ import com.cim.block.entity.industrial.casting.CastingPotBlockEntity;
 import com.cim.item.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.PickaxeItem;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -35,9 +37,9 @@ public class CastingPotBlock extends BaseEntityBlock {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
+
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        // Полублок: полный X/Z, высота 8 пикселей (0.5)
         return Shapes.box(0, 0, 0, 1, 0.5, 1);
     }
 
@@ -101,24 +103,50 @@ public class CastingPotBlock extends BaseEntityBlock {
         }
 
         ItemStack heldItem = player.getItemInHand(hand);
+        boolean isPickaxe = heldItem.getItem() instanceof PickaxeItem;
 
-        // Приоритет: забор готового предмета
-        // Приоритет: забор готового предмета
+        // 1. ВОЗВРАТ ГОРЯЧЕГО ПРЕДМЕТА обратно в котел
+        if (!heldItem.isEmpty() && heldItem.hasTag() && heldItem.getTag().contains("HotTime")) {
+            if (pot.tryInsertHotItem(heldItem)) {
+                heldItem.shrink(1);
+                level.playSound(null, pos, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.5f, 2.0f);
+                return InteractionResult.CONSUME;
+            }
+        }
+
+        // 2. ДОСТАВАНИЕ ПРЕДМЕТА (киркой или рукой)
         if (!pot.getOutputItem().isEmpty()) {
-            // БЛОКИРОВКА: нельзя забрать пока остывает
-            if (pot.getCoolingTimer() > 0) {
-                return InteractionResult.PASS; // Или CONSUME с сообщением "Горячо!"
+            // Киркой - достаём даже если горячий
+            if (isPickaxe) {
+                ItemStack drop = pot.takeOutput();
+                // Сохраняем оставшееся время остывания
+                if (pot.getCoolingTimer() > 0) {
+                    drop.getOrCreateTag().putInt("HotTime", pot.getCoolingTimer());
+                    drop.getOrCreateTag().putInt("HotTimeMax", CastingPotBlockEntity.BASE_COOLING_TIME);
+                }
+
+                if (!player.getInventory().add(drop)) {
+                    player.drop(drop, false);
+                }
+                level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
+                return InteractionResult.CONSUME;
             }
 
-            if (heldItem.isEmpty()) {
-                player.setItemInHand(hand, pot.takeOutput());
-                level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
-                return InteractionResult.CONSUME;
-            } else if (player.getInventory().add(pot.takeOutput())) {
-                level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
-                return InteractionResult.CONSUME;
+            // Рукой - только если остыл
+            if (pot.getCoolingTimer() > 0) {
+                player.displayClientMessage(Component.literal("§cСлишком горячо! Используйте кирку."), true);
+                return InteractionResult.PASS;
             }
-            return InteractionResult.PASS;
+
+            // Обычная выдача остывшего предмета
+            ItemStack drop = pot.takeOutput();
+            if (heldItem.isEmpty()) {
+                player.setItemInHand(hand, drop);
+            } else {
+                player.getInventory().add(drop);
+            }
+            level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
+            return InteractionResult.CONSUME;
         }
 
         ItemStack moldStack = pot.getMold();
@@ -168,7 +196,13 @@ public class CastingPotBlock extends BaseEntityBlock {
                     popResource(level, pos, pot.getMold());
                 }
                 if (!pot.getOutputItem().isEmpty()) {
-                    popResource(level, pos, pot.getOutputItem());
+                    ItemStack drop = pot.getOutputItem().copy();
+                    // Сохраняем "горячесть" если котёл сломали во время остывания
+                    if (pot.getCoolingTimer() > 0) {
+                        drop.getOrCreateTag().putInt("HotTime", pot.getCoolingTimer());
+                        drop.getOrCreateTag().putInt("HotTimeMax", CastingPotBlockEntity.BASE_COOLING_TIME);
+                    }
+                    popResource(level, pos, drop);
                 }
                 // Металл теряется при разрушении
             }

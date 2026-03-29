@@ -47,6 +47,7 @@ public class HeaterBlockEntity extends BlockEntity implements MenuProvider {
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
             if (slot == 0) return isFuel(stack);
+            if (slot == 1) return stack.is(ModItems.FUEL_ASH.get()); // Разрешаем золу в слот для золы!
             return false;
         }
     };

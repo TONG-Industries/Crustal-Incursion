@@ -43,27 +43,115 @@ public class CastingPotBlockEntity extends BlockEntity {
     private int coolingTimer = 0;
     private int solidifyTimer = 0;
     private static final int SOLIDIFY_TIME = 100; // 5 секунд
-    private static final int COOLING_TIME = 40; // 2 секунды (40 тиков)
+    private static final int COOLING_TIME = 100;
     private int transferCooldown = 0;
-
+    public static final int BASE_COOLING_TIME = 100; // 10 секунд база
     public CastingPotBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CASTING_POT.get(), pos, state);
     }
+    private int getCoolingTimeForMold() {
+        // Сейчас: только слиток = 1.0f
+        if (mold.is(ModItems.MOLD_INGOT.get())) {
+            return BASE_COOLING_TIME; // 200 тиков
+        }
+        // ПОТОМ добавишь:
+        // if (mold.is(ModItems.MOLD_BLOCK.get())) return BASE_COOLING_TIME * 9; // 1800
+        // if (mold.is(ModItems.MOLD_NUGGET.get())) return (int)(BASE_COOLING_TIME * 0.11f); // 22
 
+        return BASE_COOLING_TIME; // По умолчанию
+    }
+    private final ItemStackHandler itemHandler = new ItemStackHandler(1) {
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            return outputItem;
+        }
+
+        @Override
+        public void setStackInSlot(int slot, ItemStack stack) {
+            outputItem = stack;
+            setChanged();
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            // КРИТИЧНО: Блокируем если горячий! (воронка ждёт остывания)
+            if (coolingTimer > 0) {
+                return ItemStack.EMPTY; // Воронка получит пустоту = подождёт
+            }
+
+            if (storedMb > 0 || solidifyTimer > 0) {
+                return ItemStack.EMPTY;
+            }
+
+            ItemStack res = outputItem.copy().split(amount);
+            if (!simulate) {
+                outputItem.shrink(amount);
+                setChanged();
+            }
+            return res;
+        }
+    };
+    // В createOutputItem():
+    private void createOutputItem() {
+        if (currentMetal == null || storedMb < capacity) return;
+
+        ItemStack result = ItemStack.EMPTY;
+
+        // Сейчас только слиток, потом добавишь else if для других форм
+        if (currentMetal.hasIngot()) {
+            result = new ItemStack(currentMetal.getIngot());
+        }
+
+        if (!result.isEmpty()) {
+            int coolTime = getCoolingTimeForMold();
+            result.getOrCreateTag().putInt("HotTime", coolTime);
+            result.getOrCreateTag().putInt("HotTimeMax", coolTime); // Для правильного отображения %
+            this.outputItem = result;
+        }
+
+        this.storedMb = 0;
+        this.currentMetal = null;
+        this.solidifyTimer = 0;
+        setChanged();
+        level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+    }
+
+    // Метод возврата горячего предмета:
+    public boolean tryInsertHotItem(ItemStack stack) {
+        // Принимаем только если: пустой котел, есть форма, нет металла, нет output
+        if (!outputItem.isEmpty() || storedMb > 0 || mold.isEmpty()) return false;
+
+        if (stack.hasTag() && stack.getTag().contains("HotTime")) {
+            this.outputItem = stack.copy();
+            this.coolingTimer = stack.getTag().getInt("HotTime");
+            // Очищаем NBT у предмета в котле (чтобы не дублировалось)
+            this.outputItem.removeTagKey("HotTime");
+            this.outputItem.removeTagKey("HotTimeMax");
+            setChanged();
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            return true;
+        }
+        return false;
+    }
     public static void serverTick(Level level, BlockPos pos, BlockState state, CastingPotBlockEntity be) {
-        // 1. Уменьшаем кулдауны и таймер охлаждения (ТОЛЬКО ЗДЕСЬ!)
+        // 1. Кулдауны (всегда)
         if (be.transferCooldown > 0) be.transferCooldown--;
 
+        // === ОСТЫВАНИЕ ПРЕДМЕТА ===
+        // Работает ВСЕГДА, даже если в котле лежит готовый слиток!
         if (be.coolingTimer > 0) {
             be.coolingTimer--;
             be.setChanged();
-            if (be.coolingTimer == 0) level.sendBlockUpdated(pos, state, state, 3);
-            // Если остываем - дальше не идём (чтобы не передавать/не застывать)
-            return;
+            if (be.coolingTimer == 0) {
+                level.sendBlockUpdated(pos, state, state, 3);
+                // Звук остывания (опционально)
+                level.playSound(null, pos, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.3f, 2.0f);
+            }
         }
 
-        // 2. Если в котле уже лежит готовый слиток — выходим
+        // 2. Теперь проверяем есть ли предмет - если да, дальше не идём (только остывать)
         if (!be.outputItem.isEmpty()) return;
+
 
         // 3. Если формы нет — очищаем металл (испарение)
         if (be.mold.isEmpty()) {
@@ -181,30 +269,7 @@ public class CastingPotBlockEntity extends BlockEntity {
 
 
 
-    private final ItemStackHandler itemHandler = new ItemStackHandler(1) {
-        @Override
-        public ItemStack getStackInSlot(int slot) { return outputItem; }
 
-        @Override
-        public void setStackInSlot(int slot, ItemStack stack) {
-            outputItem = stack;
-            setChanged();
-        }
-
-        @Override
-        public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            // Блокировка: нельзя забрать, если есть металл, идет плавка ИЛИ предмет еще горячий
-            if (storedMb > 0 || solidifyTimer > 0 || coolingTimer > 0) {
-                return ItemStack.EMPTY;
-            }
-            ItemStack res = outputItem.copy().split(amount);
-            if (!simulate) {
-                outputItem.shrink(amount);
-                setChanged();
-            }
-            return res;
-        }
-    };
 
     private final LazyOptional<IItemHandler> inventoryCap = LazyOptional.of(() -> itemHandler);
 
@@ -274,20 +339,7 @@ public class CastingPotBlockEntity extends BlockEntity {
         }
     }
 
-    private void createOutputItem() {
-        if (currentMetal == null || storedMb < capacity) return;
 
-        if (currentMetal.hasIngot()) {
-            this.outputItem = new ItemStack(currentMetal.getIngot());
-        }
-
-        this.storedMb = 0;
-        this.currentMetal = null;
-        this.solidifyTimer = 0;
-
-        setChanged();
-        level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-    }
 
     private void clearMetal() {
         this.storedMb = 0;
@@ -325,8 +377,15 @@ public class CastingPotBlockEntity extends BlockEntity {
         }
     }
 
+
     public ItemStack takeOutput() {
         ItemStack result = outputItem.copy();
+
+        // Если предмет ещё горячий - сохраняем время остывания в NBT
+        if (coolingTimer > 0) {
+            result.getOrCreateTag().putInt("HotTime", coolingTimer);
+        }
+
         this.outputItem = ItemStack.EMPTY;
         setChanged();
         level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);

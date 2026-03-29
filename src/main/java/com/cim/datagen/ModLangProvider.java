@@ -169,11 +169,14 @@ public class ModLangProvider extends LanguageProvider {
         add("entity.cim.grenade_if_slime_projectile", "Slime impact grenade");
         add("entity.cim.grenade_if_he_projectile", "HE Impact grenade");
         add("entity.cim.grenade_nuc_projectile", "Nuclear grenade");
+
     }
 
 
     private void addRussian() {
         //Секвойя
+
+        add("item.cim.hot_ingot.tooltip", "§6§lРАСКАЛЁННЫЙ! §r§7(%s%%)");
         add(ModBlocks.SEQUOIA_BARK.get(), "Кора секвойи");
         add(ModBlocks.SEQUOIA_HEARTWOOD.get(), "Бревно секвойи");
         add(ModBlocks.SEQUOIA_PLANKS.get(), "Доски из секвойи");

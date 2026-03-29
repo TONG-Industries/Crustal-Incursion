@@ -15,6 +15,7 @@ import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
@@ -148,7 +149,41 @@ public class ClientModEvents {
             }
             return 0xFFFFFFFF;
         }, ModItems.FLUID_IDENTIFIER.get()); // Замени на свой предмет
+
+        // === ГОРЯЧИЕ МЕТАЛЛЫ ===
+        // Сейчас работает для слитков, легко расширить на другие предметы
+        event.register((stack, tintIndex) -> {
+                    // Окрашиваем только tintIndex 0 (основная текстура)
+                    if (tintIndex != 0) return -1;
+
+                    if (stack.hasTag() && stack.getTag().contains("HotTime")) {
+                        int hotTime = stack.getTag().getInt("HotTime");
+                        int maxTime = stack.getTag().getInt("HotTimeMax");
+                        if (maxTime == 0) maxTime = 200;
+
+                        float ratio = (float) hotTime / maxTime; // 1.0 = горячий, 0.0 = остыл
+
+                        // От ОРАНЖЕВОГО (255, 120, 0) к БЕЛОМУ (255, 255, 255) - оригинальная текстура
+                        int r = 255;
+                        int g = (int) (120 + (255 - 120) * (1 - ratio)); // 120 → 255
+                        int b = (int) (0 + 255 * (1 - ratio));           // 0 → 255
+
+                        // Если остыл меньше чем на 5% - показываем оригинальную текстуру
+                        if (ratio < 0.05f) return -1;
+
+                        return (0xFF << 24) | (r << 16) | (g << 8) | b;
+                    }
+                    return -1;
+                },
+                Items.IRON_INGOT,
+                Items.GOLD_INGOT,
+                Items.NETHERITE_INGOT,
+                Items.COPPER_INGOT
+
+        );
     }
+
+
 
     @SubscribeEvent
     public static void onModifyBakingResult(ModelEvent.ModifyBakingResult event) {
