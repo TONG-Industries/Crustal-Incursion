@@ -356,4 +356,36 @@ public class FluidPipeBlock extends Block implements EntityBlock, SimpleWaterlog
         FluidState fluidstate = context.getLevel().getFluidState(context.getClickedPos());
         return this.defaultBlockState().setValue(WATERLOGGED, fluidstate.getType() == Fluids.WATER);
     }
+
+    // ==========================================
+    // ВИЗУАЛЬНЫЕ ЭФФЕКТЫ (КЛИЕНТ-САЙД, 0 ЛАГОВ)
+    // ==========================================
+    @Override
+    public void animateTick(BlockState state, Level level, BlockPos pos, net.minecraft.util.RandomSource random) {
+        // Проверяем, затоплена ли труба
+        if (!state.getValue(WATERLOGGED)) return;
+
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof FluidPipeBlockEntity pipeBE) {
+            // Проверяем, текла ли по ней жидкость
+            if (pipeBE.hasFlowed()) {
+                Fluid fluid = pipeBE.getFilterFluid();
+
+                // Проверяем, что жидкость реально горячая.
+                // Вода в Forge = 300 Кельвинов. Значит всё, что больше 300 - заставит воду кипеть!
+                if (fluid != Fluids.EMPTY && fluid.getFluidType().getTemperature() > 300) {
+
+                    // Спавним пузырьки с шансом (чтобы не перегружать экран белым шумом)
+                    if (random.nextInt(3) == 0) {
+                        double d0 = pos.getX() + 0.5D + (random.nextDouble() - 0.5D) * 0.5D; // Случайный X внутри трубы
+                        double d1 = pos.getY() + 0.6D + (random.nextDouble() * 0.4D);        // Чуть выше центра
+                        double d2 = pos.getZ() + 0.5D + (random.nextDouble() - 0.5D) * 0.5D; // Случайный Z внутри трубы
+
+                        // Добавляем ванильные пузырьки, которые поднимаются вверх
+                        level.addParticle(net.minecraft.core.particles.ParticleTypes.BUBBLE_COLUMN_UP, d0, d1, d2, 0.0D, 0.05D, 0.0D);
+                    }
+                }
+            }
+        }
+    }
 }

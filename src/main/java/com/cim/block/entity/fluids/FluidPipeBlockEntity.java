@@ -22,6 +22,7 @@ public class FluidPipeBlockEntity extends BlockEntity {
 
     public static final ModelProperty<Fluid> FLUID_PROP = new ModelProperty<>();
     private Fluid filterFluid = Fluids.EMPTY;
+    private boolean hasFlowed = false;
 
     public FluidPipeBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.FLUID_PIPE_BE.get(), pos, state);
@@ -74,22 +75,39 @@ public class FluidPipeBlockEntity extends BlockEntity {
                 .build();
     }
 
+    public boolean hasFlowed() {
+        return hasFlowed;
+    }
+
+    public void setHasFlowed(boolean hasFlowed) {
+        if (this.hasFlowed != hasFlowed) {
+            this.hasFlowed = hasFlowed;
+            this.setChanged();
+            if (this.level != null && !this.level.isClientSide) {
+                // Отправляем пакет клиенту, чтобы он начал рисовать пузырьки
+                this.level.sendBlockUpdated(this.getBlockPos(), this.getBlockState(), this.getBlockState(), 3);
+            }
+        }
+    }
+
     // ==========================================
     // СОХРАНЕНИЕ И ПАКЕТЫ (NBT)
     // ==========================================
     @Override
-    protected void saveAdditional(CompoundTag tag) {
+    protected void saveAdditional(net.minecraft.nbt.CompoundTag tag) {
         super.saveAdditional(tag);
-        ResourceLocation fluidKey = ForgeRegistries.FLUIDS.getKey(filterFluid);
+        net.minecraft.resources.ResourceLocation fluidKey = net.minecraftforge.registries.ForgeRegistries.FLUIDS.getKey(filterFluid);
         tag.putString("FilterFluid", fluidKey == null ? "minecraft:empty" : fluidKey.toString());
+        tag.putBoolean("HasFlowed", this.hasFlowed); // Сохраняем флаг
     }
 
     @Override
-    public void load(CompoundTag tag) {
+    public void load(net.minecraft.nbt.CompoundTag tag) {
         super.load(tag);
-        ResourceLocation fluidKey = new ResourceLocation(tag.getString("FilterFluid"));
-        this.filterFluid = ForgeRegistries.FLUIDS.getValue(fluidKey);
-        if (this.filterFluid == null) this.filterFluid = Fluids.EMPTY;
+        net.minecraft.resources.ResourceLocation fluidKey = new net.minecraft.resources.ResourceLocation(tag.getString("FilterFluid"));
+        this.filterFluid = net.minecraftforge.registries.ForgeRegistries.FLUIDS.getValue(fluidKey);
+        if (this.filterFluid == null) this.filterFluid = net.minecraft.world.level.material.Fluids.EMPTY;
+        this.hasFlowed = tag.getBoolean("HasFlowed"); // Загружаем флаг
         this.requestModelDataUpdate();
     }
 

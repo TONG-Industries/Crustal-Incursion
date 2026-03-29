@@ -83,7 +83,18 @@ public class FluidNetwork {
                             if (checkMeltdown(level, drained.getFluid())) {
                                 return true; // Сеть взорвалась, прерываем работу!
                             }
-                            hasCheckedMeltdown = true; // Трубы выдержали, больше не проверяем!
+                            hasCheckedMeltdown = true; // Трубы выдержали
+
+                            // === НОВОЕ: МАРКИРУЕМ ВЫЖИВШИЕ ТРУБЫ КАК "АКТИВНЫЕ" ===
+                            for (FluidNode node : nodes) {
+                                BlockPos nodePos = node.getPos();
+                                if (level.isLoaded(nodePos)) {
+                                    BlockEntity be = level.getBlockEntity(nodePos);
+                                    if (be instanceof com.cim.block.entity.fluids.FluidPipeBlockEntity pipeBE) {
+                                        pipeBE.setHasFlowed(true);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
