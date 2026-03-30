@@ -76,7 +76,6 @@ public class ModBlockStateProvider extends BlockStateProvider {
 
         cubeAllWithItem(ModBlocks.CRATE);
         cubeAllWithItem(ModBlocks.CRATE_AMMO);
-        simpleBlockWithItem(ModBlocks.WIRE_COATED.get(), models().getExistingFile(modLoc("block/wire_coated")));
         cubeAllWithItem(ModBlocks.CONCRETE_REINFORCED);
         cubeAllWithItem(ModBlocks.CONCRETE_REINFORCED_HEAVY);
         cubeAllWithItem(ModBlocks.CONCRETE_STRIPPED);

@@ -38,7 +38,6 @@ import com.cim.client.gecko.entity.bullets.TurretBulletRenderer;
 import com.cim.client.gecko.entity.mobs.DepthWormRenderer;
 import com.cim.client.gecko.entity.turrets.TurretLightLinkedRenderer;
 import com.cim.client.gecko.entity.turrets.TurretLightRenderer;
-import com.cim.client.loader.ProceduralWireLoader;
 import com.cim.client.overlay.hud.OverlayAmmoHud;
 import com.cim.entity.ModEntities;
 import com.cim.item.ModItems;
@@ -116,11 +115,6 @@ public class ClientModEvents {
     }
 
     @SubscribeEvent
-    public static void onModelRegister(ModelEvent.RegisterGeometryLoaders event) {
-        event.register("procedural_wire", new ProceduralWireLoader());
-    }
-
-    @SubscribeEvent
     public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         MinecraftForge.EVENT_BUS.register(ModConfigKeybindHandler.class);
 
@@ -182,7 +176,7 @@ public class ClientModEvents {
 
         );
     }
-    
+
 
     @SubscribeEvent
     public static void onModifyBakingResult(ModelEvent.ModifyBakingResult event) {

@@ -1,6 +1,0 @@
-{
-    "loader": "cim:procedural_wire",
-    "textures": {
-        "particle": "cim:block/wire_coated"
-    }
-}
