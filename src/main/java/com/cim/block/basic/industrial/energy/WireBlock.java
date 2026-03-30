@@ -94,12 +94,20 @@ public class WireBlock extends BaseEntityBlock {
     public BlockState updateShape(BlockState state, Direction facing, BlockState facingState,
                                   LevelAccessor level, BlockPos currentPos, BlockPos facingPos) {
         BooleanProperty property = getProperty(facing);
-        // [🔥 ИЗМЕНЕНО: Добавляем 'facingState' в вызов]
         boolean canConnect = canVisuallyConnectTo(level, facingPos, facing.getOpposite(), facingState);
+
+        // [🔥 УМНАЯ РЕАКЦИЯ НА СОСЕДЕЙ]
+        // Если визуально мы соединились (например, рядом только что поставили генератор),
+        // заставляем сеть немедленно проверить этот новый блок!
+        if (!level.isClientSide() && !state.getValue(property) && canConnect) {
+            EnergyNetworkManager.get((ServerLevel) level).addNode(facingPos);
+            EnergyNetworkManager.get((ServerLevel) level).addNode(currentPos);
+        }
+
         return state.setValue(property, canConnect);
-
-
     }
+
+
 
     private BlockState getConnectionState(LevelAccessor level, BlockPos pos) {
         // [🔥 ИЗМЕНЕНО: Мы также получаем и передаем BlockState соседа]
@@ -182,36 +190,7 @@ public class WireBlock extends BaseEntityBlock {
             case DOWN -> DOWN;
         };
     }
-
-    @Override
-    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
-        if (!level.isClientSide && !oldState.is(this)) {
-            // УБИРАЕМ: level.scheduleTick(pos, this, 1);
-            // ДОБАВЛЯЕМ СРАЗУ:
-            EnergyNetworkManager.get((ServerLevel) level).addNode(pos);
-        }
-        super.onPlace(state, level, pos, oldState, isMoving);
-    }
-
-    @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!level.isClientSide && !state.is(newState.getBlock())) {
-            EnergyNetworkManager.get((ServerLevel) level).removeNode(pos);
-        }
-        super.onRemove(state, level, pos, newState, isMoving);
-    }
-
-
-
-    @Nullable
-    @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return level.isClientSide ? null : (lvl, pos, st, be) -> {
-            if (be instanceof WireBlockEntity wire) {
-                WireBlockEntity.tick(lvl, pos, st, wire);
-            }
-        };
-    }
+    
 
     @Override
     public RenderShape getRenderShape(BlockState state) {

@@ -29,22 +29,6 @@ public class WireBlockEntity extends BlockEntity implements IEnergyConnector {
         super(ModBlockEntities.WIRE_BE.get(), pos, state);
     }
 
-    /**
-     * Периодически проверяем, есть ли мы в сети.
-     * Это нужно на случай если провод был размещён раньше соседних машин.
-     */
-    public static void tick(Level level, BlockPos pos, BlockState state, WireBlockEntity entity) {
-        if (level.isClientSide) return;
-
-        ServerLevel serverLevel = (ServerLevel) level;
-        EnergyNetworkManager manager = EnergyNetworkManager.get(serverLevel);
-
-        // ПРОВЕРКА КАЖДЫЙ ТИК (для надежности, но можно оптимизировать boolean флагом initialized)
-        // hasNode - быстрая операция (проверка HashMap), так что это не ударит по TPS.
-        if (!manager.hasNode(pos)) {
-            manager.addNode(pos);
-        }
-    }
 
     // --- IEnergyConnector ---
     @Override
@@ -83,6 +67,21 @@ public class WireBlockEntity extends BlockEntity implements IEnergyConnector {
     public void setLevel(Level pLevel) {
         super.setLevel(pLevel);
 
+    }
+
+    // ==========================================
+    // ЖИЗНЕННЫЙ ЦИКЛ БЛОКА (БЕЗ ТИКЕРОВ!)
+    // ==========================================
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        // Добавляемся в сеть только когда BlockEntity полностью готов
+        if (this.level != null && !this.level.isClientSide) {
+            EnergyNetworkManager manager = EnergyNetworkManager.get((ServerLevel) this.level);
+            if (!manager.hasNode(this.getBlockPos())) {
+                manager.addNode(this.getBlockPos());
+            }
+        }
     }
 }
 
