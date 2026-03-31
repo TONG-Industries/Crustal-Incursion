@@ -180,9 +180,9 @@ public class GUISmelter extends AbstractContainerScreen<SmelterMenu> {
                             .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(stack.metal.getColor()))));
                 } else {
                     StringBuilder sb = new StringBuilder();
-                    if (converted.blocks() > 0) sb.append(converted.blocks()).append("б ");
-                    if (converted.ingots() > 0) sb.append(converted.ingots()).append("сл ");
-                    if (converted.nuggets() > 0) sb.append(converted.nuggets()).append("см");
+                    if (converted.blocks() > 0) sb.append(converted.blocks()).append("блоки ");
+                    if (converted.ingots() > 0) sb.append(converted.ingots()).append("слитки ");
+                    if (converted.nuggets() > 0) sb.append(converted.nuggets()).append("самородки ");
                     if (sb.length() == 0) sb.append("0");
                     lines.add(Component.literal(name + ": " + sb.toString())
                             .withStyle(Style.EMPTY.withColor(TextColor.fromRgb(stack.metal.getColor()))));
