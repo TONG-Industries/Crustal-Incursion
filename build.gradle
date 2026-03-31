@@ -112,6 +112,14 @@ dependencies {
     compileOnly fg.deobf("mezz.jei:jei-1.20.1-forge-api:15.3.0.4")
     runtimeOnly fg.deobf("mezz.jei:jei-1.20.1-forge:15.3.0.4")
 
+    implementation fg.deobf("com.jozufozu.flywheel:flywheel-forge-1.20.1:0.6.10-7")
+
+    // 2. Добавляем магию Jar-in-Jar
+    // Forge найдет эту зависимость и физически упакует её в твой финальный билд
+    jarJar(group: 'com.jozufozu.flywheel', name: 'flywheel-forge-1.20.1', version: '[0.6.10, 0.7.0)') {
+        jarJar.pin(it, '0.6.10-7') // Фиксируем предпочитаемую версию
+    }
+
     // Spark
     runtimeOnly fg.deobf("maven.modrinth:spark:1.10.53-forge")
 
