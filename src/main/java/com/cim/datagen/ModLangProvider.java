@@ -1,5 +1,6 @@
 package com.cim.datagen;
 
+import com.cim.api.resource.ResourceRegistry;
 import net.minecraft.data.PackOutput;
 import net.minecraftforge.common.data.LanguageProvider;
 import com.cim.main.CrustalIncursionMod;
@@ -13,10 +14,17 @@ public class ModLangProvider extends LanguageProvider {
     public ModLangProvider(PackOutput output, String locale) {
         super(output, CrustalIncursionMod.MOD_ID, locale);
         this.locale = locale;
+
+        // !!! ВАЖНО: Инициализируем ResourceRegistry !!!
+        ResourceRegistry.init();
     }
 
     @Override
     protected void addTranslations() {
+        // Сначала автоматические переводы для ресурсов
+        ResourceDatagenHelper.generateTranslations(this, locale);
+
+        // Затем ручные переводы
         if (locale.equals("ru_ru")) {
             addRussian();
         } else if (locale.equals("uk_ua")){

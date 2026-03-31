@@ -1,6 +1,7 @@
 package com.cim.datagen.assets;
 
 import com.cim.block.basic.ModBlocks;
+import com.cim.datagen.ResourceDatagenHelper;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -14,12 +15,12 @@ import net.minecraftforge.common.data.ExistingFileHelper;
 import net.minecraftforge.registries.RegistryObject;
 import com.cim.main.CrustalIncursionMod;
 import com.cim.item.ModItems;
+import com.cim.api.resource.ResourceRegistry;
 
 import java.util.LinkedHashMap;
 
 public class ModItemModelProvider extends ItemModelProvider {
 
-    // Для тримминга брони
     private static LinkedHashMap<ResourceKey<TrimMaterial>, Float> trimMaterials = new LinkedHashMap<>();
     static {
         trimMaterials.put(TrimMaterials.QUARTZ, 0.1F);
@@ -36,12 +37,15 @@ public class ModItemModelProvider extends ItemModelProvider {
 
     public ModItemModelProvider(PackOutput output, ExistingFileHelper existingFileHelper) {
         super(output, CrustalIncursionMod.MOD_ID, existingFileHelper);
+
+        // !!! ВАЖНО: Инициализируем ResourceRegistry перед использованием !!!
+        ResourceRegistry.init();
     }
 
     @Override
     protected void registerModels() {
-        // Пример ручной регистрации уникальных предметов
-        // simpleItem(ModItems.NECROTIC_FRAGMENT);
+        // Автогенерация моделей для ресурсов (СНАЧАЛА!)
+        ResourceDatagenHelper.generateItemModels(this);
         simpleItem(ModItems.SCREWDRIVER);
         simpleItem(ModItems.CROWBAR);
         simpleItem(ModItems.RANGE_DETONATOR);

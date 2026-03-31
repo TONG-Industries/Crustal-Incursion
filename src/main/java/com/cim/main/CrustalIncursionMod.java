@@ -5,6 +5,7 @@ import com.cim.api.fluids.ModFluids;
 import com.cim.api.hive.HiveNetworkManager;
 import com.cim.api.metal.MetalRegistry;
 import com.cim.api.metal.MetallurgyRegistry;
+import com.cim.api.resource.ResourceRegistry;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -60,6 +61,7 @@ public class CrustalIncursionMod {
         ModCreativeTabs.register(modEventBus);
         GeckoLib.initialize();
         this.registerCapabilities(modEventBus);
+        ResourceRegistry.init();
         ModBlocks.register(modEventBus); // 1. Сначала блоки
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITIES.register(modEventBus);
@@ -94,7 +96,7 @@ public class CrustalIncursionMod {
     private void addCreative(BuildCreativeModeTabContentsEvent event) {
         // Логгирование для отладки
         LOGGER.info("Building creative tab contents for: " + event.getTabKey());
-
+        ResourceRegistry.addCreative(event);
         if (event.getTab() == ModCreativeTabs.CIM_BUILD_TAB.get()) {
 
             event.accept(ModBlocks.CONCRETE.get());
