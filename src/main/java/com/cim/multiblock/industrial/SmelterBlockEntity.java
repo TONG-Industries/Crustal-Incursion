@@ -7,6 +7,8 @@ import com.cim.api.metallurgy.system.recipe.AlloyRecipe;
 import com.cim.api.metallurgy.system.recipe.AlloySlot;
 import com.cim.api.metallurgy.system.recipe.SmeltRecipe;
 import com.cim.block.entity.ModBlockEntities;
+import com.cim.event.SlagItem;
+import com.cim.item.ModItems;
 import com.cim.menu.SmelterMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -51,7 +53,9 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
 
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
-            if (slot < 4) return true; // верхний ряд – любые предметы
+            if (slot < 4) return true;
+            // Нижний ряд - шлак ИЛИ рецепт плавки
+            if (stack.is(ModItems.SLAG.get())) return true;
             return MetallurgyRegistry.getSmeltRecipe(stack.getItem()) != null;
         }
     };
@@ -329,7 +333,7 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
         setChanged();
     }
 
-    // ==================== Нижний ряд (партийная плавка) ====================
+    // ==================== Нижний ряд (партийная плавка + переплавка шлака) ====================
 
     private void tickBottomRow() {
         bottomProgress = 0;
@@ -347,12 +351,17 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
             }
         }
 
-        // ВЫЧИСЛЯЕМ ТРЕБУЕМУЮ ТЕМПЕРАТУРУ ДЛЯ ВСЕХ ВАЛИДНЫХ СЛОТОВ (фикс #1 и #3)
+        // ВЫЧИСЛЯЕМ ТРЕБУЕМУЮ ТЕМПЕРАТУРУ ДЛЯ ВСЕХ ВАЛИДНЫХ СЛОТОВ
         int maxTempRequired = 0;
         boolean hasAnyValidRecipe = false;
         for (int i = 0; i < 4; i++) {
             ItemStack stack = inventory.getStackInSlot(4 + i);
             if (!stack.isEmpty()) {
+                // Шлак не требует температуры для переплавки (или можно сделать минимальную)
+                if (stack.getItem() instanceof SlagItem) {
+                    hasAnyValidRecipe = true;
+                    continue;
+                }
                 SmeltRecipe recipe = MetallurgyRegistry.getSmeltRecipe(stack.getItem());
                 if (recipe != null) {
                     maxTempRequired = Math.max(maxTempRequired, recipe.minTemp());
@@ -360,10 +369,9 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
                 }
             }
         }
-        // Температура видна сразу при наличии предметов, не только во время плавки
         requiredTempBottom = hasAnyValidRecipe ? maxTempRequired : 0;
 
-        // Обрабатываем каждый слот (партийно - сохраняем прогресс между тиками)
+        // Обрабатываем каждый слот
         for (int i = 0; i < 4; i++) {
             ItemStack stack = inventory.getStackInSlot(4 + i);
             if (stack.isEmpty()) {
@@ -371,6 +379,30 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
                 continue;
             }
 
+            // === ОБРАБОТКА ШЛАКА (мгновенная переплавка) ===
+            if (stack.getItem() instanceof SlagItem) {
+                Metal slagMetal = SlagItem.getMetal(stack);
+                int slagAmount = SlagItem.getAmount(stack);
+
+                if (slagMetal != null && slagAmount > 0) {
+                    // Проверяем есть ли место в баке
+                    if (hasSpaceFor(slagAmount)) {
+                        // Переплавляем шлак мгновенно (он уже был расплавлен)
+                        addMetal(slagMetal, slagAmount);
+                        stack.shrink(1); // Уменьшаем количество шлака
+                        setChanged();
+                        level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+                    }
+                    // Если места нет - просто пропускаем, ждем освобождения
+                    continue;
+                } else {
+                    // Пустой шлак - удаляем
+                    stack.shrink(1);
+                    continue;
+                }
+            }
+
+            // === ОБЫЧНАЯ ПЛАВКА ===
             SmeltRecipe recipe = MetallurgyRegistry.getSmeltRecipe(stack.getItem());
             if (recipe == null) {
                 bottomSlots[i] = null;
@@ -486,6 +518,42 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
         }
         return toExtract;
     }
+    /**
+     * Выбрасывает весь металл из бака в виде шлака
+     * @return список стаков шлака
+     */
+    public List<ItemStack> dumpMetalAsSlag() {
+        List<ItemStack> slagItems = new ArrayList<>();
+
+        metalTank.forEach((metal, amount) -> {
+            if (amount > 0) {
+                ItemStack slag = SlagItem.createSlag(metal, amount);
+                // Убеждаемся что горячесть есть (createSlag уже добавляет, но на всякий случай)
+                if (!slag.getTag().contains("HotTime")) {
+                    slag.getOrCreateTag().putInt("HotTime", SlagItem.BASE_COOLING_TIME);
+                    slag.getOrCreateTag().putInt("HotTimeMax", SlagItem.BASE_COOLING_TIME);
+                }
+                slagItems.add(slag);
+            }
+        });
+
+        metalTank.clear();
+        totalMetalAmount = 0;
+        setChanged();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+        }
+
+        return slagItems;
+    }
+
+    /**
+     * Проверяет есть ли металл для выброса
+     */
+    public boolean hasMetal() {
+        return totalMetalAmount > 0;
+    }
+
 
 
     // ==================== Геттеры ====================

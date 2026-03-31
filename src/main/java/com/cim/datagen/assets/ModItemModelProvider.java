@@ -64,7 +64,7 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(ModItems.PROTECTOR_LEAD);
         simpleItem(ModItems.PROTECTOR_STEEL);
         simpleItem(ModItems.PROTECTOR_TUNGSTEN);
-
+        simpleItem(ModItems.SLAG);
         simpleItem(ModItems.TURRET_CHIP);
         simpleItem(ModItems.TURRET_LIGHT_PORTATIVE_PLACER);
 

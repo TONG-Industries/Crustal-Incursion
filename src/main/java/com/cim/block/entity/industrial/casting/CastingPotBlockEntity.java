@@ -5,6 +5,7 @@ import com.cim.api.metallurgy.system.MetallurgyRegistry;
 import com.cim.api.metallurgy.system.MetalUnits2;
 import com.cim.block.entity.ModBlockEntities;
 import com.cim.item.ModItems;
+import com.cim.event.SlagItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
@@ -43,6 +44,12 @@ public class CastingPotBlockEntity extends BlockEntity {
     private int solidifyTimer = 0;
     private static final int SOLIDIFY_TIME = 100;
     public static final int BASE_COOLING_TIME = 200;
+
+    // === ПОЛЯ ДЛЯ ШЛАКА ===
+    private static final int SLAG_FORMATION_TIME = 40; // 2 секунды = 40 тиков
+    private int metalIdleTime = 0; // Время простоя металла
+    private boolean isSlagged = false; // Флаг что котёл содержит шлак
+    private CompoundTag slagData = null; // Данные шлака если он застыл
 
     private int transferCooldown = 0;
 
@@ -164,6 +171,23 @@ public class CastingPotBlockEntity extends BlockEntity {
 
         if (!be.outputItem.isEmpty()) return;
 
+        // === ЛОГИКА ШЛАКА ===
+        // Если есть металл, но его недостаточно для формы - начинаем отсчет
+        if (be.storedUnits > 0 && be.storedUnits < be.capacity && !be.isSlagged) {
+            be.metalIdleTime++;
+            if (be.metalIdleTime >= SLAG_FORMATION_TIME) {
+                be.formSlag();
+                be.setChanged();
+                level.sendBlockUpdated(pos, state, state, 3);
+                return; // Выходим чтобы не обрабатывать дальше
+            }
+        } else {
+            be.metalIdleTime = 0;
+        }
+
+        // Если есть шлак - не обрабатываем металл
+        if (be.isSlagged) return;
+
         if (be.mold.isEmpty()) {
             if (be.storedUnits > 0) be.clearMetal();
             return;
@@ -214,6 +238,7 @@ public class CastingPotBlockEntity extends BlockEntity {
                 be.setChanged();
                 level.sendBlockUpdated(pos, state, state, 3);
             }
+
         } else {
             if (be.solidifyTimer > 0) {
                 be.solidifyTimer = 0;
@@ -222,6 +247,66 @@ public class CastingPotBlockEntity extends BlockEntity {
             }
         }
     }
+
+    /**
+     * Превращает жидкий металл в шлак
+     */
+    private void formSlag() {
+        if (currentMetal == null || storedUnits <= 0) return;
+
+        isSlagged = true;
+        slagData = new CompoundTag();
+        slagData.putString(SlagItem.TAG_METAL_ID, currentMetal.getId().toString());
+        slagData.putInt(SlagItem.TAG_AMOUNT, storedUnits);
+        slagData.putInt(SlagItem.TAG_MELTING_POINT, currentMetal.getMeltingPoint());
+        slagData.putInt(SlagItem.TAG_COLOR, currentMetal.getColor());
+
+        // Добавляем горячесть шлаку
+        slagData.putInt("HotTime", SlagItem.BASE_COOLING_TIME);
+        slagData.putInt("HotTimeMax", SlagItem.BASE_COOLING_TIME);
+
+        // Очищаем жидкий металл
+        storedUnits = 0;
+        currentMetal = null;
+        metalIdleTime = 0;
+
+        // Эффекты...
+        if (level != null && !level.isClientSide) {
+            level.playSound(null, worldPosition, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.5f, 1.5f);
+            ((ServerLevel)level).sendParticles(ParticleTypes.ASH,
+                    worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5,
+                    10, 0.3, 0.1, 0.3, 0.02);
+        }
+    }
+
+    /**
+     * Выбрасывает шлак (для ручного сброса или поломки)
+     */
+    public ItemStack extractSlag() {
+        if (!isSlagged || slagData == null) return ItemStack.EMPTY;
+
+        ItemStack slag = SlagItem.createSlagFromNBT(slagData);
+        clearSlag();
+        setChanged();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+        return slag;
+    }
+
+    /**
+     * Проверяет можно ли извлечь шлак
+     */
+    public boolean hasSlag() {
+        return isSlagged;
+    }
+
+    private void clearSlag() {
+        isSlagged = false;
+        slagData = null;
+        metalIdleTime = 0;
+    }
+
 
     private void tryTransferToNeighbor() {
         if (this.storedUnits <= 0 || this.currentMetal == null) return;
@@ -324,10 +409,11 @@ public class CastingPotBlockEntity extends BlockEntity {
         }
     }
 
-    private void clearMetal() {
+    public void clearMetal() {
         this.storedUnits = 0;
         this.currentMetal = null;
         this.solidifyTimer = 0;
+        this.metalIdleTime = 0; // Сбрасываем таймер шлака
         setChanged();
     }
 
@@ -375,7 +461,6 @@ public class CastingPotBlockEntity extends BlockEntity {
         return result;
     }
 
-    // === NBT ===
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
@@ -384,6 +469,13 @@ public class CastingPotBlockEntity extends BlockEntity {
         tag.putInt("StoredUnits", storedUnits);
         tag.putInt("SolidifyTimer", solidifyTimer);
         tag.putInt("CoolingTimer", coolingTimer);
+        tag.putInt("MetalIdleTime", metalIdleTime);
+        tag.putBoolean("IsSlagged", isSlagged);
+
+        if (isSlagged && slagData != null) {
+            tag.put("SlagData", slagData);
+        }
+
         if (currentMetal != null) {
             tag.putString("MetalId", currentMetal.getId().toString());
         }
@@ -397,6 +489,13 @@ public class CastingPotBlockEntity extends BlockEntity {
         this.storedUnits = tag.getInt("StoredUnits");
         this.solidifyTimer = tag.getInt("SolidifyTimer");
         this.coolingTimer = tag.getInt("CoolingTimer");
+        this.metalIdleTime = tag.getInt("MetalIdleTime");
+        this.isSlagged = tag.getBoolean("IsSlagged");
+
+        if (tag.contains("SlagData")) {
+            this.slagData = tag.getCompound("SlagData");
+        }
+
         if (tag.contains("MetalId")) {
             ResourceLocation id = new ResourceLocation(tag.getString("MetalId"));
             MetallurgyRegistry.get(id).ifPresent(m -> this.currentMetal = m);
@@ -412,6 +511,13 @@ public class CastingPotBlockEntity extends BlockEntity {
         tag.putInt("StoredUnits", storedUnits);
         tag.putInt("SolidifyTimer", solidifyTimer);
         tag.putInt("CoolingTimer", coolingTimer);
+
+        tag.putBoolean("IsSlagged", isSlagged);
+        if (isSlagged && slagData != null) {
+            tag.put("SlagData", slagData);
+        }
+        tag.putInt("MetalIdleTime", metalIdleTime);
+
         if (currentMetal != null) {
             tag.putString("MetalId", currentMetal.getId().toString());
         }
@@ -433,9 +539,20 @@ public class CastingPotBlockEntity extends BlockEntity {
             this.storedUnits = tag.getInt("StoredUnits");
             this.solidifyTimer = tag.getInt("SolidifyTimer");
             this.coolingTimer = tag.getInt("CoolingTimer");
+
+            this.isSlagged = tag.getBoolean("IsSlagged");
+            if (tag.contains("SlagData")) {
+                this.slagData = tag.getCompound("SlagData");
+            } else {
+                this.slagData = null;
+            }
+            this.metalIdleTime = tag.getInt("MetalIdleTime");
+
             if (tag.contains("MetalId")) {
                 ResourceLocation id = new ResourceLocation(tag.getString("MetalId"));
                 MetallurgyRegistry.get(id).ifPresent(m -> this.currentMetal = m);
+            } else {
+                this.currentMetal = null;
             }
             updateCapacity();
         }
@@ -448,6 +565,7 @@ public class CastingPotBlockEntity extends BlockEntity {
 
     // === Методы для работы с металлом ===
     public boolean canAcceptMetal(Metal metal) {
+        if (isSlagged) return false; // Не принимаем металл если есть шлак
         if (mold.isEmpty()) return false;
         if (!outputItem.isEmpty()) return false;
         if (coolingTimer > 0) return false;
@@ -466,6 +584,7 @@ public class CastingPotBlockEntity extends BlockEntity {
     }
 
     public int addMetal(Metal metal, int amount) {
+        if (isSlagged) return 0; // Не добавляем если есть шлак
         if (this.coolingTimer > 0 || !this.outputItem.isEmpty()) {
             return 0;
         }
@@ -492,5 +611,17 @@ public class CastingPotBlockEntity extends BlockEntity {
 
     public boolean isCooling() {
         return coolingTimer > 0;
+    }
+    public ItemStack getSlagStack() {
+        if (isSlagged && slagData != null) {
+            return SlagItem.createSlagFromNBT(slagData);
+        }
+        return ItemStack.EMPTY;
+    }
+    public int getSlagColor() {
+        if (slagData != null && slagData.contains("Color")) {
+            return slagData.getInt("Color");
+        }
+        return 0x888888; // Серый по умолчанию
     }
 }

@@ -18,10 +18,10 @@ public class HotItemHandler {
 
         Player player = event.player;
         boolean hasHotItem = false;
-        boolean inventoryChanged = false;
 
-        // Остывание 1% каждые 2 тика (как ты хотел)
-        boolean shouldCool = player.level().getGameTime() % 2 == 0;
+        // Остывание раз в 10 тиков (0.5 сек) вместо каждые 2 тика
+        boolean shouldCool = player.level().getGameTime() % 10 == 0;
+        boolean inventoryChanged = false;
 
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
             ItemStack stack = player.getInventory().getItem(i);
@@ -30,13 +30,14 @@ public class HotItemHandler {
 
                 if (hotTime > 0) {
                     if (shouldCool) {
-                        hotTime--;
+                        hotTime -= 5; // Отнимаем сразу 5 единиц за раз
+                        if (hotTime < 0) hotTime = 0;
                         stack.getTag().putInt("HotTime", hotTime);
                         inventoryChanged = true;
                     }
                     hasHotItem = true;
                 } else {
-                    // Остыл - чистим теги чтобы стакалось с обычными
+                    // Остыл - чистим теги
                     stack.removeTagKey("HotTime");
                     stack.removeTagKey("HotTimeMax");
                     inventoryChanged = true;
@@ -49,6 +50,7 @@ public class HotItemHandler {
             player.setSecondsOnFire(2);
         }
 
+        // Синхронизируем инвентарь только если реально были изменения
         if (inventoryChanged) {
             player.getInventory().setChanged();
         }

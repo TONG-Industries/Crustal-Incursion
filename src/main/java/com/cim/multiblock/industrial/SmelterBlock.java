@@ -7,12 +7,15 @@ import com.cim.multiblock.system.MultiblockStructureHelper;
 import com.cim.multiblock.system.PartRole;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.PickaxeItem;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -29,6 +32,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -116,10 +120,19 @@ public class SmelterBlock extends BaseEntityBlock implements IMultiblockControll
         if (!state.is(newState.getBlock()) && !level.isClientSide) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof SmelterBlockEntity smelter) {
+                // Выбрасываем инвентарь
                 ItemStackHandler inv = smelter.getInventory();
                 for (int i = 0; i < inv.getSlots(); i++) {
                     if (!inv.getStackInSlot(i).isEmpty()) {
                         Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), inv.getStackInSlot(i));
+                    }
+                }
+
+                // === ВЫБРАСЫВАЕМ МЕТАЛЛ КАК ШЛАК ===
+                if (smelter.hasMetal()) {
+                    List<ItemStack> slagItems = smelter.dumpMetalAsSlag();
+                    for (ItemStack slag : slagItems) {
+                        Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), slag);
                     }
                 }
             }
@@ -131,10 +144,26 @@ public class SmelterBlock extends BaseEntityBlock implements IMultiblockControll
 
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        if (!level.isClientSide && level.getBlockEntity(pos) instanceof SmelterBlockEntity) {
+        if (!level.isClientSide && level.getBlockEntity(pos) instanceof SmelterBlockEntity smelter) {
+            ItemStack heldItem = player.getItemInHand(hand);
+
+            // === SHIFT + ПКМ КИРКОЙ - СБРОС МЕТАЛЛА КАК ШЛАК ===
+            if (heldItem.getItem() instanceof PickaxeItem && player.isShiftKeyDown()) {
+                if (smelter.hasMetal()) {
+                    List<ItemStack> slagItems = smelter.dumpMetalAsSlag();
+                    for (ItemStack slag : slagItems) {
+                        Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), slag);
+                    }
+                    level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0f, 0.8f);
+                    return InteractionResult.CONSUME;
+                }
+                return InteractionResult.PASS;
+            }
+
+            // Обычное открытие GUI
             net.minecraftforge.network.NetworkHooks.openScreen(
                     (net.minecraft.server.level.ServerPlayer) player,
-                    (SmelterBlockEntity) level.getBlockEntity(pos),
+                    smelter,
                     pos
             );
             return InteractionResult.CONSUME;

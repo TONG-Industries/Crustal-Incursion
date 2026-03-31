@@ -1,5 +1,6 @@
 package com.cim.client;
 
+import com.cim.event.SlagItem;
 import com.cim.main.ResourceRegistry;
 import com.cim.block.basic.ModBlocks;
 import com.cim.client.gecko.block.energy.MachineBatteryRenderer;
@@ -14,6 +15,7 @@ import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelResourceLocation;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
@@ -169,6 +171,8 @@ public class ClientModEvents {
                     }
                     return -1;
                 },
+
+
                 Items.IRON_INGOT,
                 Items.GOLD_INGOT,
                 Items.NETHERITE_INGOT,
@@ -177,9 +181,52 @@ public class ClientModEvents {
                 ResourceRegistry.getMainUnit("steel"),     // стальной слиток
                 ResourceRegistry.getSmallUnit("steel"),
                 ResourceRegistry.getBlock("steel")
-
-
         );
+
+        // === ШЛАК (специальная окраска по цвету металла) ===
+        event.register((stack, tintIndex) -> {
+            if (tintIndex != 0) return -1;
+
+            if (stack.hasTag()) {
+                CompoundTag tag = stack.getTag();
+                int metalColor = tag.contains("Color") ? tag.getInt("Color") : 0x888888;
+                int r = (metalColor >> 16) & 0xFF;
+                int g = (metalColor >> 8) & 0xFF;
+                int b = metalColor & 0xFF;
+
+                // Если горячий - яркий цвет, если остывший - темно-серый
+                if (tag.contains("HotTime") && tag.getInt("HotTime") > 0) {
+                    int hotTime = tag.getInt("HotTime");
+                    int maxTime = tag.getInt("HotTimeMax");
+                    if (maxTime == 0) maxTime = SlagItem.BASE_COOLING_TIME;
+                    float ratio = (float) hotTime / maxTime;
+
+                    // Остывший: темный фон + чуть цвета металла
+                    int coldR = 0x33 + (r / 4);
+                    int coldG = 0x33 + (g / 4);
+                    int coldB = 0x33 + (b / 4);
+
+                    // Горячий: яркий цвет металла + оранжевый оттенок
+                    int hotR = Math.min(255, r + 60);
+                    int hotG = Math.min(255, g + 30);
+                    int hotB = Math.min(255, b + 10);
+
+                    int finalR = (int) (coldR + (hotR - coldR) * ratio);
+                    int finalG = (int) (coldG + (hotG - coldG) * ratio);
+                    int finalB = (int) (coldB + (hotB - coldB) * ratio);
+
+                    return (0xFF << 24) | (finalR << 16) | (finalG << 8) | finalB;
+                } else {
+                    // Остывший шлак - темно-серый с оттенком металла
+                    int dr = 0x33 + (r / 4);
+                    int dg = 0x33 + (g / 4);
+                    int db = 0x33 + (b / 4);
+                    return (0xFF << 24) | (dr << 16) | (dg << 8) | db;
+                }
+            }
+            return 0xFF555555; // По умолчанию серый
+        }, ModItems.SLAG.get());
+
     }
 
 

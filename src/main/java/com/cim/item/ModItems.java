@@ -5,6 +5,7 @@ import com.cim.entity.weapons.grenades.GrenadeIfType;
 import com.cim.entity.weapons.grenades.GrenadeType;
 import com.cim.item.energy.EnergyCellItem;
 import com.cim.item.food.FoodZamaz;
+import com.cim.event.SlagItem;
 import com.cim.item.mobs.MoryLahItem;
 import com.cim.item.energy.WireCoilItem;
 import com.cim.item.rotation.*;
@@ -46,7 +47,8 @@ public class ModItems {
             () -> new DepthWormSpawnEggItem(new Item.Properties()));
 
 
-
+    public static final RegistryObject<Item> SLAG = ITEMS.register("slag",
+            () -> new SlagItem(new Item.Properties()));
 
     //ИНСТРУМЕНТЫ
     public static final RegistryObject<Item> SCREWDRIVER = ITEMS.register("screwdriver",

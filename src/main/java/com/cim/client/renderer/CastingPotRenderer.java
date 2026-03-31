@@ -97,6 +97,66 @@ public class CastingPotRenderer implements BlockEntityRenderer<CastingPotBlockEn
 
             poseStack.popPose();
         }
+
+        // 4. ШЛАК (если сформировался)
+        if (blockEntity.hasSlag()) {
+            ItemStack slagStack = blockEntity.getSlagStack();
+
+            if (!slagStack.isEmpty()) {
+                poseStack.pushPose();
+                poseStack.translate(0.5f, 4.01f / 16.0f, 0.5f);
+
+                // Поворачиваем в направлении котла (как слиток)
+                float rotationY = getRotationFromFacing(facing);
+                poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(rotationY));
+
+                // Лежит плоско (как слиток)
+                poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90));
+
+                float scale = 0.75f;
+                poseStack.scale(scale, scale, scale);
+
+                // Подсветка если горячий
+                boolean isHot = slagStack.hasTag() && slagStack.getTag().getInt("HotTime") > 0;
+                int renderLight = isHot ? 15728880 : packedLight;
+
+                itemRenderer.renderStatic(slagStack, ItemDisplayContext.FIXED,
+                        renderLight, packedOverlay, poseStack, buffer,
+                        blockEntity.getLevel(), 0);
+
+                // Эффект свечения если горячий (опционально)
+                if (isHot) {
+                    int hotTime = slagStack.getTag().getInt("HotTime");
+                    int maxTime = slagStack.getTag().getInt("HotTimeMax");
+                    float progress = hotTime / (float) maxTime;
+                    if (progress > 0.01f) {
+                        renderHotGlow(poseStack, buffer, progress);
+                    }
+                }
+
+                poseStack.popPose();
+            }
+        }
+    }
+
+    private void renderSlagBlock(PoseStack poseStack, MultiBufferSource buffer, int packedLight, int color) {
+        VertexConsumer builder = buffer.getBuffer(RenderType.entitySolid(
+                new ResourceLocation("cim", "textures/block/slag_block.png"))); // или любая другая текстура
+
+        float r = ((color >> 16) & 0xFF) / 255f * 0.5f; // Темнее
+        float g = ((color >> 8) & 0xFF) / 255f * 0.5f;
+        float b = (color & 0xFF) / 255f * 0.5f;
+
+        Matrix4f matrix = poseStack.last().pose();
+        Matrix3f normal = poseStack.last().normal();
+
+        float half = 0.5f;
+
+        // Верхняя грань шлака
+        builder.vertex(matrix, -half, half, -half).color(r, g, b, 1.0f).uv(0, 0).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(normal, 0, 1, 0).endVertex();
+        builder.vertex(matrix, -half, half, half).color(r, g, b, 1.0f).uv(0, 1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(normal, 0, 1, 0).endVertex();
+        builder.vertex(matrix, half, half, half).color(r, g, b, 1.0f).uv(1, 1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(normal, 0, 1, 0).endVertex();
+        builder.vertex(matrix, half, half, -half).color(r, g, b, 1.0f).uv(1, 0).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(normal, 0, 1, 0).endVertex();
     }
 
     /**

@@ -4,6 +4,10 @@ package com.cim.main;
 import com.cim.api.fluids.ModFluids;
 import com.cim.api.hive.HiveNetworkManager;
 import com.cim.api.metallurgy.ModMetallurgy;
+import com.cim.api.metallurgy.system.Metal;
+import com.cim.api.metallurgy.system.MetalUnits2;
+import com.cim.api.metallurgy.system.MetallurgyRegistry;
+import com.cim.event.SlagItem;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -247,6 +251,18 @@ public class CrustalIncursionMod {
             event.accept(ModItems.FIREBRICK.get());
             event.accept(ModItems.REINFORCEDBRICK.get());
             event.accept(ModItems.FUEL_ASH.get());
+
+            if (event.getTab() == ModCreativeTabs.CIM_RECOURSES_TAB.get()) {
+                event.accept(ModItems.FIREBRICK.get());
+                event.accept(ModItems.REINFORCEDBRICK.get());
+                event.accept(ModItems.FUEL_ASH.get());
+
+                // Добавляем демонстрационный шлак для каждого металла (1 слиток = 9 единиц)
+                for (Metal metal : MetallurgyRegistry.getAllMetals()) {
+                    ItemStack slagStack = SlagItem.createSlag(metal, MetalUnits2.UNITS_PER_INGOT);
+                    event.accept(slagStack);
+                }
+            }
         }
 
         if (event.getTab() == ModCreativeTabs.CIM_NATURE_TAB.get()) {
