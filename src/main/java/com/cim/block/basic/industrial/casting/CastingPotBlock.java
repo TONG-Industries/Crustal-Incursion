@@ -37,6 +37,16 @@ public class CastingPotBlock extends BaseEntityBlock {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING);
+    }
+
+    @Override
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        // Устанавливается противоположно направлению взгляда игрока
+        return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+    }
 
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
@@ -53,11 +63,7 @@ public class CastingPotBlock extends BaseEntityBlock {
         return getShape(state, level, pos, CollisionContext.empty());
     }
 
-    @Nullable
-    @Override
-    public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
-    }
+   
 
     @Override
     public BlockState rotate(BlockState state, Rotation rotation) {
@@ -69,10 +75,7 @@ public class CastingPotBlock extends BaseEntityBlock {
         return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
-    @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
-    }
+
 
     @Override
     public RenderShape getRenderShape(BlockState state) {
@@ -112,6 +115,9 @@ public class CastingPotBlock extends BaseEntityBlock {
                 level.playSound(null, pos, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.5f, 2.0f);
                 return InteractionResult.CONSUME;
             }
+            // Если не получилось вставить (например, котёл занят), показываем сообщение
+            player.displayClientMessage(Component.literal("§cНельзя поместить: котёл занят или нет формы"), true);
+            return InteractionResult.PASS;
         }
 
         // 2. ДОСТАВАНИЕ ПРЕДМЕТА (киркой или рукой)
@@ -119,11 +125,7 @@ public class CastingPotBlock extends BaseEntityBlock {
             // Киркой - достаём даже если горячий
             if (isPickaxe) {
                 ItemStack drop = pot.takeOutput();
-                // Сохраняем оставшееся время остывания
-                if (pot.getCoolingTimer() > 0) {
-                    drop.getOrCreateTag().putInt("HotTime", pot.getCoolingTimer());
-                    drop.getOrCreateTag().putInt("HotTimeMax", CastingPotBlockEntity.BASE_COOLING_TIME);
-                }
+                // takeOutput уже сохраняет оставшееся время остывания в NBT если нужно
 
                 if (!player.getInventory().add(drop)) {
                     player.drop(drop, false);
@@ -134,7 +136,9 @@ public class CastingPotBlock extends BaseEntityBlock {
 
             // Рукой - только если остыл
             if (pot.getCoolingTimer() > 0) {
-                player.displayClientMessage(Component.literal("§cСлишком горячо! Используйте кирку."), true);
+                // Показываем прогресс остывания
+                int percent = (int)((pot.getCoolingTimer() / (float)CastingPotBlockEntity.BASE_COOLING_TIME) * 100);
+                player.displayClientMessage(Component.literal("§cСлишком горячо! (" + percent + "%) Используйте кирку."), true);
                 return InteractionResult.PASS;
             }
 
@@ -143,7 +147,9 @@ public class CastingPotBlock extends BaseEntityBlock {
             if (heldItem.isEmpty()) {
                 player.setItemInHand(hand, drop);
             } else {
-                player.getInventory().add(drop);
+                if (!player.getInventory().add(drop)) {
+                    player.drop(drop, false);
+                }
             }
             level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
             return InteractionResult.CONSUME;
@@ -161,6 +167,9 @@ public class CastingPotBlock extends BaseEntityBlock {
                 level.playSound(null, pos, SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 1.0F, 1.0F);
                 return InteractionResult.CONSUME;
             }
+            if (!moldStack.isEmpty() && !pot.canRemoveMold()) {
+                player.displayClientMessage(Component.literal("§cНельзя извлечь форму: есть металл или предмет"), true);
+            }
             return InteractionResult.PASS;
         }
 
@@ -175,12 +184,16 @@ public class CastingPotBlock extends BaseEntityBlock {
                 return InteractionResult.CONSUME;
             }
         } else {
-            // Забор пустой рукой только если нет металла
+            // Забор пустой рукой только если нет металла и предмета
             if (heldItem.isEmpty() && pot.canRemoveMold()) {
                 player.setItemInHand(hand, moldStack.copy());
                 pot.setMold(ItemStack.EMPTY);
                 level.playSound(null, pos, SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 1.0F, 1.0F);
                 return InteractionResult.CONSUME;
+            }
+            if (heldItem.isEmpty() && !pot.canRemoveMold()) {
+                player.displayClientMessage(Component.literal("§cНельзя извлечь форму: есть металл или предмет"), true);
+                return InteractionResult.PASS;
             }
         }
 
@@ -192,19 +205,22 @@ public class CastingPotBlock extends BaseEntityBlock {
         if (!state.is(newState.getBlock())) {
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof CastingPotBlockEntity pot) {
+                // Выбрасываем форму
                 if (!pot.getMold().isEmpty()) {
                     popResource(level, pos, pot.getMold());
                 }
+
+                // Выбрасываем предмет с сохранением "горячести"
                 if (!pot.getOutputItem().isEmpty()) {
                     ItemStack drop = pot.getOutputItem().copy();
-                    // Сохраняем "горячесть" если котёл сломали во время остывания
+                    // Сохраняем оставшееся время остывания если котёл сломали во время остывания
                     if (pot.getCoolingTimer() > 0) {
                         drop.getOrCreateTag().putInt("HotTime", pot.getCoolingTimer());
                         drop.getOrCreateTag().putInt("HotTimeMax", CastingPotBlockEntity.BASE_COOLING_TIME);
                     }
                     popResource(level, pos, drop);
                 }
-                // Металл теряется при разрушении
+                // Металл теряется при разрушении (логика остаётся)
             }
             super.onRemove(state, level, pos, newState, isMoving);
         }
