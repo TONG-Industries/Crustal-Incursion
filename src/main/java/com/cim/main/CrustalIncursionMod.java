@@ -76,9 +76,21 @@ public class CrustalIncursionMod {
         ModFoliagePlacerTypes.register(modEventBus);
         ModFluids.register(modEventBus);
         MinecraftForge.EVENT_BUS.register(new HiveEventHandler());
-        if (FMLLoader.getLoadingModList().getModFileById("oculus") != null) {
-            com.cim.compat.irisflw.IrisFlw.init();
-            System.out.println("🔥 [CIM] КЛЮЧ ЗАЖИГАНИЯ ПОВЕРНУТ! Движок Flywheel-Oculus запущен!");
+        // Проверяем, есть ли Окулус
+        if (net.minecraftforge.fml.loading.FMLLoader.getLoadingModList().getModFileById("oculus") != null) {
+
+            // ЗАЩИТА ОТ ДУРАКА: Проверяем, есть ли мод Леона
+            boolean hasLeonFix = net.minecraftforge.fml.loading.FMLLoader.getLoadingModList().getModFileById("oculusflywheelcompat") != null ||
+                    net.minecraftforge.fml.loading.FMLLoader.getLoadingModList().getModFileById("irisflw") != null;
+
+            if (!hasLeonFix) {
+                // Леона нет, запускаем наши турбины!
+                com.cim.compat.irisflw.IrisFlw.init();
+                System.out.println("🔥 [CIM] КЛЮЧ ЗАЖИГАНИЯ ПОВЕРНУТ! Движок Flywheel-Oculus запущен!");
+            } else {
+                // Леон есть, мы отходим в сторону, чтобы не было краша
+                System.out.println("🛡️ [CIM] Замечен сторонний фикс! Встроенный движок CIM деактивирован.");
+            }
         }
 
     }
