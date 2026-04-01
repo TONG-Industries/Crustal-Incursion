@@ -50,7 +50,7 @@ public class SmelterHudOverlay {
 
         if (smelter == null) return;
 
-        int temp = smelter.getTemperature();
+        float temp = smelter.getTemperature();
         GuiGraphics graphics = event.getGuiGraphics();
         Font font = mc.font;
         int maxTemp = SmelterBlockEntity.MAX_TEMP;

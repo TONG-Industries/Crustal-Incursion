@@ -276,15 +276,15 @@ public class CastingPotBlock extends BaseEntityBlock {
                 if (!pot.getOutputItem().isEmpty()) {
                     ItemStack drop = pot.getOutputItem().copy();
                     // Сохраняем оставшееся время остывания если котёл сломали во время остывания
-                    if (pot.getCoolingTimer() > 0) {
-                        drop.getOrCreateTag().putInt("HotTime", pot.getCoolingTimer());
-                        drop.getOrCreateTag().putInt("HotTimeMax", CastingPotBlockEntity.BASE_COOLING_TIME);
+                    float coolingTimer = pot.getCoolingTimer();
+                    if (coolingTimer > 0) {
+                        // Используем float для плавности, но округляем для совместимости
+                        drop.getOrCreateTag().putFloat("HotTime", coolingTimer);
+                        drop.getOrCreateTag().putFloat("HotTimeMax", CastingPotBlockEntity.BASE_COOLING_TIME);
                     }
                     popResource(level, pos, drop);
                 }
-                // Металл теряется при разрушении (логика остаётся)
-            }
             super.onRemove(state, level, pos, newState, isMoving);
         }
     }
-}
+}}

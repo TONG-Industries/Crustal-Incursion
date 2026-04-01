@@ -32,7 +32,7 @@ public class CastingPotRenderer implements BlockEntityRenderer<CastingPotBlockEn
 
         ItemStack mold = blockEntity.getMold();
         ItemStack output = blockEntity.getOutputItem();
-        int coolingTimer = blockEntity.getCoolingTimer();
+        float coolingTimer = blockEntity.getCoolingTimer();
         float coolingProgress = blockEntity.getCoolingProgress();
 
         // Получаем направление котла

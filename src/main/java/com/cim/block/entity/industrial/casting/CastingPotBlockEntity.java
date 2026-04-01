@@ -6,6 +6,7 @@ import com.cim.api.metallurgy.system.MetalUnits2;
 import com.cim.block.entity.ModBlockEntities;
 import com.cim.item.ModItems;
 import com.cim.event.SlagItem;
+import com.cim.event.HotItemHandler; // НОВЫЙ ИМПОРТ
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
@@ -38,27 +39,26 @@ public class CastingPotBlockEntity extends BlockEntity {
     private ItemStack outputItem = ItemStack.EMPTY;
 
     private Metal currentMetal = null;
-    private int storedUnits = 0;          // <-- теперь единицы, а не мб
+    private int storedUnits = 0;
     private int capacity = 0;
-    private int coolingTimer = 0;
+    private float coolingTimer = 0; // Теперь float для плавности!
     private int solidifyTimer = 0;
     private static final int SOLIDIFY_TIME = 100;
-    public static final int BASE_COOLING_TIME = 200;
+    public static final float BASE_COOLING_TIME = 200f; // Теперь float!
 
-    // === ПОЛЯ ДЛЯ ШЛАКА ===
-    private static final int SLAG_FORMATION_TIME = 40; // 2 секунды = 40 тиков
-    private int metalIdleTime = 0; // Время простоя металла
-    private boolean isSlagged = false; // Флаг что котёл содержит шлак
-    private CompoundTag slagData = null; // Данные шлака если он застыл
-    private int slagCoolingTimer = 0;
+    // Поля для шлака
+    private static final int SLAG_FORMATION_TIME = 40;
+    private int metalIdleTime = 0;
+    private boolean isSlagged = false;
+    private CompoundTag slagData = null;
+    private float slagCoolingTimer = 0; // Теперь float!
     private int transferCooldown = 0;
 
     public CastingPotBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.CASTING_POT.get(), pos, state);
     }
 
-    private int getCoolingTimeForMold() {
-        // Пока одна форма, но можно расширить
+    private float getCoolingTimeForMold() {
         return BASE_COOLING_TIME;
     }
 
@@ -108,12 +108,13 @@ public class CastingPotBlockEntity extends BlockEntity {
         }
 
         if (!result.isEmpty()) {
-            int coolTime = getCoolingTimeForMold();
-            result.getOrCreateTag().putInt("HotTime", coolTime);
-            result.getOrCreateTag().putInt("HotTimeMax", coolTime);
+            float coolTime = getCoolingTimeForMold();
+            // Устанавливаем горячесть через HotItemHandler
+            HotItemHandler.setHot(result, (int) (coolTime / 20f)); // в секундах
+
             this.outputItem = result;
         }
-        this.storedUnits -= capacity; // вычитаем, а не обнуляем
+        this.storedUnits -= capacity;
         if (this.storedUnits == 0) this.currentMetal = null;
         this.solidifyTimer = 0;
         setChanged();
@@ -123,14 +124,18 @@ public class CastingPotBlockEntity extends BlockEntity {
     public boolean tryInsertHotItem(ItemStack stack) {
         if (!outputItem.isEmpty() || storedUnits > 0 || mold.isEmpty() || coolingTimer > 0) return false;
 
-        if (stack.hasTag() && stack.getTag().contains("HotTime")) {
-            int remainingHotTime = stack.getTag().getInt("HotTime");
-            if (remainingHotTime <= 0) return false;
+        // Используем HotItemHandler для проверки горячести
+        if (HotItemHandler.isHot(stack)) {
+            float hotTime = stack.getTag().getFloat("HotTime");
+            if (hotTime <= 0) return false;
 
             this.outputItem = stack.copy();
             this.outputItem.setCount(1);
-            this.coolingTimer = remainingHotTime;
+            this.coolingTimer = hotTime;
+
+            // Убираем тег горячести (он теперь в котле)
             this.outputItem.removeTagKey("HotTime");
+            this.outputItem.removeTagKey("HotTimeMax");
 
             setChanged();
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
@@ -142,22 +147,21 @@ public class CastingPotBlockEntity extends BlockEntity {
     public static void serverTick(Level level, BlockPos pos, BlockState state, CastingPotBlockEntity be) {
         if (be.transferCooldown > 0) be.transferCooldown--;
 
-        // === Остывание готового предмета ===
+        // === Остывание готового предмета (плавное!) ===
         if (be.coolingTimer > 0 && !be.outputItem.isEmpty()) {
-            be.coolingTimer--;
-            int currentHotTime = be.coolingTimer;
-            int maxHotTime = BASE_COOLING_TIME;
-            if (be.outputItem.hasTag()) {
-                be.outputItem.getTag().putInt("HotTime", currentHotTime);
-                if (!be.outputItem.getTag().contains("HotTimeMax")) {
-                    be.outputItem.getTag().putInt("HotTimeMax", maxHotTime);
-                }
+            // Плавное уменьшение: -0.1 за тик
+            be.coolingTimer = Math.max(0, be.coolingTimer - 0.1f);
+
+            // Обновляем NBT только раз в секунду для синхронизации
+            if ((int) be.coolingTimer % 20 == 0 || be.coolingTimer <= 0) {
+                int displayTime = (int) be.coolingTimer;
+                be.outputItem.getOrCreateTag().putInt("HotTime", displayTime);
+                be.outputItem.getOrCreateTag().putInt("HotTimeMax", (int) BASE_COOLING_TIME);
+                be.setChanged();
             }
-            be.setChanged();
-            if (be.coolingTimer % 10 == 0 || be.coolingTimer == 0) {
-                level.sendBlockUpdated(pos, state, state, 3);
-            }
-            if (be.coolingTimer == 0) {
+
+            if (be.coolingTimer <= 0.5f) { // Почти остыл
+                be.coolingTimer = 0;
                 be.outputItem.removeTagKey("HotTime");
                 be.outputItem.removeTagKey("HotTimeMax");
                 be.setChanged();
@@ -168,30 +172,33 @@ public class CastingPotBlockEntity extends BlockEntity {
 
         if (!be.outputItem.isEmpty()) return;
 
-        // === Остывание шлака (NEW) ===
+        // === Остывание шлака (плавное!) ===
         if (be.isSlagged && be.slagData != null) {
             if (be.slagCoolingTimer > 0) {
-                be.slagCoolingTimer--;
-                be.slagData.putInt("HotTime", be.slagCoolingTimer);
-                if (be.slagCoolingTimer == 0) {
-                    // Частицы при остывании шлака
+                be.slagCoolingTimer = Math.max(0, be.slagCoolingTimer - 0.1f);
+
+                // Синхронизация раз в секунду
+                if ((int) be.slagCoolingTimer % 20 == 0) {
+                    be.slagData.putFloat("HotTime", be.slagCoolingTimer);
+                }
+
+                if (be.slagCoolingTimer <= 0.5f) {
+                    be.slagCoolingTimer = 0;
+                    be.slagData.remove("HotTime");
+                    be.slagData.remove("HotTimeMax");
                     if (!level.isClientSide) {
                         ((ServerLevel) level).sendParticles(ParticleTypes.POOF,
                                 pos.getX() + 0.5, pos.getY() + 0.4, pos.getZ() + 0.5,
                                 8, 0.25, 0.1, 0.25, 0.03);
                     }
-                    be.slagData.remove("HotTime");
-                    be.slagData.remove("HotTimeMax");
                     be.setChanged();
                 }
             }
-            // Если шлак есть, ничего больше не делаем
             return;
         }
 
-        // === Логика образования шлака с учётом передачи металла ===
+        // === Логика образования шлака ===
         if (be.storedUnits > 0 && be.storedUnits < be.capacity && !be.isSlagged) {
-            // Сначала пытаемся передать соседям
             boolean transferred = false;
             for (Direction dir : Direction.Plane.HORIZONTAL) {
                 BlockPos neighborPos = pos.relative(dir);
@@ -228,7 +235,7 @@ public class CastingPotBlockEntity extends BlockEntity {
 
         if (be.isSlagged) return;
 
-        // Далее существующая логика (молд, передача, затвердевание) без изменений
+        // Далее существующая логика...
         if (be.mold.isEmpty()) {
             if (be.storedUnits > 0) be.clearMetal();
             return;
@@ -285,9 +292,6 @@ public class CastingPotBlockEntity extends BlockEntity {
         }
     }
 
-    /**
-     * Превращает жидкий металл в шлак
-     */
     private void formSlag() {
         if (currentMetal == null || storedUnits <= 0) return;
 
@@ -297,7 +301,8 @@ public class CastingPotBlockEntity extends BlockEntity {
         slagData.putInt(SlagItem.TAG_AMOUNT, storedUnits);
         slagData.putInt(SlagItem.TAG_MELTING_POINT, currentMetal.getMeltingPoint());
         slagData.putInt(SlagItem.TAG_COLOR, currentMetal.getColor());
-        slagData.putInt("HotTime", SlagItem.BASE_COOLING_TIME);
+        slagData.putFloat(SlagItem.TAG_HEAT_CONSUMPTION, currentMetal.getHeatConsumptionPerTick()); // НОВОЕ!
+        slagData.putFloat("HotTime", SlagItem.BASE_COOLING_TIME);
         slagData.putInt("HotTimeMax", SlagItem.BASE_COOLING_TIME);
         slagCoolingTimer = SlagItem.BASE_COOLING_TIME;
 
@@ -313,9 +318,6 @@ public class CastingPotBlockEntity extends BlockEntity {
         }
     }
 
-    /**
-     * Выбрасывает шлак (для ручного сброса или поломки)
-     */
     public ItemStack extractSlag() {
         if (!isSlagged || slagData == null) return ItemStack.EMPTY;
 
@@ -328,9 +330,6 @@ public class CastingPotBlockEntity extends BlockEntity {
         return slag;
     }
 
-    /**
-     * Проверяет можно ли извлечь шлак
-     */
     public boolean hasSlag() {
         return isSlagged;
     }
@@ -341,7 +340,6 @@ public class CastingPotBlockEntity extends BlockEntity {
         metalIdleTime = 0;
         slagCoolingTimer = 0;
     }
-
 
     private void tryTransferToNeighbor() {
         if (this.storedUnits <= 0 || this.currentMetal == null) return;
@@ -448,7 +446,7 @@ public class CastingPotBlockEntity extends BlockEntity {
         this.storedUnits = 0;
         this.currentMetal = null;
         this.solidifyTimer = 0;
-        this.metalIdleTime = 0; // Сбрасываем таймер шлака
+        this.metalIdleTime = 0;
         setChanged();
     }
 
@@ -456,11 +454,11 @@ public class CastingPotBlockEntity extends BlockEntity {
     public ItemStack getMold() { return mold; }
     public ItemStack getOutputItem() { return outputItem; }
     public Metal getCurrentMetal() { return currentMetal; }
-    public int getStoredUnits() { return storedUnits; }        // <-- новое имя
+    public int getStoredUnits() { return storedUnits; }
     public int getCapacity() { updateCapacity(); return capacity; }
     public int getSolidifyProgress() { return solidifyTimer; }
     public int getSolidifyTime() { return SOLIDIFY_TIME; }
-    public int getCoolingTimer() { return coolingTimer; }
+    public float getCoolingTimer() { return coolingTimer; } // Теперь float!
 
     public float getFillLevel() {
         if (capacity <= 0) return 0;
@@ -485,9 +483,9 @@ public class CastingPotBlockEntity extends BlockEntity {
 
     public ItemStack takeOutput() {
         ItemStack result = outputItem.copy();
+        // Сохраняем горячесть если нужно
         if (coolingTimer > 0) {
-            result.getOrCreateTag().putInt("HotTime", coolingTimer);
-            result.getOrCreateTag().putInt("HotTimeMax", BASE_COOLING_TIME);
+            HotItemHandler.setHot(result, (int) (coolingTimer / 20f));
         }
         this.outputItem = ItemStack.EMPTY;
         this.coolingTimer = 0;
@@ -503,10 +501,10 @@ public class CastingPotBlockEntity extends BlockEntity {
         tag.put("Output", outputItem.save(new CompoundTag()));
         tag.putInt("StoredUnits", storedUnits);
         tag.putInt("SolidifyTimer", solidifyTimer);
-        tag.putInt("CoolingTimer", coolingTimer);
+        tag.putFloat("CoolingTimer", coolingTimer); // Теперь float!
         tag.putInt("MetalIdleTime", metalIdleTime);
         tag.putBoolean("IsSlagged", isSlagged);
-        tag.putInt("SlagCoolingTimer", slagCoolingTimer); // NEW
+        tag.putFloat("SlagCoolingTimer", slagCoolingTimer); // Теперь float!
 
         if (isSlagged && slagData != null) {
             tag.put("SlagData", slagData);
@@ -524,10 +522,10 @@ public class CastingPotBlockEntity extends BlockEntity {
         this.outputItem = ItemStack.of(tag.getCompound("Output"));
         this.storedUnits = tag.getInt("StoredUnits");
         this.solidifyTimer = tag.getInt("SolidifyTimer");
-        this.coolingTimer = tag.getInt("CoolingTimer");
+        this.coolingTimer = tag.getFloat("CoolingTimer"); // Теперь float!
         this.metalIdleTime = tag.getInt("MetalIdleTime");
         this.isSlagged = tag.getBoolean("IsSlagged");
-        this.slagCoolingTimer = tag.getInt("SlagCoolingTimer"); // NEW
+        this.slagCoolingTimer = tag.getFloat("SlagCoolingTimer"); // Теперь float!
 
         if (tag.contains("SlagData")) {
             this.slagData = tag.getCompound("SlagData");
@@ -547,7 +545,7 @@ public class CastingPotBlockEntity extends BlockEntity {
         tag.put("Output", outputItem.save(new CompoundTag()));
         tag.putInt("StoredUnits", storedUnits);
         tag.putInt("SolidifyTimer", solidifyTimer);
-        tag.putInt("CoolingTimer", coolingTimer);
+        tag.putFloat("CoolingTimer", coolingTimer);
 
         tag.putBoolean("IsSlagged", isSlagged);
         if (isSlagged && slagData != null) {
@@ -575,7 +573,7 @@ public class CastingPotBlockEntity extends BlockEntity {
             this.outputItem = ItemStack.of(tag.getCompound("Output"));
             this.storedUnits = tag.getInt("StoredUnits");
             this.solidifyTimer = tag.getInt("SolidifyTimer");
-            this.coolingTimer = tag.getInt("CoolingTimer");
+            this.coolingTimer = tag.getFloat("CoolingTimer");
 
             this.isSlagged = tag.getBoolean("IsSlagged");
             if (tag.contains("SlagData")) {
@@ -602,7 +600,7 @@ public class CastingPotBlockEntity extends BlockEntity {
 
     // === Методы для работы с металлом ===
     public boolean canAcceptMetal(Metal metal) {
-        if (isSlagged) return false; // Не принимаем металл если есть шлак
+        if (isSlagged) return false;
         if (mold.isEmpty()) return false;
         if (!outputItem.isEmpty()) return false;
         if (coolingTimer > 0) return false;
@@ -621,7 +619,7 @@ public class CastingPotBlockEntity extends BlockEntity {
     }
 
     public int addMetal(Metal metal, int amount) {
-        if (isSlagged) return 0; // не добавляем, если есть шлак
+        if (isSlagged) return 0;
         if (this.coolingTimer > 0 || !this.outputItem.isEmpty()) {
             return 0;
         }
@@ -634,7 +632,6 @@ public class CastingPotBlockEntity extends BlockEntity {
         if (toAdd > 0) {
             this.storedUnits += toAdd;
             this.metalIdleTime = 0;
-            // Если был шлак - удаляем его (на случай, если isSlagged всё же true)
             if (this.isSlagged) {
                 clearSlag();
             }
@@ -648,32 +645,35 @@ public class CastingPotBlockEntity extends BlockEntity {
 
     public float getCoolingProgress() {
         if (coolingTimer <= 0) return 0;
-        return (float) coolingTimer / BASE_COOLING_TIME;
+        return coolingTimer / BASE_COOLING_TIME;
     }
 
     public boolean isCooling() {
         return coolingTimer > 0;
     }
+
     public ItemStack getSlagStack() {
         if (isSlagged && slagData != null) {
             return SlagItem.createSlagFromNBT(slagData);
         }
         return ItemStack.EMPTY;
     }
+
     public int getSlagColor() {
         if (slagData != null && slagData.contains("Color")) {
             return slagData.getInt("Color");
         }
-        return 0x888888; // Серый по умолчанию
+        return 0x888888;
     }
-    public int getSlagHotTime() {
+
+    public float getSlagHotTime() {
         if (!isSlagged || slagData == null) return 0;
-        return slagData.getInt("HotTime");
+        return slagData.getFloat("HotTime");
     }
 
     public float getSlagHotProgress() {
         if (!isSlagged || slagData == null) return 0;
-        int hotTime = slagData.getInt("HotTime");
+        float hotTime = slagData.getFloat("HotTime");
         int maxTime = slagData.getInt("HotTimeMax");
         if (maxTime == 0) maxTime = SlagItem.BASE_COOLING_TIME;
         return hotTime / (float) maxTime;

@@ -9,17 +9,23 @@ public class Metal {
     private final ResourceLocation id;
     private final String translationKey;
     private int color;
-    private int meltingPoint;
+    private int meltingPoint; // Температура плавления в градусах
     private final int baseUnits;
     private final int smallUnits;
     private final int blockUnits;
-    private final int baseSmeltTime;
+
+    // НОВОЕ: Потребление температуры в градусах за тик
+    private final float heatConsumptionPerTick;
+
+    // СТАРОЕ УДАЛЕНО: baseSmeltTime больше не хранится здесь
+
     @Nullable private Item ingot;
     @Nullable private Item nugget;
     @Nullable private Block block;
 
     public Metal(ResourceLocation id, int color, int meltingPoint,
-                 int baseUnits, int smallUnits, int blockUnits, int baseSmeltTime) {
+                 int baseUnits, int smallUnits, int blockUnits,
+                 float heatConsumptionPerTick) {
         this.id = id;
         this.translationKey = "metal." + id.getNamespace() + "." + id.getPath();
         this.color = color;
@@ -27,7 +33,7 @@ public class Metal {
         this.baseUnits = baseUnits;
         this.smallUnits = smallUnits;
         this.blockUnits = blockUnits;
-        this.baseSmeltTime = baseSmeltTime;
+        this.heatConsumptionPerTick = heatConsumptionPerTick;
     }
 
     // Геттеры
@@ -38,7 +44,10 @@ public class Metal {
     public int getBaseUnits() { return baseUnits; }
     public int getSmallUnits() { return smallUnits; }
     public int getBlockUnits() { return blockUnits; }
-    public int getBaseSmeltTime() { return baseSmeltTime; }
+
+    // НОВЫЙ ГЕТТЕР
+    public float getHeatConsumptionPerTick() { return heatConsumptionPerTick; }
+
     @Nullable public Item getIngot() { return ingot; }
     @Nullable public Item getNugget() { return nugget; }
     @Nullable public Block getBlock() { return block; }
@@ -51,4 +60,18 @@ public class Metal {
     public boolean hasIngot() { return ingot != null; }
     public boolean hasNugget() { return nugget != null; }
     public boolean hasBlock() { return block != null; }
+
+    /**
+     * Рассчитывает время плавки для заданного количества единиц металла
+     * Используется для шлака: чем больше металла, тем дольше плавка
+     * Максимум 30 секунд (600 тиков)
+     */
+    public int calculateSmeltTimeForUnits(int units) {
+        // Базовое время: 3 секунды на слиток (9 единиц)
+        float ingots = units / (float) baseUnits;
+        int timeTicks = (int) (ingots * 60); // 60 тиков = 3 сек на слиток
+
+        // Максимум 30 секунд (600 тиков)
+        return Math.min(timeTicks, 600);
+    }
 }

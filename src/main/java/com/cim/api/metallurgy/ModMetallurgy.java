@@ -16,36 +16,61 @@ public class ModMetallurgy {
     public static void init() {
 
         // === ЗОЛОТО ===
-        Metal gold = registerMetalWithItems("gold", 0xFFD700, 1064, 200, Items.GOLD_INGOT, Items.GOLD_NUGGET, Blocks.GOLD_BLOCK);
-        MetallurgyRegistry.addSmeltRecipe(Items.GOLDEN_SWORD, gold, MetalUnits2.UNITS_PER_INGOT, 80);
-        MetallurgyRegistry.addSmeltRecipe(Items.GOLDEN_HELMET, gold, MetalUnits2.UNITS_PER_INGOT * 2, 100);
-        MetallurgyRegistry.addSmeltRecipe(Items.GOLDEN_CHESTPLATE, gold, MetalUnits2.UNITS_PER_INGOT * 5, 120);
-        MetallurgyRegistry.addSmeltRecipe(Items.GOLDEN_LEGGINGS, gold, MetalUnits2.UNITS_PER_INGOT * 4, 110);
-        MetallurgyRegistry.addSmeltRecipe(Items.GOLDEN_BOOTS, gold, MetalUnits2.UNITS_PER_INGOT * 2, 80);
+        // Потребление: 0.5 градуса/тик, плавится при 1064°C
+        Metal gold = registerMetalWithItems("gold", 0xFFD700, 1064, 0.5f,
+                Items.GOLD_INGOT, Items.GOLD_NUGGET, Blocks.GOLD_BLOCK);
+
+        // Кастомные рецепты: указываем ТОЧНЫЙ выход в единицах и ВРЕМЯ
+        // Меч = 9 единиц (1 слиток), 80 тиков (4 сек), потребление 0.8/тик
+        MetallurgyRegistry.addSmeltRecipe(Items.GOLDEN_SWORD, gold, 9, 1064, 0.8f, 80);
+        // Шлем = 18 единиц (2 слитка)
+        MetallurgyRegistry.addSmeltRecipe(Items.GOLDEN_HELMET, gold, 18, 1064, 0.6f, 100);
+        // Нагрудник = 45 единиц (5 слитков)
+        MetallurgyRegistry.addSmeltRecipe(Items.GOLDEN_CHESTPLATE, gold, 45, 1064, 0.7f, 120);
+        // Поножи = 36 единиц (4 слитка)
+        MetallurgyRegistry.addSmeltRecipe(Items.GOLDEN_LEGGINGS, gold, 36, 1064, 0.6f, 110);
+        // Ботинки = 18 единиц (2 слитка)
+        MetallurgyRegistry.addSmeltRecipe(Items.GOLDEN_BOOTS, gold, 18, 1064, 0.5f, 80);
 
         // === ЖЕЛЕЗО ===
-        Metal iron = registerMetalWithItems("iron", 0xB87333, 958, 200, Items.IRON_INGOT, Items.IRON_NUGGET, Blocks.IRON_BLOCK);
-        MetallurgyRegistry.addSmeltRecipe(Items.IRON_ORE, iron, MetalUnits2.UNITS_PER_INGOT, 100);
-        MetallurgyRegistry.addSmeltRecipe(Items.DEEPSLATE_IRON_ORE, iron, MetalUnits2.UNITS_PER_INGOT, 100);
-        MetallurgyRegistry.addSmeltRecipe(Items.RAW_IRON, iron, MetalUnits2.UNITS_PER_INGOT, 80);
-        MetallurgyRegistry.addSmeltRecipe(Items.IRON_SWORD, iron, MetalUnits2.UNITS_PER_INGOT, 60);
+        // Потребление: 0.8 градуса/тик, плавится при 958°C
+        Metal iron = registerMetalWithItems("iron", 0xB87333, 958, 0.8f,
+                Items.IRON_INGOT, Items.IRON_NUGGET, Blocks.IRON_BLOCK);
+
+        // Руды и сырые куски плавятся дольше чем готовые слитки
+        MetallurgyRegistry.addSmeltRecipe(Items.IRON_ORE, iron, 9, 958, 1.0f, 100);
+        MetallurgyRegistry.addSmeltRecipe(Items.DEEPSLATE_IRON_ORE, iron, 9, 958, 1.0f, 100);
+        MetallurgyRegistry.addSmeltRecipe(Items.RAW_IRON, iron, 9, 958, 0.9f, 80);
+        // Меч = 9 единиц
+        MetallurgyRegistry.addSmeltRecipe(Items.IRON_SWORD, iron, 9, 958, 0.8f, 60);
 
         // === МЕДЬ ===
-        Metal copper = registerMetalWithItems("copper", 0xFF6B35, 1085, 200, Items.COPPER_INGOT, null, Blocks.COPPER_BLOCK);
-        MetallurgyRegistry.addSmeltRecipe(Items.COPPER_ORE, copper, MetalUnits2.UNITS_PER_INGOT, 100);
-        MetallurgyRegistry.addSmeltRecipe(Items.DEEPSLATE_COPPER_ORE, copper, MetalUnits2.UNITS_PER_INGOT, 100);
-        MetallurgyRegistry.addSmeltRecipe(Items.RAW_COPPER, copper, MetalUnits2.UNITS_PER_INGOT, 80);
+        // Потребление: 0.6 градуса/тик, плавится при 1085°C
+        Metal copper = registerMetalWithItems("copper", 0xFF6B35, 1085, 0.6f,
+                Items.COPPER_INGOT, null, Blocks.COPPER_BLOCK);
+
+        MetallurgyRegistry.addSmeltRecipe(Items.COPPER_ORE, copper, 9, 1085, 0.8f, 100);
+        MetallurgyRegistry.addSmeltRecipe(Items.DEEPSLATE_COPPER_ORE, copper, 9, 1085, 0.8f, 100);
+        MetallurgyRegistry.addSmeltRecipe(Items.RAW_COPPER, copper, 9, 1085, 0.7f, 80);
 
         // === НЕЗЕРИТ ===
-        Metal netherite = registerMetalWithItems("netherite", 0x383038, 1200, 250, Items.NETHERITE_INGOT, null, Blocks.NETHERITE_BLOCK);
+        // Потребление: 2.0 градуса/тик, плавится при 1200°C (очень требовательный!)
+        Metal netherite = registerMetalWithItems("netherite", 0x383038, 1200, 2.0f,
+                Items.NETHERITE_INGOT, null, Blocks.NETHERITE_BLOCK);
 
 
-        // КАСТОМ МЕТАЛЛЫ
+        // === КАСТОМ МЕТАЛЛЫ ===
 
 
         // === СТАЛЬ ===
-        Metal steel = registerMetalWithItems("steel", 0x71797E, 1440, 200, ResourceRegistry.getMainUnit("steel"), ResourceRegistry.getSmallUnit("steel"), ResourceRegistry.getBlock("steel"));
-        // сплав
+        // Потребление: 1.2 градуса/тик, плавится при 1440°C
+        Metal steel = registerMetalWithItems("steel", 0x71797E, 1440, 1.2f,
+                ResourceRegistry.getMainUnit("steel"),
+                ResourceRegistry.getSmallUnit("steel"),
+                ResourceRegistry.getBlock("steel"));
+
+        // Сплав: 2 слитка железа + 2 угля = 18 единиц стали (2 слитка)
+        // Время: 300 тиков (15 сек), потребление: 1.5/тик
         AlloyRecipe steelAlloy = new AlloyRecipe(
                 new AlloySlot[]{
                         new AlloySlot(Items.IRON_INGOT, 2),
@@ -54,75 +79,49 @@ public class ModMetallurgy {
                         new AlloySlot(null, 0)
                 },
                 steel,
-                MetalUnits2.UNITS_PER_INGOT * 2,
-                6000, 20
+                18, // Точный выход: 18 единиц = 2 слитка стали
+                1.5f, // Потребление 1.5 градуса/тик
+                300   // 15 секунд плавки
         );
         MetallurgyRegistry.addAlloyRecipe(steelAlloy);
-        MetallurgyRegistry.addSmeltRecipe(Items.IRON_SWORD, steel, MetalUnits2.UNITS_PER_INGOT, 100);
+
+        // Кастомный рецепт переплавки железного меча в сталь
+        MetallurgyRegistry.addSmeltRecipe(Items.IRON_SWORD, steel, 9, 1440, 1.5f, 100);
 
 
         // === АЛЮМИНИЙ ===
-        Metal aluminum = registerMetalWithItems("aluminum", 0xE0E0E0, 660, 150, ResourceRegistry.getMainUnit("aluminum"), ResourceRegistry.getSmallUnit("aluminum"), ResourceRegistry.getBlock("aluminum"));
+        // Потребление: 0.4 градуса/тик (лёгкий!), плавится при 660°C (низкая!)
+        Metal aluminum = registerMetalWithItems("aluminum", 0xE0E0E0, 660, 0.4f,
+                ResourceRegistry.getMainUnit("aluminum"),
+                ResourceRegistry.getSmallUnit("aluminum"),
+                ResourceRegistry.getBlock("aluminum"));
 
 
-
-
-
-
-        // ГЕНЕРАЦИЯ СТАНДАРТНЫХ РЕЦЕПТОВ (слитки, самородки, блоки) – только для зарегистрированных металлов
+        // ГЕНЕРАЦИЯ СТАНДАРТНЫХ РЕЦЕПТОВ
+        // Автоматически создаёт рецепты для слитков (3с), самородков (1с), блоков (9с)
+        // с потреблением из металла
         MetallurgyRegistry.generateStandardRecipes();
     }
-
-//    ШАБЛОН ДЛЯ ДОБАВЛЕНИЯ МЕТАЛЛА
-
-//    // 1. Зарегистрируйте металл с предметами
-//    Metal newMetal = registerMetalWithItems("metal_name",
-//            0xRRGGBB,          // цвет в hex
-//            meltingPoint,      // температура плавления
-//            baseSmeltTime,     // время плавки слитка (тики)
-//            ResourceRegistry.getMainUnit("metal_name"), // слиток из ResourceRegistry
-//            ResourceRegistry.getSmallUnit("metal_name"), // самородок (или null)
-//            ResourceRegistry.getBlock("metal_name"));    // блок (или null)
-//
-//    // 2. (опционально) добавьте сплавной рецепт
-//    AlloyRecipe alloy = new AlloyRecipe(
-//            new AlloySlot[]{
-//                    new AlloySlot(Items.IRON_INGOT, 2),
-//                    new AlloySlot(Items.COAL, 2),
-//                    new AlloySlot(null, 0),
-//                    new AlloySlot(null, 0)
-//            },
-//            newMetal,
-//            MetalUnits2.UNITS_PER_INGOT * 2,
-//            6000, 20
-//    );
-//    MetallurgyRegistry.addAlloyRecipe(alloy);
-//
-//    // 3. (опционально) добавьте кастомные рецепты (например, для инструментов)
-//    MetallurgyRegistry.addSmeltRecipe(Items.IRON_SWORD, newMetal, MetalUnits2.UNITS_PER_INGOT, 100);
-//
-//    // 4. После всех регистраций и привязок, в самом конце init() уже вызывается
-//    //    MetallurgyRegistry.generateStandardRecipes(); – она автоматически добавит рецепты
-//    //    для слитка, самородка и блока, если они есть.
 
 
     /**
      * Универсальный метод для регистрации металла с привязкой предметов.
      * @param name идентификатор
      * @param color цвет
-     * @param meltingPoint температура плавления
-     * @param baseSmeltTime время плавки слитка (тики)
+     * @param meltingPoint температура плавления в градусах
+     * @param heatConsumptionPerTick потребление температуры за тик (градусы/тик)
      * @param ingot слиток (может быть null)
      * @param nugget самородок (может быть null)
      * @param block блок (может быть null)
      */
-    private static Metal registerMetalWithItems(String name, int color, int meltingPoint, int baseSmeltTime,
+    private static Metal registerMetalWithItems(String name, int color, int meltingPoint,
+                                                float heatConsumptionPerTick,
                                                 Item ingot, Item nugget, Block block) {
         Metal metal = MetallurgyRegistry.registerMetal(name, color, meltingPoint,
                 MetalUnits2.UNITS_PER_INGOT,
                 nugget != null ? MetalUnits2.UNITS_PER_NUGGET : 0,
                 block != null ? MetalUnits2.UNITS_PER_BLOCK : 0,
-                baseSmeltTime);
+                heatConsumptionPerTick);
         if (ingot != null) metal.setIngot(ingot);
         if (nugget != null) metal.setNugget(nugget);
         if (block != null) metal.setBlock(block);

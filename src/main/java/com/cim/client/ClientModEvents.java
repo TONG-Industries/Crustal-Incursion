@@ -1,5 +1,6 @@
 package com.cim.client;
 
+import com.cim.event.HotItemHandler;
 import com.cim.event.SlagItem;
 import com.cim.main.ResourceRegistry;
 import com.cim.block.basic.ModBlocks;
@@ -146,85 +147,74 @@ public class ClientModEvents {
             return 0xFFFFFFFF;
         }, ModItems.FLUID_IDENTIFIER.get()); // Замени на свой предмет
 
-        // === ГОРЯЧИЕ МЕТАЛЛЫ ===
-        // Сейчас работает для слитков, легко расширить на другие предметы
+
+        // === ГОРЯЧИЕ МЕТАЛЛЫ С ГРАДУСАМИ ===
         event.register((stack, tintIndex) -> {
-                    // Окрашиваем только tintIndex 0 (основная текстура)
                     if (tintIndex != 0) return -1;
 
-                    if (stack.hasTag() && stack.getTag().contains("HotTime")) {
-                        int hotTime = stack.getTag().getInt("HotTime");
-                        int maxTime = stack.getTag().getInt("HotTimeMax");
-                        if (maxTime == 0) maxTime = 200;
+                    // Используем HotItemHandler для получения температуры
+                    if (!HotItemHandler.isHot(stack)) return -1;
 
-                        float ratio = (float) hotTime / maxTime; // 1.0 = горячий, 0.0 = остыл
+                    float ratio = HotItemHandler.getHeatRatio(stack);
 
-                        // От ОРАНЖЕВОГО (255, 120, 0) к БЕЛОМУ (255, 255, 255) - оригинальная текстура
-                        int r = 255;
-                        int g = (int) (120 + (255 - 120) * (1 - ratio)); // 120 → 255
-                        int b = (int) (0 + 255 * (1 - ratio));           // 0 → 255
+                    // Если остыл меньше чем на 5% - показываем оригинальную текстуру
+                    if (ratio < 0.05f) return -1;
 
-                        // Если остыл меньше чем на 5% - показываем оригинальную текстуру
-                        if (ratio < 0.05f) return -1;
+                    // Градиент от ОРАНЖЕВОГО (1000°C) к БЕЛОМУ (20°C)
+                    // Чем горячее, тем оранжевее
+                    int r = 255;
+                    int g = (int) (100 + (200 - 100) * ratio); // 100 → 200 (оранжевый → жёлтый)
+                    int b = (int) (50 + (255 - 50) * (1 - ratio)); // 50 → 255 (тёмный → белый)
 
-                        return (0xFF << 24) | (r << 16) | (g << 8) | b;
-                    }
-                    return -1;
+                    return (0xFF << 24) | (r << 16) | (g << 8) | b;
                 },
-
-
-                Items.IRON_INGOT,
-                Items.GOLD_INGOT,
-                Items.NETHERITE_INGOT,
-                Items.COPPER_INGOT,
-                // Вместо Items.IRON_INGOT пишешь:
-                ResourceRegistry.getMainUnit("steel"),     // стальной слиток
+                Items.IRON_INGOT, Items.GOLD_INGOT, Items.NETHERITE_INGOT, Items.COPPER_INGOT,
+                ResourceRegistry.getMainUnit("steel"),
                 ResourceRegistry.getSmallUnit("steel"),
-                ResourceRegistry.getBlock("steel")
+                ResourceRegistry.getBlock("steel"),
+                ResourceRegistry.getMainUnit("aluminum"),
+                ResourceRegistry.getSmallUnit("aluminum"),
+                ResourceRegistry.getBlock("aluminum"),
+                ModItems.SLAG.get() // Добавляем шлак!
         );
 
-        // === ШЛАК (специальная окраска по цвету металла) ===
+        // === ШЛАК (улучшенная окраска с температурой) ===
         event.register((stack, tintIndex) -> {
             if (tintIndex != 0) return -1;
+            if (!stack.hasTag()) return 0xFF555555;
 
-            if (stack.hasTag()) {
-                CompoundTag tag = stack.getTag();
-                int metalColor = tag.contains("Color") ? tag.getInt("Color") : 0x888888;
-                int r = (metalColor >> 16) & 0xFF;
-                int g = (metalColor >> 8) & 0xFF;
-                int b = metalColor & 0xFF;
+            CompoundTag tag = stack.getTag();
+            int metalColor = tag.contains("Color") ? tag.getInt("Color") : 0x888888;
+            int r = (metalColor >> 16) & 0xFF;
+            int g = (metalColor >> 8) & 0xFF;
+            int b = metalColor & 0xFF;
 
-                // Если горячий - яркий цвет, если остывший - темно-серый
-                if (tag.contains("HotTime") && tag.getInt("HotTime") > 0) {
-                    int hotTime = tag.getInt("HotTime");
-                    int maxTime = tag.getInt("HotTimeMax");
-                    if (maxTime == 0) maxTime = SlagItem.BASE_COOLING_TIME;
-                    float ratio = (float) hotTime / maxTime;
+            // Если горячий - яркий цвет + оранжевый оттенок от температуры
+            if (tag.contains("HotTime") && tag.getFloat("HotTime") > 0) {
+                float ratio = HotItemHandler.getHeatRatio(stack);
 
-                    // Остывший: темный фон + чуть цвета металла
-                    int coldR = 0x33 + (r / 4);
-                    int coldG = 0x33 + (g / 4);
-                    int coldB = 0x33 + (b / 4);
+                // Остывший: темный фон + чуть цвета металла
+                int coldR = 0x33 + (r / 4);
+                int coldG = 0x33 + (g / 4);
+                int coldB = 0x33 + (b / 4);
 
-                    // Горячий: яркий цвет металла + оранжевый оттенок
-                    int hotR = Math.min(255, r + 60);
-                    int hotG = Math.min(255, g + 30);
-                    int hotB = Math.min(255, b + 10);
+                // Горячий: яркий цвет металла + оранжевый оттенок от температуры
+                int hotR = Math.min(255, r + (int)(60 * ratio));
+                int hotG = Math.min(255, g + (int)(30 * ratio));
+                int hotB = Math.min(255, b + (int)(10 * ratio));
 
-                    int finalR = (int) (coldR + (hotR - coldR) * ratio);
-                    int finalG = (int) (coldG + (hotG - coldG) * ratio);
-                    int finalB = (int) (coldB + (hotB - coldB) * ratio);
+                int finalR = (int) (coldR + (hotR - coldR) * ratio);
+                int finalG = (int) (coldG + (hotG - coldG) * ratio);
+                int finalB = (int) (coldB + (hotB - coldB) * ratio);
 
-                    return (0xFF << 24) | (finalR << 16) | (finalG << 8) | finalB;
-                } else {
-                    // Остывший шлак - темно-серый с оттенком металла
-                    int dr = 0x33 + (r / 4);
-                    int dg = 0x33 + (g / 4);
-                    int db = 0x33 + (b / 4);
-                    return (0xFF << 24) | (dr << 16) | (dg << 8) | db;
-                }
+                return (0xFF << 24) | (finalR << 16) | (finalG << 8) | finalB;
+            } else {
+                // Остывший шлак - темно-серый с оттенком металла
+                int dr = 0x33 + (r / 4);
+                int dg = 0x33 + (g / 4);
+                int db = 0x33 + (b / 4);
+                return (0xFF << 24) | (dr << 16) | (dg << 8) | db;
             }
-            return 0xFF555555; // По умолчанию серый
         }, ModItems.SLAG.get());
 
     }
