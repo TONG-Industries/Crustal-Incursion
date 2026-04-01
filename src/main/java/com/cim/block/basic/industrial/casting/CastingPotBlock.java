@@ -2,6 +2,7 @@ package com.cim.block.basic.industrial.casting;
 
 import com.cim.block.entity.ModBlockEntities;
 import com.cim.block.entity.industrial.casting.CastingPotBlockEntity;
+import com.cim.event.HotItemHandler;
 import com.cim.item.ModItems;
 import com.cim.event.SlagItem;
 import net.minecraft.core.BlockPos;
@@ -13,7 +14,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.PickaxeItem;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -65,8 +65,6 @@ public class CastingPotBlock extends BaseEntityBlock {
         return getShape(state, level, pos, CollisionContext.empty());
     }
 
-
-
     @Override
     public BlockState rotate(BlockState state, Rotation rotation) {
         return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
@@ -76,8 +74,6 @@ public class CastingPotBlock extends BaseEntityBlock {
     public BlockState mirror(BlockState state, Mirror mirror) {
         return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
-
-
 
     @Override
     public RenderShape getRenderShape(BlockState state) {
@@ -108,74 +104,14 @@ public class CastingPotBlock extends BaseEntityBlock {
         }
 
         ItemStack heldItem = player.getItemInHand(hand);
-        boolean isPoker = heldItem.is(ModItems.POKER.get()); // NEW
 
-        // === 1. SHIFT + ПКМ - СБРОС ВСЕГО ИНВЕНТАРЯ В ВИДЕ ШЛАКА (требуется кочерга) ===
-        if (player.isShiftKeyDown()) {
-            if (!isPoker) {
-                player.displayClientMessage(Component.literal("§cНужна кочерга!"), true);
-                return InteractionResult.PASS;
-            }
-            boolean droppedSomething = false;
-
-            if (pot.hasSlag()) {
-                ItemStack slag = pot.extractSlag();
-                if (!slag.isEmpty()) {
-                    popResource(level, pos, slag);
-                    droppedSomething = true;
-                }
-            }
-
-            if (pot.getStoredUnits() > 0 && pot.getCurrentMetal() != null) {
-                ItemStack slag = com.cim.event.SlagItem.createSlag(pot.getCurrentMetal(), pot.getStoredUnits());
-                slag.getOrCreateTag().putInt("HotTime", com.cim.event.SlagItem.BASE_COOLING_TIME);
-                slag.getOrCreateTag().putInt("HotTimeMax", com.cim.event.SlagItem.BASE_COOLING_TIME);
-                popResource(level, pos, slag);
-                pot.clearMetal();
-                droppedSomething = true;
-            }
-
-            if (!pot.getOutputItem().isEmpty()) {
-                ItemStack drop = pot.takeOutput();
-                popResource(level, pos, drop);
-                droppedSomething = true;
-            }
-
-            if (!pot.getMold().isEmpty()) {
-                popResource(level, pos, pot.getMold());
-                pot.setMold(ItemStack.EMPTY);
-                droppedSomething = true;
-            }
-
-            if (droppedSomething) {
-                level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0f, 0.8f);
-                return InteractionResult.CONSUME;
-            }
-            return InteractionResult.PASS;
+        // === КОЧЕРГА - обрабатывается в PokerItem.useOn() ===
+        if (heldItem.is(ModItems.POKER.get())) {
+            return InteractionResult.PASS; // Позволяем PokerItem обработать
         }
 
-        // === 2. ЕСТЬ ШЛАК - МОЖНО ДОСТАТЬ ТОЛЬКО КОЧЕРГОЙ ===
-        if (pot.hasSlag()) {
-            if (!isPoker) {
-                player.displayClientMessage(Component.literal("§cНужна кочерга, чтобы достать шлак!"), true);
-                return InteractionResult.PASS;
-            }
-            ItemStack slag = pot.extractSlag();
-            if (!slag.isEmpty()) {
-                if (heldItem.isEmpty()) {
-                    player.setItemInHand(hand, slag);
-                } else {
-                    if (!player.getInventory().add(slag)) {
-                        player.drop(slag, false);
-                    }
-                }
-                level.playSound(null, pos, SoundEvents.STONE_BREAK, SoundSource.BLOCKS, 1.0F, 0.8F);
-                return InteractionResult.CONSUME;
-            }
-        }
-
-        // === 3. ВОЗВРАТ ГОРЯЧЕГО ПРЕДМЕТА ОБРАТНО В КОТЕЛ ===
-        if (!heldItem.isEmpty() && heldItem.hasTag() && heldItem.getTag().contains("HotTime")) {
+        // === ВОЗВРАТ ГОРЯЧЕГО ПРЕДМЕТА В КОТЁЛ ===
+        if (!heldItem.isEmpty() && HotItemHandler.isHot(heldItem)) {
             if (pot.tryInsertHotItem(heldItem)) {
                 heldItem.shrink(1);
                 level.playSound(null, pos, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.5f, 2.0f);
@@ -185,41 +121,173 @@ public class CastingPotBlock extends BaseEntityBlock {
             return InteractionResult.PASS;
         }
 
-        // === 4. ДОСТАВАНИЕ ГОТОВОГО ПРЕДМЕТА ===
+        // === ДОСТАВАНИЕ ГОТОВОГО ПРЕДМЕТА (рукой - только остывшего) ===
         if (!pot.getOutputItem().isEmpty()) {
-            // Киркой - достаём даже если горячий
-            if (isPoker) {
-                ItemStack drop = pot.takeOutput();
-                if (!player.getInventory().add(drop)) {
-                    player.drop(drop, false);
-                }
-                level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
-                return InteractionResult.CONSUME;
-            }
+            return extractOutputItemByHand(level, pos, player, hand, pot);
+        }
 
-            // Рукой - только если остыл
-            if (pot.getCoolingTimer() > 0) {
-                int percent = (int)((pot.getCoolingTimer() / (float)CastingPotBlockEntity.BASE_COOLING_TIME) * 100);
-                player.displayClientMessage(Component.literal("§cСлишком горячо! (" + percent + "%) Используйте кочергу."), true);
-                return InteractionResult.PASS;
-            }
+        // === РАБОТА С ФОРМОЙ ===
+        return handleMoldInteraction(level, pos, player, hand, pot, heldItem);
+    }
 
-            // Обычная выдача остывшего предмета
+    /**
+     * Извлечение предмета рукой (только если остыл)
+     */
+    private InteractionResult extractOutputItemByHand(Level level, BlockPos pos, Player player, InteractionHand hand,
+                                                      CastingPotBlockEntity pot) {
+        ItemStack output = pot.getOutputItem();
+
+        // Проверяем горячесть
+        if (HotItemHandler.isHot(output)) {
+            float heatRatio = HotItemHandler.getHeatRatio(output);
+            int percent = (int)(heatRatio * 100);
+            int temp = HotItemHandler.getTemperature(output);
+
+            player.displayClientMessage(
+                    Component.literal(String.format("§cСлишком горячо! %d°C (%d%%) Используйте кочергу.", temp, percent)),
+                    true
+            );
+            return InteractionResult.PASS;
+        }
+
+        // Остывший - можно забирать
+        ItemStack drop = pot.takeOutput();
+        ItemStack heldItem = player.getItemInHand(hand);
+
+        if (heldItem.isEmpty()) {
+            player.setItemInHand(hand, drop);
+        } else {
+            if (!player.getInventory().add(drop)) {
+                player.drop(drop, false);
+            }
+        }
+
+        level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
+        return InteractionResult.CONSUME;
+    }
+
+    /**
+     * Сброс всего содержимого в виде шлака (Shift + ПКМ с кочергой)
+     */
+    private InteractionResult handleDumpContents(Level level, BlockPos pos, Player player, CastingPotBlockEntity pot) {
+        boolean droppedSomething = false;
+
+        // Шлак
+        if (pot.hasSlag()) {
+            ItemStack slag = pot.extractSlag();
+            if (!slag.isEmpty()) {
+                ensureHot(slag);
+                popResource(level, pos, slag);
+                droppedSomething = true;
+            }
+        }
+
+        // Жидкий металл → шлак
+        if (pot.getStoredUnits() > 0 && pot.getCurrentMetal() != null) {
+            ItemStack slag = SlagItem.createSlag(pot.getCurrentMetal(), pot.getStoredUnits());
+            ensureHot(slag);
+            popResource(level, pos, slag);
+            pot.clearMetal();
+            droppedSomething = true;
+        }
+
+        // Горячий предмет
+        if (!pot.getOutputItem().isEmpty()) {
             ItemStack drop = pot.takeOutput();
-            if (heldItem.isEmpty()) {
-                player.setItemInHand(hand, drop);
-            } else {
-                if (!player.getInventory().add(drop)) {
-                    player.drop(drop, false);
-                }
+            popResource(level, pos, drop);
+            droppedSomething = true;
+        }
+
+        // Форма
+        if (!pot.getMold().isEmpty()) {
+            popResource(level, pos, pot.getMold());
+            pot.setMold(ItemStack.EMPTY);
+            droppedSomething = true;
+        }
+
+        if (droppedSomething) {
+            level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0f, 0.8f);
+            return InteractionResult.CONSUME;
+        }
+        return InteractionResult.PASS;
+    }
+
+    /**
+     * Извлечение шлака
+     */
+    private InteractionResult extractSlag(Level level, BlockPos pos, Player player, InteractionHand hand, CastingPotBlockEntity pot) {
+        ItemStack slag = pot.extractSlag();
+        if (slag.isEmpty()) return InteractionResult.PASS;
+
+        ItemStack heldItem = player.getItemInHand(hand);
+
+        if (heldItem.isEmpty()) {
+            player.setItemInHand(hand, slag);
+        } else {
+            if (!player.getInventory().add(slag)) {
+                player.drop(slag, false);
+            }
+        }
+
+        level.playSound(null, pos, SoundEvents.STONE_BREAK, SoundSource.BLOCKS, 1.0F, 0.8F);
+        return InteractionResult.CONSUME;
+    }
+
+    /**
+     * Извлечение готового предмета
+     */
+    private InteractionResult extractOutputItem(Level level, BlockPos pos, Player player, InteractionHand hand,
+                                                CastingPotBlockEntity pot, boolean isPoker) {
+
+        // Проверяем горячесть через HotItemHandler
+        ItemStack output = pot.getOutputItem();
+        boolean isHot = HotItemHandler.isHot(output);
+        float heatRatio = isHot ? HotItemHandler.getHeatRatio(output) : 0f;
+
+        // Кочергой - можно достать даже горячий
+        if (isPoker) {
+            ItemStack drop = pot.takeOutput();
+            if (!player.getInventory().add(drop)) {
+                player.drop(drop, false);
             }
             level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
             return InteractionResult.CONSUME;
         }
 
+        // Рукой - только если остыл
+        if (isHot && heatRatio > 0.1f) {
+            int percent = (int)(heatRatio * 100);
+            player.displayClientMessage(
+                    Component.literal(String.format("§cСлишком горячо! (%d%%) Используйте кочергу.", percent)),
+                    true
+            );
+            return InteractionResult.PASS;
+        }
+
+        // Обычная выдача
+        ItemStack drop = pot.takeOutput();
+        ItemStack heldItem = player.getItemInHand(hand);
+
+        if (heldItem.isEmpty()) {
+            player.setItemInHand(hand, drop);
+        } else {
+            if (!player.getInventory().add(drop)) {
+                player.drop(drop, false);
+            }
+        }
+
+        level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
+        return InteractionResult.CONSUME;
+    }
+
+    /**
+     * Работа с формой (вставка/извлечение)
+     */
+    private InteractionResult handleMoldInteraction(Level level, BlockPos pos, Player player, InteractionHand hand,
+                                                    CastingPotBlockEntity pot, ItemStack heldItem) {
         ItemStack moldStack = pot.getMold();
 
-        // === 5. ОТВЁРТКА - ИЗВЛЕЧЕНИЕ ФОРМЫ ===
+        // Отвёртка - извлечение
         if (heldItem.is(ModItems.SCREWDRIVER.get())) {
             if (!moldStack.isEmpty() && pot.canRemoveMold()) {
                 if (!player.getInventory().add(moldStack.copy())) {
@@ -235,7 +303,7 @@ public class CastingPotBlock extends BaseEntityBlock {
             return InteractionResult.PASS;
         }
 
-        // === 6. ВСТАВКА ФОРМЫ ===
+        // Вставка формы
         if (moldStack.isEmpty()) {
             if (heldItem.is(ModItems.MOLD_INGOT.get())) {
                 ItemStack toInsert = heldItem.copy();
@@ -246,7 +314,7 @@ public class CastingPotBlock extends BaseEntityBlock {
                 return InteractionResult.CONSUME;
             }
         } else {
-            // Забор пустой рукой только если нет металла и предмета
+            // Забор пустой рукой
             if (heldItem.isEmpty() && pot.canRemoveMold()) {
                 player.setItemInHand(hand, moldStack.copy());
                 pot.setMold(ItemStack.EMPTY);
@@ -262,29 +330,65 @@ public class CastingPotBlock extends BaseEntityBlock {
         return InteractionResult.PASS;
     }
 
+    /**
+     * Убеждается что шлак горячий
+     */
+    private void ensureHot(ItemStack slag) {
+        if (!slag.hasTag() || !slag.getTag().contains("HotTime")) {
+            // Если шлак не горячий - нагреваем его
+            int meltingPoint = 1000;
+            if (slag.getTag() != null && slag.getTag().contains(SlagItem.TAG_MELTING_POINT)) {
+                meltingPoint = slag.getTag().getInt(SlagItem.TAG_MELTING_POINT);
+            }
+            HotItemHandler.setHot(slag, meltingPoint, false); // В руках - обычное охлаждение
+        }
+    }
+
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock())) {
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof CastingPotBlockEntity pot) {
-                // Выбрасываем форму
+                // Форма
                 if (!pot.getMold().isEmpty()) {
                     popResource(level, pos, pot.getMold());
                 }
 
-                // Выбрасываем предмет с сохранением "горячести"
+                // Предмет с сохранением горячести
                 if (!pot.getOutputItem().isEmpty()) {
                     ItemStack drop = pot.getOutputItem().copy();
-                    // Сохраняем оставшееся время остывания если котёл сломали во время остывания
-                    float coolingTimer = pot.getCoolingTimer();
-                    if (coolingTimer > 0) {
-                        // Используем float для плавности, но округляем для совместимости
-                        drop.getOrCreateTag().putFloat("HotTime", coolingTimer);
-                        drop.getOrCreateTag().putFloat("HotTimeMax", CastingPotBlockEntity.BASE_COOLING_TIME);
+
+                    // Копируем данные о горячести если есть
+                    if (HotItemHandler.isHot(pot.getOutputItem())) {
+                        float hotTime = HotItemHandler.getHotTime(pot.getOutputItem());
+                        int maxTime = HotItemHandler.getHotTimeMax(pot.getOutputItem());
+                        int meltingPoint = HotItemHandler.getMeltingPoint(pot.getOutputItem());
+
+                        drop.getOrCreateTag().putFloat("HotTime", hotTime);
+                        drop.getOrCreateTag().putInt("HotTimeMax", maxTime);
+                        drop.getOrCreateTag().putInt("MeltingPoint", meltingPoint);
                     }
+
                     popResource(level, pos, drop);
                 }
-            super.onRemove(state, level, pos, newState, isMoving);
+
+                // Жидкий металл → шлак при разрушении
+                if (pot.getStoredUnits() > 0 && pot.getCurrentMetal() != null) {
+                    ItemStack slag = SlagItem.createSlag(pot.getCurrentMetal(), pot.getStoredUnits());
+                    ensureHot(slag);
+                    popResource(level, pos, slag);
+                }
+
+                // Шлак
+                if (pot.hasSlag()) {
+                    ItemStack slag = pot.extractSlag();
+                    if (!slag.isEmpty()) {
+                        ensureHot(slag);
+                        popResource(level, pos, slag);
+                    }
+                }
+            }
         }
+        super.onRemove(state, level, pos, newState, isMoving);
     }
-}}
+}

@@ -47,7 +47,7 @@ public class SlagItem extends Item {
             Optional<Metal> metalOpt = MetallurgyRegistry.get(metalId);
             String metalName = metalOpt.map(m -> Component.translatable(m.getTranslationKey()).getString())
                     .orElse(metalId.getPath());
-
+            tooltip.add(Component.literal("§8Можно переплавить в плавильне").withStyle(ChatFormatting.GRAY));
             tooltip.add(Component.literal("§7Металл: §f" + metalName));
 
             StringBuilder content = new StringBuilder("§7Содержит: §f");
@@ -55,24 +55,11 @@ public class SlagItem extends Item {
             if (units.ingots() > 0) content.append(units.ingots()).append(" слитков ");
             if (units.nuggets() > 0) content.append(units.nuggets()).append(" самородков");
             tooltip.add(Component.literal(content.toString().trim()));
-
-            // Только свойства металла, НЕ дублируем горячесть!
             tooltip.add(Component.literal(String.format("§7Температура плавки: §f%d°C", meltingPoint)));
             tooltip.add(Component.literal(String.format("§7Потребление тепла: §f%.1f§7/тик", heatConsumption)));
-
-            // Время плавки
             int smeltTimeTicks = calculateSmeltTime(stack);
             float smeltTimeSeconds = smeltTimeTicks / 20f;
             tooltip.add(Component.literal(String.format("§7Время переплавки: §f%.1fс §8(макс 30с)", smeltTimeSeconds)));
-
-            // Только пометка что горячий, без дублирования градусов (их даст HotItemHandler)
-            if (tag.contains("HotTime") && tag.getFloat("HotTime") > 0) {
-                tooltip.add(Component.empty());
-                tooltip.add(Component.literal("§6§l[ГОРЯЧИЙ] §cОсторожно!").withStyle(ChatFormatting.RED));
-            }
-
-            tooltip.add(Component.empty());
-            tooltip.add(Component.literal("§8Можно переплавить в плавильне").withStyle(ChatFormatting.GRAY));
         } else {
             tooltip.add(Component.literal("§8Пустой шлак").withStyle(ChatFormatting.GRAY));
         }

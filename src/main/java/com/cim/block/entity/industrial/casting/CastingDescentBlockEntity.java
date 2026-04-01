@@ -26,7 +26,7 @@ import java.util.List;
 public class CastingDescentBlockEntity extends BlockEntity {
     // Медленная передача без промежуточного буфера (фикс рассинхрона)
     private static final int TRANSFER_RATE = 3; // 3 единицы за раз (~3 самородка)
-    private static final int TRANSFER_COOLDOWN = 8; // Задержка между передачами (8 тиков)
+    private static final int TRANSFER_COOLDOWN = 0; // Задержка между передачами (8 тиков)
     private static final int MAX_TRANSFER_DISTANCE = 6;
 
     private int transferCooldown = 0;

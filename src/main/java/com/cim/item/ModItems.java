@@ -11,6 +11,7 @@ import com.cim.item.energy.WireCoilItem;
 import com.cim.item.rotation.*;
 import com.cim.item.tools.BeamPlacerItem;
 import com.cim.item.tools.FluidIdentifierItem;
+import com.cim.item.tools.PokerItem;
 import com.cim.item.tools.ScrewdriverItem;
 import com.cim.item.weapons.grenades.GrenadeIfItem;
 import com.cim.item.weapons.grenades.GrenadeItem;
@@ -50,8 +51,9 @@ public class ModItems {
     public static final RegistryObject<Item> SLAG = ITEMS.register("slag",
             () -> new SlagItem(new Item.Properties()));
     public static final RegistryObject<Item> POKER = ITEMS.register("poker",
-            () -> new Item(new Item.Properties()));
-
+            () -> new PokerItem(new Item.Properties()
+                    .stacksTo(1)
+                    .durability(128)));
     //ИНСТРУМЕНТЫ
     public static final RegistryObject<Item> SCREWDRIVER = ITEMS.register("screwdriver",
             () -> new ScrewdriverItem(new Item.Properties().stacksTo(1).durability(256)));

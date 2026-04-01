@@ -147,40 +147,36 @@ public class SmelterBlock extends BaseEntityBlock implements IMultiblockControll
 
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        if (!level.isClientSide && level.getBlockEntity(pos) instanceof SmelterBlockEntity smelter) {
-            ItemStack heldItem = player.getItemInHand(hand);
-            boolean isPoker = heldItem.is(ModItems.POKER.get()); // NEW
-
-            // === SHIFT + ПКМ - СБРОС МЕТАЛЛА КАК ШЛАКА (требуется кочерга) ===
-            if (player.isShiftKeyDown()) {
-                if (!isPoker) {
-                    player.displayClientMessage(Component.literal("§cНужна кочерга!"), true);
-                    return InteractionResult.PASS;
-                }
-                if (smelter.hasMetal()) {
-                    List<ItemStack> slagItems = smelter.dumpMetalAsSlag();
-                    for (ItemStack slag : slagItems) {
-                        if (!slag.hasTag() || !slag.getTag().contains("HotTime")) {
-                            slag.getOrCreateTag().putInt("HotTime", SlagItem.BASE_COOLING_TIME);
-                            slag.getOrCreateTag().putInt("HotTimeMax", SlagItem.BASE_COOLING_TIME);
-                        }
-                        Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), slag);
-                    }
-                    level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0f, 0.8f);
-                    return InteractionResult.CONSUME;
-                }
-                return InteractionResult.PASS;
-            }
-
-            // Обычное открытие GUI
-            net.minecraftforge.network.NetworkHooks.openScreen(
-                    (net.minecraft.server.level.ServerPlayer) player,
-                    smelter,
-                    pos
-            );
-            return InteractionResult.CONSUME;
+        if (level.isClientSide) {
+            return InteractionResult.sidedSuccess(true);
         }
-        return InteractionResult.sidedSuccess(level.isClientSide);
+
+        BlockEntity be = level.getBlockEntity(pos);
+        if (!(be instanceof SmelterBlockEntity smelter)) {
+            return InteractionResult.PASS;
+        }
+
+        ItemStack heldItem = player.getItemInHand(hand);
+
+        // === КОЧЕРГА - обрабатывается в PokerItem.useOn() ===
+        // Но если игрок держит кочергу, мы должны вернуть PASS чтобы сработал useOn
+        if (heldItem.is(ModItems.POKER.get())) {
+            return InteractionResult.PASS; // Позволяем PokerItem обработать
+        }
+
+        // === SHIFT + ПКМ без кочерги - сообщение о необходимости кочерги ===
+        if (player.isShiftKeyDown()) {
+            player.displayClientMessage(Component.literal("§cДля сброса металла нужна кочерга!"), true);
+            return InteractionResult.PASS;
+        }
+
+        // Обычное открытие GUI
+        net.minecraftforge.network.NetworkHooks.openScreen(
+                (net.minecraft.server.level.ServerPlayer) player,
+                smelter,
+                pos
+        );
+        return InteractionResult.CONSUME;
     }
 
     @Nullable

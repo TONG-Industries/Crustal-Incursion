@@ -2,6 +2,7 @@ package com.cim.client.renderer;
 
 import com.cim.block.basic.industrial.casting.CastingPotBlock;
 import com.cim.block.entity.industrial.casting.CastingPotBlockEntity;
+import com.cim.event.HotItemHandler;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
@@ -20,6 +21,8 @@ import org.joml.Matrix4f;
 
 public class CastingPotRenderer implements BlockEntityRenderer<CastingPotBlockEntity> {
     private static final ResourceLocation LIQUID_METAL_TEXTURE = new ResourceLocation("cim", "textures/machine/liquid_metal.png");
+    private static final ResourceLocation HOT_GLOW_TEXTURE = new ResourceLocation("minecraft", "textures/misc/white.png");
+
     private final ItemRenderer itemRenderer;
 
     public CastingPotRenderer(BlockEntityRendererProvider.Context context) {
@@ -38,12 +41,12 @@ public class CastingPotRenderer implements BlockEntityRenderer<CastingPotBlockEn
         // Получаем направление котла
         Direction facing = blockEntity.getBlockState().getValue(CastingPotBlock.FACING);
 
-        // 1. Форма (повёрнута в направлении котла)
+        // 1. ФОРМА (повёрнута в направлении котла)
         if (!mold.isEmpty()) {
             poseStack.pushPose();
             poseStack.translate(0.5f, 0.25f, 0.5f);
 
-            // Поворачиваем в направлении котла (с поправкой на боковые стороны)
+            // Поворачиваем в направлении котла
             float rotationY = getRotationFromFacing(facing);
             poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(rotationY));
 
@@ -57,7 +60,7 @@ public class CastingPotRenderer implements BlockEntityRenderer<CastingPotBlockEn
             poseStack.popPose();
         }
 
-        // 2. Жидкий металл (рендерим только если нет готового предмета)
+        // 2. ЖИДКИЙ МЕТАЛЛ (рендерим только если нет готового предмета)
         if (blockEntity.getStoredUnits() > 0 && output.isEmpty()) {
             float fillLevel = blockEntity.getFillLevel();
             float heightPixels = 0.1f + 1.9f * fillLevel;
@@ -71,12 +74,12 @@ public class CastingPotRenderer implements BlockEntityRenderer<CastingPotBlockEn
             poseStack.popPose();
         }
 
-        // 3. Слиток + Эффект остывания (повёрнут в направлении котла)
+        // 3. ГОТОВЫЙ ПРЕДМЕТ (слиток) с эффектом остывания
         if (!output.isEmpty()) {
             poseStack.pushPose();
             poseStack.translate(0.5f, 4.01f / 16.0f, 0.5f);
 
-            // Поворачиваем в направлении котла (с поправкой на боковые стороны)
+            // Поворачиваем в направлении котла
             float rotationY = getRotationFromFacing(facing);
             poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(rotationY));
 
@@ -86,118 +89,135 @@ public class CastingPotRenderer implements BlockEntityRenderer<CastingPotBlockEn
             float scale = 0.75f;
             poseStack.scale(scale, scale, scale);
 
-            boolean isHot = coolingTimer > 0;
-            int renderLight = isHot ? 15728880 : packedLight;
+            // === КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Проверяем горячесть через HotItemHandler ===
+            boolean isHot = HotItemHandler.isHot(output);
+            float heatRatio = isHot ? HotItemHandler.getHeatRatio(output) : 0f;
+
+            // Светимся если горячий (heatRatio > 0.1)
+            int renderLight = (isHot && heatRatio > 0.1f) ? 15728880 : packedLight;
 
             itemRenderer.renderStatic(output, ItemDisplayContext.FIXED, renderLight, packedOverlay, poseStack, buffer, blockEntity.getLevel(), 0);
 
-            if (isHot && coolingProgress > 0.01f) {
-                renderHotGlow(poseStack, buffer, coolingProgress);
+            // === ЭФФЕКТ ОСТЫВАНИЯ: глоу + тонировка ===
+            if (isHot && heatRatio > 0.05f) {
+                renderHotGlowEffect(poseStack, buffer, heatRatio);
+
+                // Дополнительная тонировка цветом температуры
+                renderTemperatureTint(poseStack, buffer, heatRatio);
             }
 
             poseStack.popPose();
         }
 
-        // В CastingPotRenderer.java, ЗАМЕНИТЬ блок рендера шлака (строки ~115-150):
-// 4. ШЛАК (если сформировался)
+        // 4. ШЛАК
         if (blockEntity.hasSlag()) {
-            // Используем цвет металла напрямую из БЭ, а не создаём стак
-            int slagColor = blockEntity.getSlagColor();
-            boolean isHot = blockEntity.getSlagHotTime() > 0;
-            float hotProgress = blockEntity.getSlagHotProgress();
-
-            // Создаём временный стак для рендера только если нужно
-            ItemStack slagStack = blockEntity.getSlagStackForRender();
-
-            if (!slagStack.isEmpty()) {
-                poseStack.pushPose();
-                poseStack.translate(0.5f, 4.01f / 16.0f, 0.5f);
-
-                float rotationY = getRotationFromFacing(facing);
-                poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(rotationY));
-                poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90));
-
-                float scale = 0.75f;
-                poseStack.scale(scale, scale, scale);
-
-                int renderLight = isHot ? 15728880 : packedLight;
-
-                itemRenderer.renderStatic(slagStack, ItemDisplayContext.FIXED,
-                        renderLight, packedOverlay, poseStack, buffer,
-                        blockEntity.getLevel(), 0);
-
-                if (isHot && hotProgress > 0.01f) {
-                    renderHotGlow(poseStack, buffer, hotProgress);
-                }
-
-                poseStack.popPose();
-            }
+            renderSlag(blockEntity, poseStack, buffer, packedLight, packedOverlay, facing);
         }
     }
 
-    private void renderSlagBlock(PoseStack poseStack, MultiBufferSource buffer, int packedLight, int color) {
-        VertexConsumer builder = buffer.getBuffer(RenderType.entitySolid(
-                new ResourceLocation("cim", "textures/block/slag_block.png"))); // или любая другая текстура
+    /**
+     * Рендер шлака с эффектом горячести
+     */
+    private void renderSlag(CastingPotBlockEntity blockEntity, PoseStack poseStack,
+                            MultiBufferSource buffer, int packedLight, int packedOverlay,
+                            Direction facing) {
 
-        float r = ((color >> 16) & 0xFF) / 255f * 0.5f; // Темнее
-        float g = ((color >> 8) & 0xFF) / 255f * 0.5f;
-        float b = (color & 0xFF) / 255f * 0.5f;
+        ItemStack slagStack = blockEntity.getSlagStackForRender();
+        if (slagStack.isEmpty()) return;
+
+        poseStack.pushPose();
+        poseStack.translate(0.5f, 4.01f / 16.0f, 0.5f);
+
+        float rotationY = getRotationFromFacing(facing);
+        poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(rotationY));
+        poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90));
+
+        float scale = 0.75f;
+        poseStack.scale(scale, scale, scale);
+
+        // Проверяем горячесть шлака
+        boolean isHot = HotItemHandler.isHot(slagStack);
+        float heatRatio = isHot ? HotItemHandler.getHeatRatio(slagStack) : 0f;
+
+        int renderLight = (isHot && heatRatio > 0.1f) ? 15728880 : packedLight;
+
+        itemRenderer.renderStatic(slagStack, ItemDisplayContext.FIXED,
+                renderLight, packedOverlay, poseStack, buffer,
+                blockEntity.getLevel(), 0);
+
+        // Эффект горячести для шлака
+        if (isHot && heatRatio > 0.05f) {
+            renderHotGlowEffect(poseStack, buffer, heatRatio);
+        }
+
+        poseStack.popPose();
+    }
+
+    /**
+     * Рендерит оранжевое свечение для горячих предметов
+     */
+    private void renderHotGlowEffect(PoseStack poseStack, MultiBufferSource buffer, float heatRatio) {
+        VertexConsumer builder = buffer.getBuffer(RenderType.entityTranslucent(HOT_GLOW_TEXTURE));
+
+        // Альфа зависит от нагрева: чем горячее, тем ярче
+        float alpha = 0.6f * heatRatio;
+        if (alpha < 0.05f) return;
+
+        // Цвет: от ярко-оранжевого (горячий) к тёмно-красному (остывает)
+        float r = 1.0f;
+        float g = 0.4f + (0.4f * heatRatio); // Больше зелёного когда горячо
+        float b = 0.1f * heatRatio;
 
         Matrix4f matrix = poseStack.last().pose();
         Matrix3f normal = poseStack.last().normal();
 
-        float half = 0.5f;
+        float s = 0.4f; // Размер глоу
+        float zOffset = 0.001f; // Чуть выше предмета
 
-        // Верхняя грань шлака
-        builder.vertex(matrix, -half, half, -half).color(r, g, b, 1.0f).uv(0, 0).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(normal, 0, 1, 0).endVertex();
-        builder.vertex(matrix, -half, half, half).color(r, g, b, 1.0f).uv(0, 1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(normal, 0, 1, 0).endVertex();
-        builder.vertex(matrix, half, half, half).color(r, g, b, 1.0f).uv(1, 1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(normal, 0, 1, 0).endVertex();
-        builder.vertex(matrix, half, half, -half).color(r, g, b, 1.0f).uv(1, 0).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(normal, 0, 1, 0).endVertex();
+        // Простой квадрат поверх предмета
+        addVertex(builder, matrix, normal, -s, -s, zOffset, r, g, b, alpha, 0, 0);
+        addVertex(builder, matrix, normal, -s,  s, zOffset, r, g, b, alpha, 0, 1);
+        addVertex(builder, matrix, normal,  s,  s, zOffset, r, g, b, alpha, 1, 1);
+        addVertex(builder, matrix, normal,  s, -s, zOffset, r, g, b, alpha, 1, 0);
     }
 
     /**
-     * Конвертирует Direction в угол поворота (в градусах)
-     * С поправкой: для EAST и WEST инвертируем на 180°
+     * Дополнительная тонировка цветом температуры
+     */
+    private void renderTemperatureTint(PoseStack poseStack, MultiBufferSource buffer, float heatRatio) {
+        VertexConsumer builder = buffer.getBuffer(RenderType.entityTranslucent(HOT_GLOW_TEXTURE));
+
+        float alpha = 0.25f * heatRatio;
+        if (alpha < 0.05f) return;
+
+        // Тонировка: оранжевый оттенок
+        float r = 1.0f;
+        float g = 0.6f;
+        float b = 0.2f;
+
+        Matrix4f matrix = poseStack.last().pose();
+        Matrix3f normal = poseStack.last().normal();
+
+        float s = 0.38f;
+        float zOffset = 0.002f;
+
+        addVertex(builder, matrix, normal, -s, -s, zOffset, r, g, b, alpha, 0, 0);
+        addVertex(builder, matrix, normal, -s,  s, zOffset, r, g, b, alpha, 0, 1);
+        addVertex(builder, matrix, normal,  s,  s, zOffset, r, g, b, alpha, 1, 1);
+        addVertex(builder, matrix, normal,  s, -s, zOffset, r, g, b, alpha, 1, 0);
+    }
+
+    /**
+     * Конвертирует Direction в угол поворота
      */
     private float getRotationFromFacing(Direction facing) {
-        float baseRotation = switch (facing) {
+        return switch (facing) {
             case NORTH -> 0f;
             case EAST -> 90f;
             case SOUTH -> 180f;
             case WEST -> 270f;
             default -> 0f;
         };
-
-        // Для боковых сторон (EAST, WEST) инвертируем на 180°
-        if (facing == Direction.EAST || facing == Direction.WEST) {
-            baseRotation += 180f;
-        }
-
-        return baseRotation;
-    }
-
-    private void renderHotGlow(PoseStack poseStack, MultiBufferSource buffer, float coolingProgress) {
-        VertexConsumer builder = buffer.getBuffer(RenderType.entityTranslucent(
-                new ResourceLocation("minecraft", "textures/misc/white.png")));
-
-        float alpha = 0.5f * coolingProgress;
-
-        float r = 1.0f;
-        float g = 0.3f + (0.5f * (1.0f - coolingProgress));
-        float b = 0.0f + (0.4f * (1.0f - coolingProgress));
-
-        if (alpha <= 0.01f) return;
-
-        Matrix4f matrix = poseStack.last().pose();
-        Matrix3f normal = poseStack.last().normal();
-
-        float s = 0.35f;
-        float zOffset = 0.02f;
-
-        addVertex(builder, matrix, normal, -s, -s, zOffset, r, g, b, alpha, 0, 0);
-        addVertex(builder, matrix, normal, -s,  s, zOffset, r, g, b, alpha, 0, 1);
-        addVertex(builder, matrix, normal,  s,  s, zOffset, r, g, b, alpha, 1, 1);
-        addVertex(builder, matrix, normal,  s, -s, zOffset, r, g, b, alpha, 1, 0);
     }
 
     private void addVertex(VertexConsumer builder, Matrix4f matrix, Matrix3f normal,
@@ -211,6 +231,9 @@ public class CastingPotRenderer implements BlockEntityRenderer<CastingPotBlockEn
                 .endVertex();
     }
 
+    /**
+     * Рендер жидкого металла
+     */
     private void renderLiquidCube(PoseStack poseStack, MultiBufferSource buffer, int packedLight, int color) {
         VertexConsumer builder = buffer.getBuffer(RenderType.entitySolid(LIQUID_METAL_TEXTURE));
 
