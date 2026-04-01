@@ -64,7 +64,7 @@ public class ModMetallurgy {
 
         // === СТАЛЬ ===
         // Потребление: 1.2 градуса/тик, плавится при 1440°C
-        Metal steel = registerMetalWithItems("steel", 0x2a2a2a, 1440, 1.2f,
+        Metal steel = registerMetalWithItems("steel", 0x202321, 1440, 1.2f,
                 ResourceRegistry.getMainUnit("steel"),
                 ResourceRegistry.getSmallUnit("steel"),
                 ResourceRegistry.getBlock("steel"));
@@ -92,6 +92,13 @@ public class ModMetallurgy {
                 ResourceRegistry.getMainUnit("aluminum"),
                 ResourceRegistry.getSmallUnit("aluminum"),
                 ResourceRegistry.getBlock("aluminum"));
+
+        // === БРОНЗА ===
+        // Потребление: 0.4 градуса/тик (лёгкий!), плавится при 660°C (низкая!)
+        Metal bronze = registerMetalWithItems("bronze", 0xcb9a3e, 930, 0.6f,
+                ResourceRegistry.getMainUnit("bronze"),
+                ResourceRegistry.getSmallUnit("bronze"),
+                ResourceRegistry.getBlock("bronze"));
 
 
         // ГЕНЕРАЦИЯ СТАНДАРТНЫХ РЕЦЕПТОВ

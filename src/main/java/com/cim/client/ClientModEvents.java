@@ -210,7 +210,10 @@ public class ClientModEvents {
         ItemHeatColorRegistry.registerMixed(ItemHeatColorRegistry.HeatGradient.ORANGE_TO_WHITE,
                 ResourceRegistry.getMainUnit("aluminum"),
                 ResourceRegistry.getSmallUnit("aluminum"),
-                ResourceRegistry.getBlock("aluminum")
+                ResourceRegistry.getBlock("aluminum"),
+                ResourceRegistry.getMainUnit("bronze"),
+                ResourceRegistry.getSmallUnit("bronze"),
+                ResourceRegistry.getBlock("bronze")
         );
 
         // === РЕГИСТРАЦИЯ ОБРАБОТЧИКОВ ЦВЕТА ===
@@ -226,7 +229,10 @@ public class ClientModEvents {
                 ResourceRegistry.getBlock("steel"),
                 ResourceRegistry.getMainUnit("aluminum"),
                 ResourceRegistry.getSmallUnit("aluminum"),
-                ResourceRegistry.getBlock("aluminum")
+                ResourceRegistry.getBlock("aluminum"),
+                ResourceRegistry.getMainUnit("bronze"),
+                ResourceRegistry.getSmallUnit("bronze"),
+                ResourceRegistry.getBlock("bronze")
         );
 
         // Специальный обработчик для шлака

@@ -44,6 +44,11 @@ public class ResourceRegistry {
                         .strength(3.0f, 5.0f)
                         .requiresCorrectToolForDrops());
 
+        registerFull("bronze", ResourceType.METAL,
+                BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)
+                        .strength(2.0f, 4.0f)
+                        .requiresCorrectToolForDrops());
+
 //        // ============ ПОЛИМЕРЫ ============
 //
 //        registerFull("epoxy", ResourceType.POLYMER,
