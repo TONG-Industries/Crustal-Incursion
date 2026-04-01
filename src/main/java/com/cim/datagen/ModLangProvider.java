@@ -57,6 +57,14 @@ public class ModLangProvider extends LanguageProvider {
         add("tooltip.cim.detminer.line1", "Mines blocks in explosion radius");
         add("tooltip.cim.detminer.line2", "Completely harmless to entities");
 
+        // Metals
+        add("metal.cim.gold", "Gold");
+        add("metal.cim.iron", "Iron");
+        add("metal.cim.copper", "Copper");
+        add("metal.cim.netherite", "Netherite");
+        add("metal.cim.steel", "Steel");
+        add("metal.cim.aluminum", "Aluminum");
+
         //Секвойя
         add(ModBlocks.SEQUOIA_BARK.get(), "Sequoia bark");
         add(ModBlocks.SEQUOIA_HEARTWOOD.get(), "Sequoia heartwood");
@@ -183,6 +191,14 @@ public class ModLangProvider extends LanguageProvider {
 
     private void addRussian() {
         //Секвойя
+
+        // Металлы
+        add("metal.cim.gold", "Золото");
+        add("metal.cim.iron", "Железо");
+        add("metal.cim.copper", "Медь");
+        add("metal.cim.netherite", "Незерит");
+        add("metal.cim.steel", "Сталь");
+        add("metal.cim.aluminum", "Алюминий");
 
         add("item.cim.hot_ingot.tooltip", "§6§lРАСКАЛЁННЫЙ! §r§7(%s%%)");
         add(ModBlocks.SEQUOIA_BARK.get(), "Кора секвойи");
@@ -406,6 +422,14 @@ public class ModLangProvider extends LanguageProvider {
         add(ModBlocks.CONCRETE_HAZARD_NEW_SLAB.get(), "Плита з нового небезпечного бетону");
         add(ModBlocks.CONCRETE_HAZARD_OLD_STAIRS.get(), "Сходи зі старого небезпечного бетону");
         add(ModBlocks.CONCRETE_HAZARD_OLD_SLAB.get(), "Плита зі старого небезпечного бетону");
+
+        // Метали
+        add("metal.cim.gold", "Золото");
+        add("metal.cim.iron", "Залізо");
+        add("metal.cim.copper", "Мідь");
+        add("metal.cim.netherite", "Незерит");
+        add("metal.cim.steel", "Сталь");
+        add("metal.cim.aluminum", "Алюміній");
 
         // Вали
         add(ModBlocks.DRILL_HEAD.get(), "Бурова головка");

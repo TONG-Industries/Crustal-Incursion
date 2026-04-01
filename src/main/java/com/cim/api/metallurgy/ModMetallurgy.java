@@ -17,7 +17,7 @@ public class ModMetallurgy {
 
         // === ЗОЛОТО ===
         // Потребление: 0.5 градуса/тик, плавится при 1064°C
-        Metal gold = registerMetalWithItems("gold", 0xFFD700, 1064, 0.5f,
+        Metal gold = registerMetalWithItems("gold", 0xffac2a, 1064, 0.5f,
                 Items.GOLD_INGOT, Items.GOLD_NUGGET, Blocks.GOLD_BLOCK);
 
         // Кастомные рецепты: указываем ТОЧНЫЙ выход в единицах и ВРЕМЯ
@@ -34,7 +34,7 @@ public class ModMetallurgy {
 
         // === ЖЕЛЕЗО ===
         // Потребление: 0.8 градуса/тик, плавится при 958°C
-        Metal iron = registerMetalWithItems("iron", 0xB87333, 958, 0.8f,
+        Metal iron = registerMetalWithItems("iron", 0xba826c, 958, 0.8f,
                 Items.IRON_INGOT, Items.IRON_NUGGET, Blocks.IRON_BLOCK);
 
         // Руды и сырые куски плавятся дольше чем готовые слитки
@@ -46,7 +46,7 @@ public class ModMetallurgy {
 
         // === МЕДЬ ===
         // Потребление: 0.6 градуса/тик, плавится при 1085°C
-        Metal copper = registerMetalWithItems("copper", 0xFF6B35, 1085, 0.6f,
+        Metal copper = registerMetalWithItems("copper", 0xc15a36, 1085, 0.6f,
                 Items.COPPER_INGOT, null, Blocks.COPPER_BLOCK);
 
         MetallurgyRegistry.addSmeltRecipe(Items.COPPER_ORE, copper, 9, 1085, 0.8f, 100);
@@ -55,7 +55,7 @@ public class ModMetallurgy {
 
         // === НЕЗЕРИТ ===
         // Потребление: 2.0 градуса/тик, плавится при 1200°C (очень требовательный!)
-        Metal netherite = registerMetalWithItems("netherite", 0x383038, 1200, 2.0f,
+        Metal netherite = registerMetalWithItems("netherite", 0x4a2940, 1200, 2.0f,
                 Items.NETHERITE_INGOT, null, Blocks.NETHERITE_BLOCK);
 
 
@@ -64,7 +64,7 @@ public class ModMetallurgy {
 
         // === СТАЛЬ ===
         // Потребление: 1.2 градуса/тик, плавится при 1440°C
-        Metal steel = registerMetalWithItems("steel", 0x71797E, 1440, 1.2f,
+        Metal steel = registerMetalWithItems("steel", 0x2a2a2a, 1440, 1.2f,
                 ResourceRegistry.getMainUnit("steel"),
                 ResourceRegistry.getSmallUnit("steel"),
                 ResourceRegistry.getBlock("steel"));
@@ -85,13 +85,10 @@ public class ModMetallurgy {
         );
         MetallurgyRegistry.addAlloyRecipe(steelAlloy);
 
-        // Кастомный рецепт переплавки железного меча в сталь
-        MetallurgyRegistry.addSmeltRecipe(Items.IRON_SWORD, steel, 9, 1440, 1.5f, 100);
-
 
         // === АЛЮМИНИЙ ===
         // Потребление: 0.4 градуса/тик (лёгкий!), плавится при 660°C (низкая!)
-        Metal aluminum = registerMetalWithItems("aluminum", 0xE0E0E0, 660, 0.4f,
+        Metal aluminum = registerMetalWithItems("aluminum", 0x8ebcd4, 660, 0.4f,
                 ResourceRegistry.getMainUnit("aluminum"),
                 ResourceRegistry.getSmallUnit("aluminum"),
                 ResourceRegistry.getBlock("aluminum"));
