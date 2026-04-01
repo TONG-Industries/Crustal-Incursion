@@ -22,9 +22,9 @@ public class SlagItem extends Item {
     public static final String TAG_AMOUNT = "Amount";
     public static final String TAG_MELTING_POINT = "MeltingPoint";
     public static final String TAG_COLOR = "Color";
-    public static final String TAG_HEAT_CONSUMPTION = "HeatConsumption"; // НОВОЕ: потребление температуры
+    public static final String TAG_HEAT_CONSUMPTION = "HeatConsumption";
+    public static final String TAG_MELTING_POINT_TEMP = "MeltingPointTemp"; // Температура плавления металла
 
-    // Базовое время остывания шлака как предмета (10 секунд)
     public static final int BASE_COOLING_TIME = 200;
 
     public SlagItem(Properties properties) {
@@ -42,7 +42,6 @@ public class SlagItem extends Item {
             int meltingPoint = tag.getInt(TAG_MELTING_POINT);
             float heatConsumption = tag.getFloat(TAG_HEAT_CONSUMPTION);
 
-            // Конвертируем единицы в понятные значения
             MetalUnits2.MetalStack units = MetalUnits2.convertFromUnits(amount);
 
             Optional<Metal> metalOpt = MetallurgyRegistry.get(metalId);
@@ -51,33 +50,25 @@ public class SlagItem extends Item {
 
             tooltip.add(Component.literal("§7Металл: §f" + metalName));
 
-            // Формируем строку содержимого
             StringBuilder content = new StringBuilder("§7Содержит: §f");
             if (units.blocks() > 0) content.append(units.blocks()).append(" блоков ");
             if (units.ingots() > 0) content.append(units.ingots()).append(" слитков ");
             if (units.nuggets() > 0) content.append(units.nuggets()).append(" самородков");
-
             tooltip.add(Component.literal(content.toString().trim()));
 
-            // Свойства металла
+            // Только свойства металла, НЕ дублируем горячесть!
             tooltip.add(Component.literal(String.format("§7Температура плавки: §f%d°C", meltingPoint)));
             tooltip.add(Component.literal(String.format("§7Потребление тепла: §f%.1f§7/тик", heatConsumption)));
 
-            // Время плавки (динамическое, макс 30 сек)
+            // Время плавки
             int smeltTimeTicks = calculateSmeltTime(stack);
             float smeltTimeSeconds = smeltTimeTicks / 20f;
             tooltip.add(Component.literal(String.format("§7Время переплавки: §f%.1fс §8(макс 30с)", smeltTimeSeconds)));
 
-            // Горячий?
+            // Только пометка что горячий, без дублирования градусов (их даст HotItemHandler)
             if (tag.contains("HotTime") && tag.getFloat("HotTime") > 0) {
-                int hotTime = (int) tag.getFloat("HotTime");
-                int maxTime = tag.getInt("HotTimeMax");
-                if (maxTime <= 0) maxTime = BASE_COOLING_TIME;
-
-                int temp = 20 + (int) ((hotTime / (float) maxTime) * 980); // 20°C - 1000°C
                 tooltip.add(Component.empty());
-                tooltip.add(Component.literal(String.format("§6§lГОРЯЧИЙ! §c%d°C", temp))
-                        .withStyle(ChatFormatting.RED));
+                tooltip.add(Component.literal("§6§l[ГОРЯЧИЙ] §cОсторожно!").withStyle(ChatFormatting.RED));
             }
 
             tooltip.add(Component.empty());
@@ -87,17 +78,12 @@ public class SlagItem extends Item {
         }
     }
 
-    /**
-     * Рассчитывает время плавки шлака в тиках
-     * Зависит от количества металла, максимум 600 тиков (30 секунд)
-     */
     public static int calculateSmeltTime(ItemStack stack) {
         if (!stack.hasTag()) return 100;
 
         CompoundTag tag = stack.getTag();
         int amount = tag.getInt(TAG_AMOUNT);
 
-        // Получаем металл для расчёта
         ResourceLocation metalId = new ResourceLocation(tag.getString(TAG_METAL_ID));
         Optional<Metal> metalOpt = MetallurgyRegistry.get(metalId);
 
@@ -105,14 +91,10 @@ public class SlagItem extends Item {
             return metalOpt.get().calculateSmeltTimeForUnits(amount);
         }
 
-        // Fallback: базовый расчёт если металл не найден
         float ingots = amount / 9f;
         return Math.min((int) (ingots * 60), 600);
     }
 
-    /**
-     * Получает потребление температуры шлака (из металла)
-     */
     public static float getHeatConsumption(ItemStack stack) {
         if (!stack.hasTag()) return 0.5f;
 
@@ -121,17 +103,12 @@ public class SlagItem extends Item {
             return tag.getFloat(TAG_HEAT_CONSUMPTION);
         }
 
-        // Fallback: получаем из металла
         ResourceLocation metalId = new ResourceLocation(tag.getString(TAG_METAL_ID));
         return MetallurgyRegistry.get(metalId)
                 .map(Metal::getHeatConsumptionPerTick)
                 .orElse(0.5f);
     }
 
-    /**
-     * Создаёт стак шлака с указанным металлом и количеством
-     * Копирует ВСЕ свойства металла: цвет, температуру, потребление
-     */
     public static ItemStack createSlag(Metal metal, int amount) {
         ItemStack stack = new ItemStack(ModItems.SLAG.get());
         CompoundTag tag = stack.getOrCreateTag();
@@ -141,26 +118,20 @@ public class SlagItem extends Item {
         tag.putInt(TAG_MELTING_POINT, metal.getMeltingPoint());
         tag.putInt(TAG_COLOR, metal.getColor());
         tag.putFloat(TAG_HEAT_CONSUMPTION, metal.getHeatConsumptionPerTick());
+        tag.putInt(TAG_MELTING_POINT_TEMP, metal.getMeltingPoint()); // Сохраняем температуру плавления!
 
-        // Добавляем горячесть
-        tag.putFloat("HotTime", BASE_COOLING_TIME);
-        tag.putInt("HotTimeMax", BASE_COOLING_TIME);
+        // Горячесть через HotItemHandler
+        HotItemHandler.setHot(stack, metal.getMeltingPoint(), false);
 
         return stack;
     }
 
-    /**
-     * Создаёт стак шлака с сохранением всех характеристик (для NBT)
-     */
     public static ItemStack createSlagFromNBT(CompoundTag tag) {
         ItemStack stack = new ItemStack(ModItems.SLAG.get());
         stack.setTag(tag.copy());
         return stack;
     }
 
-    /**
-     * Получает металл из шлака
-     */
     @Nullable
     public static Metal getMetal(ItemStack stack) {
         if (!stack.hasTag() || !stack.getTag().contains(TAG_METAL_ID)) return null;
@@ -168,27 +139,30 @@ public class SlagItem extends Item {
         return MetallurgyRegistry.get(id).orElse(null);
     }
 
-    /**
-     * Получает количество материала в шлаке
-     */
     public static int getAmount(ItemStack stack) {
         if (!stack.hasTag()) return 0;
         return stack.getTag().getInt(TAG_AMOUNT);
     }
 
-    /**
-     * Получает температуру плавления шлака
-     */
     public static int getMeltingPoint(ItemStack stack) {
         if (!stack.hasTag()) return 1000;
         return stack.getTag().getInt(TAG_MELTING_POINT);
     }
 
-    /**
-     * Получает цвет металла в шлаке
-     */
     public static int getColor(ItemStack stack) {
         if (!stack.hasTag()) return 0x888888;
         return stack.getTag().getInt(TAG_COLOR);
+    }
+
+    /**
+     * Получает температуру плавления металла (для горячести)
+     */
+    public static int getMetalMeltingPointTemp(ItemStack stack) {
+        if (!stack.hasTag()) return 1000;
+        // Сначала пробуем новый тег, иначе берем из старого
+        if (stack.getTag().contains(TAG_MELTING_POINT_TEMP)) {
+            return stack.getTag().getInt(TAG_MELTING_POINT_TEMP);
+        }
+        return stack.getTag().getInt(TAG_MELTING_POINT);
     }
 }

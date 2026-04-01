@@ -99,6 +99,7 @@ public class CastingPotBlockEntity extends BlockEntity {
         }
     };
 
+    // В методе createOutputItem():
     private void createOutputItem() {
         if (currentMetal == null || storedUnits < capacity) return;
 
@@ -108,10 +109,8 @@ public class CastingPotBlockEntity extends BlockEntity {
         }
 
         if (!result.isEmpty()) {
-            float coolTime = getCoolingTimeForMold();
-            // Устанавливаем горячесть через HotItemHandler
-            HotItemHandler.setHot(result, (int) (coolTime / 20f)); // в секундах
-
+            // Температура = температура плавления металла, охлаждение в 3 раза быстрее!
+            HotItemHandler.setHot(result, currentMetal.getMeltingPoint(), true);
             this.outputItem = result;
         }
         this.storedUnits -= capacity;
@@ -119,6 +118,53 @@ public class CastingPotBlockEntity extends BlockEntity {
         this.solidifyTimer = 0;
         setChanged();
         level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+    }
+
+    private void formSlag() {
+        if (currentMetal == null || storedUnits <= 0) return;
+
+        isSlagged = true;
+        slagData = new CompoundTag();
+        slagData.putString(SlagItem.TAG_METAL_ID, currentMetal.getId().toString());
+        slagData.putInt(SlagItem.TAG_AMOUNT, storedUnits);
+        slagData.putInt(SlagItem.TAG_MELTING_POINT, currentMetal.getMeltingPoint());
+        slagData.putInt(SlagItem.TAG_COLOR, currentMetal.getColor());
+        slagData.putFloat(SlagItem.TAG_HEAT_CONSUMPTION, currentMetal.getHeatConsumptionPerTick());
+
+        // Шлак имеет температуру плавления металла!
+        int meltingPoint = currentMetal.getMeltingPoint();
+        slagData.putInt("MeltingPoint", meltingPoint);
+        slagData.putFloat("HotTime", HotItemHandler.BASE_COOLING_TIME_HANDS); // В руках - обычная скорость
+        slagData.putInt("HotTimeMax", HotItemHandler.BASE_COOLING_TIME_HANDS);
+        slagCoolingTimer = HotItemHandler.BASE_COOLING_TIME_HANDS;
+
+        storedUnits = 0;
+        currentMetal = null;
+        metalIdleTime = 0;
+
+        if (level != null && !level.isClientSide) {
+            level.playSound(null, worldPosition, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.5f, 1.5f);
+            ((ServerLevel) level).sendParticles(ParticleTypes.ASH,
+                    worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5,
+                    10, 0.3, 0.1, 0.3, 0.02);
+        }
+    }
+
+
+    public ItemStack takeOutput() {
+        ItemStack result = outputItem.copy();
+        // При выдаче сохраняем температуру металла и флаг быстрого охлаждения
+        if (coolingTimer > 0 && currentMetal != null) {
+            HotItemHandler.setHot(result, currentMetal.getMeltingPoint(), true);
+        } else if (coolingTimer > 0) {
+            // Fallback если металл уже null
+            HotItemHandler.setHot(result, 1000, true);
+        }
+        this.outputItem = ItemStack.EMPTY;
+        this.coolingTimer = 0;
+        setChanged();
+        level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        return result;
     }
 
     public boolean tryInsertHotItem(ItemStack stack) {
@@ -292,32 +338,6 @@ public class CastingPotBlockEntity extends BlockEntity {
         }
     }
 
-    private void formSlag() {
-        if (currentMetal == null || storedUnits <= 0) return;
-
-        isSlagged = true;
-        slagData = new CompoundTag();
-        slagData.putString(SlagItem.TAG_METAL_ID, currentMetal.getId().toString());
-        slagData.putInt(SlagItem.TAG_AMOUNT, storedUnits);
-        slagData.putInt(SlagItem.TAG_MELTING_POINT, currentMetal.getMeltingPoint());
-        slagData.putInt(SlagItem.TAG_COLOR, currentMetal.getColor());
-        slagData.putFloat(SlagItem.TAG_HEAT_CONSUMPTION, currentMetal.getHeatConsumptionPerTick()); // НОВОЕ!
-        slagData.putFloat("HotTime", SlagItem.BASE_COOLING_TIME);
-        slagData.putInt("HotTimeMax", SlagItem.BASE_COOLING_TIME);
-        slagCoolingTimer = SlagItem.BASE_COOLING_TIME;
-
-        storedUnits = 0;
-        currentMetal = null;
-        metalIdleTime = 0;
-
-        if (level != null && !level.isClientSide) {
-            level.playSound(null, worldPosition, SoundEvents.LAVA_EXTINGUISH, SoundSource.BLOCKS, 0.5f, 1.5f);
-            ((ServerLevel) level).sendParticles(ParticleTypes.ASH,
-                    worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5,
-                    10, 0.3, 0.1, 0.3, 0.02);
-        }
-    }
-
     public ItemStack extractSlag() {
         if (!isSlagged || slagData == null) return ItemStack.EMPTY;
 
@@ -481,18 +501,6 @@ public class CastingPotBlockEntity extends BlockEntity {
         }
     }
 
-    public ItemStack takeOutput() {
-        ItemStack result = outputItem.copy();
-        // Сохраняем горячесть если нужно
-        if (coolingTimer > 0) {
-            HotItemHandler.setHot(result, (int) (coolingTimer / 20f));
-        }
-        this.outputItem = ItemStack.EMPTY;
-        this.coolingTimer = 0;
-        setChanged();
-        level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-        return result;
-    }
 
     @Override
     protected void saveAdditional(CompoundTag tag) {

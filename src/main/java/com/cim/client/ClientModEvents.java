@@ -148,23 +148,24 @@ public class ClientModEvents {
         }, ModItems.FLUID_IDENTIFIER.get()); // Замени на свой предмет
 
 
-        // === ГОРЯЧИЕ МЕТАЛЛЫ С ГРАДУСАМИ ===
+        // === ГОРЯЧИЕ МЕТАЛЛЫ: ОТ ОРАНЖЕВОГО (горячий) К БЕЛОМУ (остыл) ===
         event.register((stack, tintIndex) -> {
                     if (tintIndex != 0) return -1;
 
-                    // Используем HotItemHandler для получения температуры
                     if (!HotItemHandler.isHot(stack)) return -1;
 
-                    float ratio = HotItemHandler.getHeatRatio(stack);
+                    float ratio = HotItemHandler.getHeatRatio(stack); // 1.0 = горячий, 0.0 = остыл
 
                     // Если остыл меньше чем на 5% - показываем оригинальную текстуру
                     if (ratio < 0.05f) return -1;
 
-                    // Градиент от ОРАНЖЕВОГО (1000°C) к БЕЛОМУ (20°C)
-                    // Чем горячее, тем оранжевее
+                    // ГРАДИЕНТ: ОТ ЯРКО-ОРАНЖЕВОГО (горячий) К БЕЛОМУ (остыл)
+                    // Горячий (100%): 255, 100, 0 (яркий оранжевый)
+                    // Остывший (0%): 255, 255, 255 (белый, оригинальная текстура)
+
                     int r = 255;
-                    int g = (int) (100 + (200 - 100) * ratio); // 100 → 200 (оранжевый → жёлтый)
-                    int b = (int) (50 + (255 - 50) * (1 - ratio)); // 50 → 255 (тёмный → белый)
+                    int g = (int) (100 + (255 - 100) * (1 - ratio)); // 100 → 255 (оранжевый → белый)
+                    int b = (int) (0 + 255 * (1 - ratio));           // 0 → 255 (чёрный/тёмный → белый)
 
                     return (0xFF << 24) | (r << 16) | (g << 8) | b;
                 },
@@ -175,7 +176,7 @@ public class ClientModEvents {
                 ResourceRegistry.getMainUnit("aluminum"),
                 ResourceRegistry.getSmallUnit("aluminum"),
                 ResourceRegistry.getBlock("aluminum"),
-                ModItems.SLAG.get() // Добавляем шлак!
+                ModItems.SLAG.get()
         );
 
         // === ШЛАК (улучшенная окраска с температурой) ===
