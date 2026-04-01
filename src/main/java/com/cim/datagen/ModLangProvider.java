@@ -64,7 +64,10 @@ public class ModLangProvider extends LanguageProvider {
         add("metal.cim.netherite", "Netherite");
         add("metal.cim.steel", "Steel");
         add("metal.cim.aluminum", "Aluminum");
-
+        add("metal.cim.bronze", "Bronze");
+        add("metal.cim.tin", "Tin");
+        add("metal.cim.zinc", "Zinc");
+        
         //Секвойя
         add(ModBlocks.SEQUOIA_BARK.get(), "Sequoia bark");
         add(ModBlocks.SEQUOIA_HEARTWOOD.get(), "Sequoia heartwood");
@@ -199,6 +202,9 @@ public class ModLangProvider extends LanguageProvider {
         add("metal.cim.netherite", "Незерит");
         add("metal.cim.steel", "Сталь");
         add("metal.cim.aluminum", "Алюминий");
+        add("metal.cim.bronze", "Бронза");
+        add("metal.cim.tin", "Олово");
+        add("metal.cim.zinc", "Цинк");
 
         add("item.cim.hot_ingot.tooltip", "§6§lРАСКАЛЁННЫЙ! §r§7(%s%%)");
         add(ModBlocks.SEQUOIA_BARK.get(), "Кора секвойи");

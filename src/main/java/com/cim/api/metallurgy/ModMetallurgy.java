@@ -103,6 +103,12 @@ public class ModMetallurgy {
                 ResourceRegistry.getSmallUnit("zinc"),
                 ResourceRegistry.getBlock("zinc"));
 
+        // === ОЛОВО ===
+        Metal tin = registerMetalWithItems("tin", 0x47675b, 232, 0.2f,
+                ResourceRegistry.getMainUnit("tin"),
+                ResourceRegistry.getSmallUnit("tin"),
+                ResourceRegistry.getBlock("tin"));
+
         // ГЕНЕРАЦИЯ СТАНДАРТНЫХ РЕЦЕПТОВ
         // Автоматически создаёт рецепты для слитков (3с), самородков (1с), блоков (9с)
         // с потреблением из металла

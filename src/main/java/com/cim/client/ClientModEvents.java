@@ -214,6 +214,9 @@ public class ClientModEvents {
                 ResourceRegistry.getMainUnit("bronze"),
                 ResourceRegistry.getSmallUnit("bronze"),
                 ResourceRegistry.getBlock("bronze"),
+                ResourceRegistry.getMainUnit("tin"),
+                ResourceRegistry.getSmallUnit("tin"),
+                ResourceRegistry.getBlock("tin"),
                 ResourceRegistry.getMainUnit("zinc"),
                 ResourceRegistry.getSmallUnit("zinc"),
                 ResourceRegistry.getBlock("zinc")
@@ -236,6 +239,9 @@ public class ClientModEvents {
                 ResourceRegistry.getMainUnit("zinc"),
                 ResourceRegistry.getSmallUnit("zinc"),
                 ResourceRegistry.getBlock("zinc"),
+                ResourceRegistry.getMainUnit("tin"),
+                ResourceRegistry.getSmallUnit("tin"),
+                ResourceRegistry.getBlock("tin"),
                 ResourceRegistry.getMainUnit("bronze"),
                 ResourceRegistry.getSmallUnit("bronze"),
                 ResourceRegistry.getBlock("bronze")

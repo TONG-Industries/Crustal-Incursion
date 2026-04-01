@@ -436,7 +436,7 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
             ItemStack current = inventory.getStackInSlot(4 + i);
             ItemStack prev = previousBottomStacks[i];
 
-            if (!ItemStack.matches(current, prev)) {
+            if (!areItemsSameIgnoreHeat(current, prev)) {
                 // Слот изменился — сбрасываем ТОЛЬКО этот слот
                 if (bottomSlots[i] != null && bottomSlots[i].active) {
                     // Вычитаем его вклад из общего прогресса
@@ -595,6 +595,33 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
 
 // === ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ===
 
+    private boolean areItemsSameIgnoreHeat(ItemStack a, ItemStack b) {
+        if (a.isEmpty() && b.isEmpty()) return true;
+        if (a.isEmpty() || b.isEmpty()) return false;
+        if (a.getItem() != b.getItem() || a.getCount() != b.getCount()) return false;
+
+        if (a.hasTag() == b.hasTag()) {
+            if (!a.hasTag()) return true;
+
+            CompoundTag tagA = a.getTag().copy();
+            CompoundTag tagB = b.getTag().copy();
+
+            // Удаляем теги нагрева перед сравнением
+            tagA.remove("HotTime");
+            tagA.remove("HotTimeMax");
+            tagA.remove("MeltingPoint");
+            tagA.remove("CooledInPot");
+
+            tagB.remove("HotTime");
+            tagB.remove("HotTimeMax");
+            tagB.remove("MeltingPoint");
+            tagB.remove("CooledInPot");
+
+            return tagA.equals(tagB);
+        }
+        return false;
+    }
+
     private int calculateMaxTempForBottomRow() {
         int maxTemp = 0;
         for (int i = 0; i < 4; i++) {
@@ -681,11 +708,18 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
         if (slot == null || slot.slagData == null) return;
 
         // === НАГРЕВ ШЛАКА ===
-        if (slot.itemTemperature < slot.targetTemperature) {
-            if (temperature > slot.itemTemperature) {
-                float heatTransfer = Math.min(HEAT_RATE * 2, temperature - slot.itemTemperature);
-                slot.itemTemperature += heatTransfer;
-                slotTemperatures[globalSlot] = slot.itemTemperature;
+        float currentItemTemp = getItemTemperature(stack);
+
+        if (currentItemTemp < slot.targetTemperature * 0.95f) {
+            if (temperature > currentItemTemp) {
+                float heatNeeded = (slot.targetTemperature * 0.95f) - currentItemTemp;
+                float heatTransfer = Math.min(HEAT_RATE * 2, heatNeeded);
+                heatTransfer = Math.min(heatTransfer, temperature * 0.1f);
+
+                float newTemp = currentItemTemp + heatTransfer;
+                setItemTemperature(stack, newTemp);
+                slotTemperatures[globalSlot] = newTemp;
+                temperature -= heatTransfer * 0.5f;
             }
             slot.active = false;
             return;
@@ -693,12 +727,8 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
             slot.active = true;
         }
 
-        slotTemperatures[globalSlot] = slot.itemTemperature;
-
-        if (!hasSpaceFor(slot.slagData.amount)) {
-            slot.active = false;
-            return;
-        }
+        slot.itemTemperature = currentItemTemp;
+        slotTemperatures[globalSlot] = currentItemTemp;
 
         // ПЛАВКА ШЛАКА
         float availableHeat = Math.min(slot.heatConsumption, temperature);
@@ -814,8 +844,8 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
      * Предмет можно вытащить и он сохранит нагрев!
      */
     private void setItemTemperature(ItemStack stack, float temp) {
-        // Если температура низкая - очищаем горячесть
-        if (temp <= HotItemHandler.ROOM_TEMP + 5) {
+
+        if (temp <= HotItemHandler.ROOM_TEMP) {
             if (HotItemHandler.isHot(stack)) {
                 HotItemHandler.clearHotTags(stack);
                 // Синхронизируем с клиентом
