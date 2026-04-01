@@ -36,11 +36,13 @@ public class SmelterMenu extends AbstractContainerMenu {
             });
         }
 
-        // Нижний ряд (слоты 4-7) – обычная плавка
+        // Нижний ряд (слоты 4-7) – обычная плавка + шлак
         for (int i = 0; i < 4; i++) {
             this.addSlot(new SlotItemHandler(entity.getInventory(), 4 + i, 95 + i * 18, 45) {
                 @Override
                 public boolean mayPlace(ItemStack stack) {
+                    // Шлак или рецепт плавки
+                    if (stack.getItem() instanceof com.cim.event.SlagItem) return true;
                     return MetallurgyRegistry.getSmeltRecipe(stack.getItem()) != null;
                 }
             });
@@ -102,7 +104,10 @@ public class SmelterMenu extends AbstractContainerMenu {
                 }
             } else {
                 // Из инвентаря в печь
-                if (MetallurgyRegistry.getSmeltRecipe(stack.getItem()) != null) {
+                boolean isSmeltable = MetallurgyRegistry.getSmeltRecipe(stack.getItem()) != null;
+                boolean isSlag = stack.getItem() instanceof com.cim.event.SlagItem;
+
+                if (isSmeltable || isSlag) {
                     // Сначала пытаемся в нижний ряд (4-7)
                     if (!this.moveItemStackTo(stack, 4, 8, false)) {
                         // Если не получилось – в верхний ряд (0-4)

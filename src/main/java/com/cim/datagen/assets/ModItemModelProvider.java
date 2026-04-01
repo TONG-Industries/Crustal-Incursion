@@ -55,6 +55,7 @@ public class ModItemModelProvider extends ItemModelProvider {
 
         simpleItem(ModItems.CREATIVE_BATTERY);
         simpleItem(ModItems.BATTERY);
+        simpleItem(ModItems.POKER);
         simpleItem(ModItems.BATTERY_ADVANCED);
         simpleItem(ModItems.BATTERY_LITHIUM);
         simpleItem(ModItems.BATTERY_TRIXITE);
