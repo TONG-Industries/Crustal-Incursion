@@ -513,8 +513,8 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
 
             BottomSlotData slot = bottomSlots[i];
 
-            // === ПРИНУДИТЕЛЬНЫЙ НАГРЕВ ===
-            float itemTemp = getItemTemperature(stack);
+            // === ПРИНУДИТЕЛЬНЫЙ НАГРЕВ ШЛАКА ===
+            float itemTemp = getItemTemperature(stack); // Используем HotItemHandler!
 
             if (itemTemp < slot.targetTemperature * 0.95f) {
                 allHeated = false;
@@ -526,7 +526,7 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
                     heatTransfer = Math.min(heatTransfer, temperature * 0.1f);
 
                     float newTemp = itemTemp + heatTransfer;
-                    setItemTemperature(stack, newTemp);
+                    setItemTemperature(stack, newTemp); // ВАЖНО: сохраняем в HotItemHandler!
                     slotTemperatures[slotIndex] = newTemp;
                     temperature -= heatTransfer * 0.5f;
                 }
@@ -562,9 +562,12 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
         if (!allHeated || temperature < requiredTempBottom * 0.9f) {
             bottomSmelting = false;
             allBottomSlotsReady = false;
-            // Сохраняем текущий прогресс, но не плавим
+            // Сбрасываем прогресс если начали греться но ещё не готовы
+            if (!allHeated) {
+                sharedBottomProgress = 0; // Сброс прогресса если остыли
+            }
             updateBottomGUI(activeSlotsCount, totalHeatConsumption);
-            return;
+            return; // ВАЖНО: выходим, не продолжаем плавку!
         }
 
         // Все готовы! Запускаем/продолжаем плавку
