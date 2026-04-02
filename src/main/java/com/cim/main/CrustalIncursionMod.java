@@ -212,7 +212,9 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.SMELTER);
             event.accept(ModBlocks.CASTING_POT);
             event.accept(ModBlocks.CASTING_DESCENT);
+            event.accept(ModItems.MOLD_NUGGET.get());
             event.accept(ModItems.MOLD_INGOT.get());
+            event.accept(ModItems.MOLD_BLOCK.get());
             event.accept(ModItems.POKER.get());
         }
 

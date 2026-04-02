@@ -85,6 +85,8 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(ModItems.MORY_FOOD);
         simpleItem(ModItems.COFFEE);
         simpleItem(ModItems.MORY_LAH);
+        simpleItem(ModItems.MOLD_BLOCK);
+        simpleItem(ModItems.MOLD_NUGGET);
         simpleItem(ModItems.FIREBRICK);
         simpleItem(ModItems.REINFORCEDBRICK);
         simpleItem(ModItems.INFINITE_FLUID_BARREL);

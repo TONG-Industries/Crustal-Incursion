@@ -222,8 +222,30 @@ public class ClientModEvents {
                 ResourceRegistry.getBlock("zinc")
         );
 
-        // === РЕГИСТРАЦИЯ ОБРАБОТЧИКОВ ЦВЕТА ===
+        // === БЛОКИ МЕТАЛЛОВ ===
+        // Регистрируем блоки как предметы (BlockItem)
+        ItemHeatColorRegistry.registerMixed(ItemHeatColorRegistry.HeatGradient.RED_TO_WHITE,
+                net.minecraft.world.level.block.Blocks.IRON_BLOCK,
+                ResourceRegistry.getBlock("steel")
+        );
 
+        ItemHeatColorRegistry.registerMixed(ItemHeatColorRegistry.HeatGradient.YELLOW_TO_WHITE,
+                net.minecraft.world.level.block.Blocks.GOLD_BLOCK,
+                net.minecraft.world.level.block.Blocks.COPPER_BLOCK
+        );
+
+        ItemHeatColorRegistry.registerMixed(ItemHeatColorRegistry.HeatGradient.RED_TO_WHITE,
+                net.minecraft.world.level.block.Blocks.NETHERITE_BLOCK
+        );
+
+        ItemHeatColorRegistry.registerMixed(ItemHeatColorRegistry.HeatGradient.ORANGE_TO_WHITE,
+                ResourceRegistry.getBlock("aluminum"),
+                ResourceRegistry.getBlock("bronze"),
+                ResourceRegistry.getBlock("tin"),
+                ResourceRegistry.getBlock("zinc")
+        );
+
+        // === РЕГИСТРАЦИЯ ОБРАБОТЧИКОВ ЦВЕТА ===
         // Стандартный обработчик для всех горячих предметов
         event.register((stack, tintIndex) -> ItemHeatColorRegistry.getHeatColor(stack, tintIndex),
                 Items.IRON_INGOT, Items.IRON_NUGGET, Items.IRON_BLOCK,

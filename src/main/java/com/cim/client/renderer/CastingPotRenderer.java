@@ -1,5 +1,6 @@
 package com.cim.client.renderer;
 
+import com.cim.api.metallurgy.system.Metal;
 import com.cim.block.basic.industrial.casting.CastingPotBlock;
 import com.cim.block.entity.industrial.casting.CastingPotBlockEntity;
 import com.cim.event.HotItemHandler;
@@ -16,6 +17,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 
@@ -38,21 +41,26 @@ public class CastingPotRenderer implements BlockEntityRenderer<CastingPotBlockEn
         float coolingTimer = blockEntity.getCoolingTimer();
         float coolingProgress = blockEntity.getCoolingProgress();
 
-        // Получаем направление котла
         Direction facing = blockEntity.getBlockState().getValue(CastingPotBlock.FACING);
 
-        // 1. ФОРМА (повёрнута в направлении котла)
+        // === ПРОВЕРКА НА EAST-WEST ДЛЯ ИНВЕРСИИ ===
+        boolean needsInverse = (facing == Direction.EAST || facing == Direction.WEST);
+        float inverseRotation = needsInverse ? 180f : 0f;
+
+        // 1. ФОРМА
         if (!mold.isEmpty()) {
             poseStack.pushPose();
             poseStack.translate(0.5f, 0.25f, 0.5f);
 
-            // Поворачиваем в направлении котла
             float rotationY = getRotationFromFacing(facing);
             poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(rotationY));
 
-            // Наклон формы (лежит плоско)
-            poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90));
+            // ИНВЕРСИЯ НА EAST-WEST
+            if (needsInverse) {
+                poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(180f));
+            }
 
+            poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90));
             float scale = 0.75f;
             poseStack.scale(scale, scale, scale);
 
@@ -74,53 +82,113 @@ public class CastingPotRenderer implements BlockEntityRenderer<CastingPotBlockEn
             poseStack.popPose();
         }
 
-        // 3. ГОТОВЫЙ ПРЕДМЕТ (слиток) с эффектом остывания
+        // 3. ГОТОВЫЙ ПРЕДМЕТ (или БЛОК)
         if (!output.isEmpty()) {
-            poseStack.pushPose();
-            poseStack.translate(0.5f, 4.01f / 16.0f, 0.5f);
-
-            // Поворачиваем в направлении котла
-            float rotationY = getRotationFromFacing(facing);
-            poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(rotationY));
-
-            // Наклон слитка (лежит плоско)
-            poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90));
-
-            float scale = 0.75f;
-            poseStack.scale(scale, scale, scale);
-
-            // === КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Проверяем горячесть через HotItemHandler ===
-            boolean isHot = HotItemHandler.isHot(output);
-            float heatRatio = isHot ? HotItemHandler.getHeatRatio(output) : 0f;
-
-            // Светимся если горячий (heatRatio > 0.1)
-            int renderLight = (isHot && heatRatio > 0.1f) ? 15728880 : packedLight;
-
-            itemRenderer.renderStatic(output, ItemDisplayContext.FIXED, renderLight, packedOverlay, poseStack, buffer, blockEntity.getLevel(), 0);
-
-            // === ЭФФЕКТ ОСТЫВАНИЯ: глоу + тонировка ===
-            if (isHot && heatRatio > 0.05f) {
-                renderHotGlowEffect(poseStack, buffer, heatRatio);
-
-                // Дополнительная тонировка цветом температуры
-                renderTemperatureTint(poseStack, buffer, heatRatio);
+            if (blockEntity.isBlockMold()) {
+                renderHotBlock(blockEntity, poseStack, buffer, packedLight, packedOverlay, facing, needsInverse);
+            } else {
+                renderOutputItem(blockEntity, poseStack, buffer, packedLight, packedOverlay, facing, needsInverse, output);
             }
-
-            poseStack.popPose();
         }
 
         // 4. ШЛАК
         if (blockEntity.hasSlag()) {
-            renderSlag(blockEntity, poseStack, buffer, packedLight, packedOverlay, facing);
+            renderSlag(blockEntity, poseStack, buffer, packedLight, packedOverlay, facing, needsInverse);
         }
     }
 
+    private void renderHotBlock(CastingPotBlockEntity blockEntity, PoseStack poseStack,
+                                MultiBufferSource buffer, int packedLight, int packedOverlay,
+                                Direction facing, boolean needsInverse) {
+
+        Metal metal = blockEntity.getBlockRenderMetal();
+        if (metal == null || !metal.hasBlock()) return;
+
+        Block block = metal.getBlock();
+        BlockState blockState = block.defaultBlockState();
+
+        // Проверяем горячесть (чтобы блок хотя бы сам по себе рендерился ярким без теней)
+        ItemStack output = blockEntity.getOutputItem();
+        boolean isHot = HotItemHandler.isHot(output);
+        float heatRatio = isHot ? HotItemHandler.getHeatRatio(output) : 0f;
+
+        // Если блок горячий, задаем ему максимальное внутреннее освещение
+        int renderLight = (isHot && heatRatio > 0.1f) ? 15728880 : packedLight;
+
+        poseStack.pushPose();
+
+        // 1. Сначала ставим "якорь" ровно в центр котла по X и Z
+        poseStack.translate(0.5f, 0.0f, 0.5f);
+
+        // 2. Вращаем
+        float rotationY = getRotationFromFacing(facing);
+        poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(rotationY));
+        if (needsInverse) {
+            poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(180f));
+        }
+
+        // 3. Поднимаем дно блока на 4 пикселя (4 / 16 = 0.25)
+        poseStack.translate(0.0f, 0.25f, 0.0f);
+
+        // 4. Задаём размеры: 9 пикселей ширина/длина (9/16 = 0.5625), 4 пикселя высота (4/16 = 0.25)
+        float scaleXZ = 9.0f / 16.0f;
+        float scaleY = 4.0f / 16.0f;
+        poseStack.scale(scaleXZ, scaleY, scaleXZ);
+
+        // 5. Центрируем сам куб рендера. Сдвигаем на -0.5 только по X и Z.
+        // По Y не трогаем, чтобы дно осталось ровно на высоте 0.25
+        poseStack.translate(-0.5f, 0.0f, -0.5f);
+
+        // Рендерим сам блок
+        Minecraft.getInstance().getBlockRenderer().renderSingleBlock(
+                blockState, poseStack, buffer, renderLight, packedOverlay
+        );
+
+        poseStack.popPose();
+    }
+
+    /**
+     * Существующий рендер предмета (выносим в отдельный метод)
+     */
+    private void renderOutputItem(CastingPotBlockEntity blockEntity, PoseStack poseStack,
+                                  MultiBufferSource buffer, int packedLight, int packedOverlay,
+                                  Direction facing, boolean needsInverse, ItemStack output) {
+
+        poseStack.pushPose();
+        poseStack.translate(0.5f, 4.01f / 16.0f, 0.5f);
+
+        float rotationY = getRotationFromFacing(facing);
+        poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(rotationY));
+
+        if (needsInverse) {
+            poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(180f));
+        }
+
+        poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90));
+        float scale = 0.75f;
+        poseStack.scale(scale, scale, scale);
+
+        boolean isHot = HotItemHandler.isHot(output);
+        float heatRatio = isHot ? HotItemHandler.getHeatRatio(output) : 0f;
+        int renderLight = (isHot && heatRatio > 0.1f) ? 15728880 : packedLight;
+
+        itemRenderer.renderStatic(output, ItemDisplayContext.FIXED, renderLight, packedOverlay, poseStack, buffer, blockEntity.getLevel(), 0);
+
+        if (isHot && heatRatio > 0.05f) {
+            renderHotGlowEffect(poseStack, buffer, heatRatio);
+            renderTemperatureTint(poseStack, buffer, heatRatio);
+        }
+
+        poseStack.popPose();
+    }
+
+    
     /**
      * Рендер шлака с эффектом горячести
      */
     private void renderSlag(CastingPotBlockEntity blockEntity, PoseStack poseStack,
                             MultiBufferSource buffer, int packedLight, int packedOverlay,
-                            Direction facing) {
+                            Direction facing, boolean needsInverse) {
 
         ItemStack slagStack = blockEntity.getSlagStackForRender();
         if (slagStack.isEmpty()) return;
@@ -130,12 +198,17 @@ public class CastingPotRenderer implements BlockEntityRenderer<CastingPotBlockEn
 
         float rotationY = getRotationFromFacing(facing);
         poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(rotationY));
+
+        // ИНВЕРСИЯ НА EAST-WEST
+        if (needsInverse) {
+            poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(180f));
+        }
+
         poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90));
 
         float scale = 0.75f;
         poseStack.scale(scale, scale, scale);
 
-        // Проверяем горячесть шлака
         boolean isHot = HotItemHandler.isHot(slagStack);
         float heatRatio = isHot ? HotItemHandler.getHeatRatio(slagStack) : 0f;
 
@@ -145,7 +218,6 @@ public class CastingPotRenderer implements BlockEntityRenderer<CastingPotBlockEn
                 renderLight, packedOverlay, poseStack, buffer,
                 blockEntity.getLevel(), 0);
 
-        // Эффект горячести для шлака
         if (isHot && heatRatio > 0.05f) {
             renderHotGlowEffect(poseStack, buffer, heatRatio);
         }

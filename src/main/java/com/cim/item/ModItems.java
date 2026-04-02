@@ -78,6 +78,12 @@ public class ModItems {
     public static final RegistryObject<Item> MOLD_INGOT = ITEMS.register("mold_ingot",
             () -> new Item(new Item.Properties()));
 
+    public static final RegistryObject<Item> MOLD_NUGGET = ITEMS.register("mold_nugget",
+            () -> new Item(new Item.Properties()));
+
+    public static final RegistryObject<Item> MOLD_BLOCK= ITEMS.register("mold_block",
+            () -> new Item(new Item.Properties()));
+
     public static final RegistryObject<Item> WIRE_COIL = ITEMS.register("wire_coil",
             () -> new WireCoilItem(new Item.Properties().stacksTo(1)));
 

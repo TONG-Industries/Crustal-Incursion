@@ -63,8 +63,6 @@ public class HotItemHandler {
         float heatRatio = getHeatRatio(stack);
         int meltingPoint = getMeltingPoint(stack);
 
-        if (meltingPoint <= 0) meltingPoint = 1000;
-
         // Температура = комнатная + (процент нагрева * разница)
         return ROOM_TEMP + (int) (heatRatio * (meltingPoint - ROOM_TEMP));
     }

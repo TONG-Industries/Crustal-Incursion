@@ -147,6 +147,7 @@ public class CastingPotBlock extends BaseEntityBlock {
 
         // === РАБОТА С ФОРМОЙ ===
         return handleMoldInteraction(level, pos, player, hand, pot, heldItem);
+
     }
 
     /**
@@ -323,8 +324,12 @@ public class CastingPotBlock extends BaseEntityBlock {
         }
 
         // Вставка формы
+        // Вставка формы
         if (moldStack.isEmpty()) {
-            if (heldItem.is(ModItems.MOLD_INGOT.get())) {
+            if (heldItem.is(ModItems.MOLD_INGOT.get()) ||
+                    heldItem.is(ModItems.MOLD_NUGGET.get()) ||
+                    heldItem.is(ModItems.MOLD_BLOCK.get())) {
+
                 ItemStack toInsert = heldItem.copy();
                 toInsert.setCount(1);
                 pot.setMold(toInsert);
