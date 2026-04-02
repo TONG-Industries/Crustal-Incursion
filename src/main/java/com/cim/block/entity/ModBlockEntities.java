@@ -5,6 +5,7 @@ import com.cim.block.entity.fluids.FluidBarrelBlockEntity;
 
 import com.cim.block.entity.fluids.FluidPipeBlockEntity;
 
+import com.cim.block.entity.industrial.rotation.MotorElectroBlockEntity;
 import com.cim.block.entity.industrial.rotation.ShaftBlockEntity;
 import com.cim.multiblock.industrial.HeaterBlockEntity;
 
@@ -104,6 +105,10 @@ public class ModBlockEntities {
 
     public static final RegistryObject<BlockEntityType<ShaftBlockEntity>> SHAFT_BE = BLOCK_ENTITIES.register("shaft",
             () -> BlockEntityType.Builder.of(ShaftBlockEntity::new, ModBlocks.SHAFT.get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<MotorElectroBlockEntity>> MOTOR_ELECTRO_BE =
+            BLOCK_ENTITIES.register("motor_electro",
+                    () -> BlockEntityType.Builder.of(MotorElectroBlockEntity::new, ModBlocks.MOTOR_ELECTRO.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<FluidPipeBlockEntity>> FLUID_PIPE_BE =
             BLOCK_ENTITIES.register("fluid_pipe_be",

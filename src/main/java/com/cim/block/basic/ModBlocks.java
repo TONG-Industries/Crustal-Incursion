@@ -13,6 +13,7 @@ import com.cim.block.basic.industrial.casting.CastingDescentBlock;
 import com.cim.block.basic.industrial.casting.CastingPotBlock;
 import com.cim.block.basic.industrial.energy.*;
 
+import com.cim.block.basic.industrial.rotation.MotorElectroBlock;
 import com.cim.block.basic.industrial.rotation.ShaftBlock;
 import com.cim.block.basic.necrosis.hive.HiveRootsBlock;
 
@@ -345,6 +346,9 @@ public class ModBlocks {
     // Меняем BLOCKS.register на твой метод registerBlock
     public static final RegistryObject<Block> SHAFT = registerBlock("shaft",
             () -> new ShaftBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).noOcclusion()));
+
+    public static final RegistryObject<Block> MOTOR_ELECTRO = registerBlock("motor_electro",
+            () -> new MotorElectroBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).noOcclusion()));
 
     //декоративные блоки
     public static final RegistryObject<Block> BEAM_BLOCK = registerBlock("beam_block",

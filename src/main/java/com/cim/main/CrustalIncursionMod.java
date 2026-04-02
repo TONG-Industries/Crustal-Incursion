@@ -199,6 +199,7 @@ public class CrustalIncursionMod {
 //            event.accept(ModBlocks.SHAFT_PLACER);
 //            event.accept(ModBlocks.MINING_PORT);
             event.accept(ModBlocks.SHAFT);
+            event.accept(ModBlocks.MOTOR_ELECTRO);
 
             event.accept(ModItems.WIRE_COIL);
             event.accept(ModBlocks.CONNECTOR);

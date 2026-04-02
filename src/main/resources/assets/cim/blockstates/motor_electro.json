@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=north": { "model": "cim:block/electro_motor" },
+    "facing=east":  { "model": "cim:block/electro_motor", "y": 90 },
+    "facing=south": { "model": "cim:block/electro_motor", "y": 180 },
+    "facing=west":  { "model": "cim:block/electro_motor", "y": 270 },
+    "facing=up":    { "model": "cim:block/electro_motor", "x": -90 },
+    "facing=down":  { "model": "cim:block/electro_motor", "x": 90 }
+  }
+}

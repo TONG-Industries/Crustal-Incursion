@@ -25,14 +25,46 @@ public class ShaftBlockEntity extends BlockEntity implements Rotational {
         return 0;
     }
 
+    // ... твой конструктор и переменные ...
+
     @Override
     public void setSpeed(long speed) {
         if (this.speed != speed) {
             this.speed = speed;
-            setChanged();
-            // Здесь будет отправка пакета клиенту для обновления Flywheel [cite: 11]
+            setChanged(); // Сохраняем изменения в чанк
+
+            // ВАЖНО: Отправляем пакет обновления на клиент (Flywheel)!
+            if (level != null && !level.isClientSide) {
+                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+            }
         }
     }
+
+    // --- НАЧАЛО БЛОКА СИНХРОНИЗАЦИИ ---
+    @Override
+    protected void saveAdditional(net.minecraft.nbt.CompoundTag tag) {
+        super.saveAdditional(tag);
+        tag.putLong("Speed", this.speed);
+    }
+
+    @Override
+    public void load(net.minecraft.nbt.CompoundTag tag) {
+        super.load(tag);
+        this.speed = tag.getLong("Speed");
+    }
+
+    @Override
+    public net.minecraft.nbt.CompoundTag getUpdateTag() {
+        net.minecraft.nbt.CompoundTag tag = super.getUpdateTag();
+        tag.putLong("Speed", this.speed);
+        return tag;
+    }
+
+    @Override
+    public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
+        return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+    }
+    // --- КОНЕЦ БЛОКА СИНХРОНИЗАЦИИ ---
 
     @Override
     public Direction[] getPropagationDirections() {

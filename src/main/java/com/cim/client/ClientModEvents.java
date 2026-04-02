@@ -6,6 +6,7 @@ import com.cim.block.entity.industrial.rotation.ShaftBlockEntity;
 import com.cim.client.gecko.block.energy.MachineBatteryRenderer;
 import com.cim.client.overlay.gui.*;
 import com.cim.client.render.flywheel.ModModels;
+import com.cim.client.render.flywheel.MotorVisual;
 import com.cim.client.render.flywheel.ShaftVisual;
 import com.cim.client.renderer.*;
 import com.cim.item.tools.FluidIdentifierItem;
@@ -115,14 +116,23 @@ public class ClientModEvents {
     }
 
     @SubscribeEvent
+    public static void onRegisterAdditionalModels(net.minecraftforge.client.event.ModelEvent.RegisterAdditional event) {
+        // Заставляем игру принудительно загрузить модель половинки вала
+        event.register(new net.minecraft.resources.ResourceLocation("cim", "block/half_shaft"));
+
+        // Корпус мотора тоже можно добавить сюда для надежности
+        event.register(new net.minecraft.resources.ResourceLocation("cim", "block/electro_motor"));
+    }
+
+    @SubscribeEvent
     public static void onClientSetup(final FMLClientSetupEvent event) {
         // 1. Инициализируем загрузку кастомной 3D модели для Flywheel
         event.enqueueWork(() -> {
             ModModels.init();
         });
 
-        // 2. Привязываем наш ShaftVisual к энтити вала
-        // ВНИМАНИЕ: Если ты назвал его SHAFT_BLOCK_BE, используй это имя вместо SHAFT_BE
+//===========================регистрации визуализаторов для Flywheel=====================================
+// ======================================================================================================
         VisualizerRegistry.setVisualizer(ModBlockEntities.SHAFT_BE.get(), new dev.engine_room.flywheel.api.visualization.BlockEntityVisualizer<com.cim.block.entity.industrial.rotation.ShaftBlockEntity>() {
 
             @Override
@@ -137,7 +147,24 @@ public class ClientModEvents {
                 return true;
             }
         });
+
+        VisualizerRegistry.setVisualizer(ModBlockEntities.MOTOR_ELECTRO_BE.get(), new dev.engine_room.flywheel.api.visualization.BlockEntityVisualizer<com.cim.block.entity.industrial.rotation.MotorElectroBlockEntity>() {
+
+            @Override
+            public dev.engine_room.flywheel.api.visual.BlockEntityVisual<? super com.cim.block.entity.industrial.rotation.MotorElectroBlockEntity> createVisual(dev.engine_room.flywheel.api.visualization.VisualizationContext ctx, com.cim.block.entity.industrial.rotation.MotorElectroBlockEntity be, float partialTick) {
+                // Возвращаем визуал мотора
+                return new com.cim.client.render.flywheel.MotorVisual(ctx, be, partialTick);
+            }
+
+            @Override
+            public boolean skipVanillaRender(com.cim.block.entity.industrial.rotation.MotorElectroBlockEntity be) {
+                // Отключаем ванильный рендер, чтобы Flywheel взял всё на себя
+                return true;
+            }
+        });
     }
+    //================================================================================================
+    //================================================================================================
 
     @SubscribeEvent
     public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
