@@ -17,24 +17,6 @@ public class ShaftBlockEntity extends BlockEntity implements Rotational {
         super(ModBlockEntities.SHAFT_BE.get(), pos, state);
     }
 
-    @Override
-    public long getInertiaContribution() { return 10; } // Обычный вал легкий
-
-    @Override
-    public long getFrictionContribution() { return 1; } // Небольшое трение
-
-    @Override
-    public long getMaxTorqueTolerance() { return getMaxTorque(); }
-
-    @Override
-    public long getSpeed() { return speed; }
-
-    @Override
-    public long getTorque() {
-        // Вал сам по себе не генерирует крутящий момент
-        return 0;
-    }
-
     // ... твой конструктор и переменные ...
 
     @Override
@@ -122,9 +104,48 @@ public class ShaftBlockEntity extends BlockEntity implements Rotational {
     }
 
     @Override
-    public long getMaxSpeed() { return 256; } // Можно вынести в конфиг
+    public long getMaxSpeed() {
+        if (getBlockState().getBlock() instanceof ShaftBlock shaft) {
+            return (long) (shaft.getMaterial().baseSpeed() * shaft.getDiameter().speedMod);
+        }
+        return 256;
+    }
+
     @Override
-    public long getMaxTorque() { return 1024; }
+    public long getMaxTorque() {
+        if (getBlockState().getBlock() instanceof ShaftBlock shaft) {
+            return (long) (shaft.getMaterial().baseTorque() * shaft.getDiameter().torqueMod);
+        }
+        return 1024;
+    }
+
+    @Override
+    public long getInertiaContribution() {
+        if (getBlockState().getBlock() instanceof ShaftBlock shaft) {
+            return (long) (shaft.getMaterial().baseInertia() * shaft.getDiameter().inertiaMod);
+        }
+        return 5;
+    }
+
+    @Override
+    public long getFrictionContribution() {
+        if (getBlockState().getBlock() instanceof ShaftBlock shaft) {
+            return (long) shaft.getMaterial().baseFriction();
+        }
+        return 1;
+    }
+
+    @Override
+    public long getMaxTorqueTolerance() { return getMaxTorque(); }
+
+    @Override
+    public long getSpeed() { return speed; }
+
+    @Override
+    public long getTorque() {
+        // Вал сам по себе не генерирует крутящий момент
+        return 0;
+    }
 
     @Override
     public boolean isSource() { return false; } // Вал — это просто передатчик

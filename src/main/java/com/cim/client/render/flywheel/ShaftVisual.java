@@ -8,6 +8,7 @@ import dev.engine_room.flywheel.api.instance.Instancer;
 import dev.engine_room.flywheel.lib.instance.InstanceTypes;
 import dev.engine_room.flywheel.lib.instance.TransformedInstance;
 import dev.engine_room.flywheel.lib.model.Models;
+import dev.engine_room.flywheel.lib.model.baked.PartialModel;
 import dev.engine_room.flywheel.lib.visual.AbstractBlockEntityVisual;
 import dev.engine_room.flywheel.lib.visual.SimpleDynamicVisual;
 import net.minecraft.core.Direction;
@@ -23,25 +24,24 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
     public ShaftVisual(VisualizationContext ctx, ShaftBlockEntity blockEntity, float partialTick) {
         super(ctx, blockEntity, partialTick);
 
-        // Получаем направление прямо из стейта блока
         this.facing = blockState.getValue(ShaftBlock.FACING);
+        PartialModel dynamicModel = ModModels.SHAFT_MODELS.get(blockState.getBlock());
 
         Instancer<TransformedInstance> instancer = instancerProvider().instancer(
                 InstanceTypes.TRANSFORMED,
-                Models.partial(ModModels.SHAFT_MODEL)
+                Models.partial(dynamicModel)
         );
 
         this.instance = instancer.createInstance();
-
-        // Первичная статичная настройка при установке блока
         setupStatic();
     }
 
     private void setupStatic() {
         instance.setIdentityTransform()
                 .translate(pos)
-                .center();
+                .translate(0.5f, 0.5f, 0.5f); // 1. Кидаем точку вращения в центр блока
 
+        // 2. Ставим вал по направлению блока
         Direction.Axis axis = facing.getAxis();
         if (axis == Direction.Axis.X) {
             instance.rotateY((float) Math.toRadians(90));
@@ -49,27 +49,22 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
             instance.rotateX((float) Math.toRadians(90));
         }
 
-        instance.uncenter().setChanged();
+        instance.translate(-0.5f, -0.5f, -0.5f); // 3. Возвращаем сетку координат на место
+        instance.setChanged();
     }
 
     @Override
     public void beginFrame(Context ctx) {
         float speed = blockEntity.getSpeed();
+        if (speed == 0) return;
 
-        // Если вал стоит на месте, не тратим ресурсы на пересчет матриц
-        if (speed == 0) {
-            return;
-        }
-
-        // Формула времени (идентичная мотору для идеальной синхронизации)
         float time = (float) (System.currentTimeMillis() % 100000) / 50f;
         float angle = time * speed * 0.1f;
 
         instance.setIdentityTransform()
                 .translate(pos)
-                .center();
+                .translate(0.5f, 0.5f, 0.5f); // 1. Снова кидаем точку вращения в центр
 
-        // 1. Поворачиваем вал в нужную сторону (Восток-Запад или Вверх-Вниз)
         Direction.Axis axis = facing.getAxis();
         if (axis == Direction.Axis.X) {
             instance.rotateY((float) Math.toRadians(90));
@@ -77,10 +72,10 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
             instance.rotateX((float) Math.toRadians(90));
         }
 
-        // 2. Крутим вдоль собственной оси Z
-        instance.rotateZ(angle);
+        instance.rotateZ(angle); // 2. Вращаем саму деталь вокруг своей оси
 
-        instance.uncenter().setChanged();
+        instance.translate(-0.5f, -0.5f, -0.5f); // 3. Возвращаем геометрию обратно
+        instance.setChanged();
     }
 
     @Override

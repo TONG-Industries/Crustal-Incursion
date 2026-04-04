@@ -131,6 +131,9 @@ public class ModBlockStateProvider extends BlockStateProvider {
         trapdoorBlockWithRenderType((net.minecraft.world.level.block.TrapDoorBlock) ModBlocks.SEQUOIA_TRAPDOOR.get(),
                 modLoc("block/sequoia_trapdoor"), true, "cutout");
 
+        //генерация моделей для валов
+        generateAllShafts();
+
 
 
         stairsAndSlabs(ModBlocks.CONCRETE_TILE_ALT.get(), ModBlocks.CONCRETE_TILE_ALT_STAIRS.get(), ModBlocks.CONCRETE_TILE_ALT_SLAB.get());
@@ -292,6 +295,40 @@ public class ModBlockStateProvider extends BlockStateProvider {
                 .end()
                 .texture("pipe_texture", pipeTexture) // <--- ПРОКИДЫВАЕМ ТЕКСТУРУ ДЛЯ ПРЕДМЕТА В ИНВЕНТАРЕ
                 .texture("particle", pipeTexture);
+    }
+
+    public void generateAllShafts() {
+        for (RegistryObject<Block> blockObj : com.cim.block.basic.ModBlocks.BLOCKS.getEntries()) {
+            if (blockObj.get() instanceof com.cim.block.basic.industrial.rotation.ShaftBlock shaft) {
+                String name = blockObj.getId().getPath();
+                ResourceLocation objModel = modLoc("models/block/shaft_" + shaft.getDiameter().name + ".obj");
+                ResourceLocation texture = modLoc("block/" + name);
+
+                // 1. ГЕНЕРАЦИЯ МОДЕЛИ БЛОКА
+                ModelFile blockModel = models().getBuilder(name)
+                        .customLoader(net.minecraftforge.client.model.generators.loaders.ObjModelBuilder::begin)
+                        .modelLocation(objModel)
+                        .flipV(true)
+                        .end()
+                        .texture("shaft_texture", texture)
+                        .texture("particle", texture);
+
+                // Генерация блокстейта (с FACING)
+                directionalBlock(blockObj.get(), blockModel);
+
+                // 2. ГЕНЕРАЦИЯ МОДЕЛИ ПРЕДМЕТА (ДЛЯ ИНВЕНТАРЯ)
+                itemModels().getBuilder(name)
+                        // Ссылка на JSON-шаблон с настройками scale, rotation, translation для GUI и рук
+                        .parent(new net.minecraftforge.client.model.generators.ModelFile.UncheckedModelFile(modLoc("item/shaft_template")))
+                        .customLoader(net.minecraftforge.client.model.generators.loaders.ObjModelBuilder::begin)
+                        // Можешь использовать ту же модель, что и у блока, или сделать отдельную (например, покороче)
+                        .modelLocation(objModel)
+                        .flipV(true)
+                        .end()
+                        .texture("shaft_texture", texture)
+                        .texture("particle", texture);
+            }
+        }
     }
 
     // Метод для прозрачных блоков (стекло, решётки и т.д.)

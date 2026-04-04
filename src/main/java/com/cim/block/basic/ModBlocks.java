@@ -2,6 +2,8 @@ package com.cim.block.basic;
 
 import com.cim.api.energy.ConnectorTier;
 import com.cim.api.fluids.PipeTier;
+import com.cim.api.rotation.ShaftDiameter;
+import com.cim.api.rotation.ShaftMaterial;
 import com.cim.block.basic.deco.BeamBlock;
 import com.cim.block.basic.deco.BeamCollisionBlock;
 import com.cim.block.basic.deco.SteelPropsBlock;
@@ -31,6 +33,7 @@ import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockSetType;
+import net.minecraft.world.level.material.MapColor;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -46,7 +49,9 @@ import com.cim.main.CrustalIncursionMod;
 import com.cim.item.ModItems;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 
 public class ModBlocks {
@@ -344,11 +349,40 @@ public class ModBlocks {
 
     // Максимально чистая регистрация базового вала
     // Меняем BLOCKS.register на твой метод registerBlock
-    public static final RegistryObject<Block> SHAFT = registerBlock("shaft",
-            () -> new ShaftBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).noOcclusion()));
+
 
     public static final RegistryObject<Block> MOTOR_ELECTRO = registerBlock("motor_electro",
             () -> new MotorElectroBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).noOcclusion()));
+
+    public static final RegistryObject<Block> SHAFT_LIGHT_IRON = registerShaft(ShaftMaterial.IRON, ShaftDiameter.LIGHT);
+    public static final RegistryObject<Block> SHAFT_MEDIUM_IRON = registerShaft(ShaftMaterial.IRON, ShaftDiameter.MEDIUM);
+    public static final RegistryObject<Block> SHAFT_HEAVY_IRON = registerShaft(ShaftMaterial.IRON, ShaftDiameter.HEAVY);
+
+    // ВАЛЫ: ДЮРАЛЮМИНИЙ
+    public static final RegistryObject<Block> SHAFT_LIGHT_DURALUMIN = registerShaft(ShaftMaterial.DURALUMIN, ShaftDiameter.LIGHT);
+    public static final RegistryObject<Block> SHAFT_MEDIUM_DURALUMIN = registerShaft(ShaftMaterial.DURALUMIN, ShaftDiameter.MEDIUM);
+    public static final RegistryObject<Block> SHAFT_HEAVY_DURALUMIN = registerShaft(ShaftMaterial.DURALUMIN, ShaftDiameter.HEAVY);
+
+    // ВАЛЫ: СТАЛЬ
+    public static final RegistryObject<Block> SHAFT_LIGHT_STEEL = registerShaft(ShaftMaterial.STEEL, ShaftDiameter.LIGHT);
+    public static final RegistryObject<Block> SHAFT_MEDIUM_STEEL = registerShaft(ShaftMaterial.STEEL, ShaftDiameter.MEDIUM);
+    public static final RegistryObject<Block> SHAFT_HEAVY_STEEL = registerShaft(ShaftMaterial.STEEL, ShaftDiameter.HEAVY);
+
+    // ВАЛЫ: ТИТАН
+    public static final RegistryObject<Block> SHAFT_LIGHT_TITANIUM = registerShaft(ShaftMaterial.TITANIUM, ShaftDiameter.LIGHT);
+    public static final RegistryObject<Block> SHAFT_MEDIUM_TITANIUM = registerShaft(ShaftMaterial.TITANIUM, ShaftDiameter.MEDIUM);
+    public static final RegistryObject<Block> SHAFT_HEAVY_TITANIUM = registerShaft(ShaftMaterial.TITANIUM, ShaftDiameter.HEAVY);
+
+    // ВАЛЫ: КАРБИД ВОЛЬФРАМА
+    public static final RegistryObject<Block> SHAFT_LIGHT_TUNGSTEN_CARBIDE = registerShaft(ShaftMaterial.TUNGSTEN_CARBIDE, ShaftDiameter.LIGHT);
+    public static final RegistryObject<Block> SHAFT_MEDIUM_TUNGSTEN_CARBIDE = registerShaft(ShaftMaterial.TUNGSTEN_CARBIDE, ShaftDiameter.MEDIUM);
+    public static final RegistryObject<Block> SHAFT_HEAVY_TUNGSTEN_CARBIDE = registerShaft(ShaftMaterial.TUNGSTEN_CARBIDE, ShaftDiameter.HEAVY);
+
+    private static RegistryObject<Block> registerShaft(ShaftMaterial mat, ShaftDiameter dia) {
+        String name = "shaft_" + dia.name + "_" + mat.name();
+        // ТЕПЕРЬ ИСПОЛЬЗУЕМ registerBlock, чтобы создались и блок, и предмет!
+        return registerBlock(name, () -> new ShaftBlock(BlockBehaviour.Properties.of().strength(2.0f), mat, dia));
+    }
 
     //декоративные блоки
     public static final RegistryObject<Block> BEAM_BLOCK = registerBlock("beam_block",
@@ -427,6 +461,8 @@ public class ModBlocks {
     private static <T extends Block> RegistryObject<T> registerBlockOnly(String name, Supplier<T> block) {
         return BLOCKS.register(name, block);
     }
+
+
 
     // Вспомогательный метод: регистрирует блок И предмет для него
     private static <T extends Block> RegistryObject<T> registerBlock(String name, Supplier<T> block) {

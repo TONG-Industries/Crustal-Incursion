@@ -185,21 +185,25 @@ public class CrustalIncursionMod {
             event.accept(ModItems.CROWBAR.get());
             event.accept(ModItems.BEAM_PLACER.get());
             event.accept(ModItems.SCREWDRIVER.get());
-//            event.accept(ModBlocks.SHAFT_WOODEN);
-//            event.accept(ModBlocks.SHAFT_IRON);
-//            event.accept(ModBlocks.DRILL_HEAD);
-//            event.accept(ModBlocks.MOTOR_ELECTRO);
-//            event.accept(ModBlocks.WIND_GEN_FLUGER);
-//            event.accept(ModBlocks.GEAR_PORT);
-//            event.accept(ModBlocks.RCONVERTER);
-//            event.accept(ModBlocks.ADDER);
-//            event.accept(ModBlocks.STOPPER);
-//            event.accept(ModBlocks.TACHOMETER);
-//            event.accept(ModBlocks.ROTATION_METER);
-//            event.accept(ModBlocks.SHAFT_PLACER);
-//            event.accept(ModBlocks.MINING_PORT);
-            event.accept(ModBlocks.SHAFT);
+
+            event.accept(ModBlocks.SHAFT_LIGHT_IRON);
+            event.accept(ModBlocks.SHAFT_MEDIUM_IRON);
+            event.accept(ModBlocks.SHAFT_HEAVY_IRON);
+            event.accept(ModBlocks.SHAFT_LIGHT_DURALUMIN);
+            event.accept(ModBlocks.SHAFT_MEDIUM_DURALUMIN);
+            event.accept(ModBlocks.SHAFT_HEAVY_DURALUMIN);
+            event.accept(ModBlocks.SHAFT_LIGHT_STEEL);
+            event.accept(ModBlocks.SHAFT_MEDIUM_STEEL);
+            event.accept(ModBlocks.SHAFT_HEAVY_STEEL);
+            event.accept(ModBlocks.SHAFT_LIGHT_TITANIUM);
+            event.accept(ModBlocks.SHAFT_MEDIUM_TITANIUM);
+            event.accept(ModBlocks.SHAFT_HEAVY_TITANIUM);
+            event.accept(ModBlocks.SHAFT_LIGHT_TUNGSTEN_CARBIDE);
+            event.accept(ModBlocks.SHAFT_MEDIUM_TUNGSTEN_CARBIDE);
+            event.accept(ModBlocks.SHAFT_HEAVY_TUNGSTEN_CARBIDE);
+
             event.accept(ModBlocks.MOTOR_ELECTRO);
+
 
             event.accept(ModItems.WIRE_COIL);
             event.accept(ModBlocks.CONNECTOR);

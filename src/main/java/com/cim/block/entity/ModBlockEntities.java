@@ -103,8 +103,24 @@ public class ModBlockEntities {
                     () -> BlockEntityType.Builder.of(CastingPotBlockEntity::new,
                             com.cim.block.basic.ModBlocks.CASTING_POT.get()).build(null));
 
-    public static final RegistryObject<BlockEntityType<ShaftBlockEntity>> SHAFT_BE = BLOCK_ENTITIES.register("shaft",
-            () -> BlockEntityType.Builder.of(ShaftBlockEntity::new, ModBlocks.SHAFT.get()).build(null));
+    public static final RegistryObject<BlockEntityType<ShaftBlockEntity>> SHAFT_BE = BLOCK_ENTITIES.register("shaft_be",
+            () -> BlockEntityType.Builder.of(ShaftBlockEntity::new,
+                    ModBlocks.SHAFT_LIGHT_IRON.get(),
+                    ModBlocks.SHAFT_MEDIUM_IRON.get(),
+                    ModBlocks.SHAFT_HEAVY_IRON.get(),
+                    ModBlocks.SHAFT_LIGHT_DURALUMIN.get(),
+                    ModBlocks.SHAFT_MEDIUM_DURALUMIN.get(),
+                    ModBlocks.SHAFT_HEAVY_DURALUMIN.get(),
+                    ModBlocks.SHAFT_LIGHT_STEEL.get(),
+                    ModBlocks.SHAFT_MEDIUM_STEEL.get(),
+                    ModBlocks.SHAFT_HEAVY_STEEL.get(),
+                    ModBlocks.SHAFT_LIGHT_TITANIUM.get(),
+                    ModBlocks.SHAFT_MEDIUM_TITANIUM.get(),
+                    ModBlocks.SHAFT_HEAVY_TITANIUM.get(),
+                    ModBlocks.SHAFT_LIGHT_TUNGSTEN_CARBIDE.get(),
+                    ModBlocks.SHAFT_MEDIUM_TUNGSTEN_CARBIDE.get(),
+                    ModBlocks.SHAFT_HEAVY_TUNGSTEN_CARBIDE.get()
+            ).build(null));
 
     public static final RegistryObject<BlockEntityType<MotorElectroBlockEntity>> MOTOR_ELECTRO_BE =
             BLOCK_ENTITIES.register("motor_electro",
