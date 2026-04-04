@@ -1,7 +1,5 @@
 package com.cim.client.gecko.item.tools;
 
-
-import com.cim.item.rotation.DrillHeadItem;
 import com.cim.item.tools.CastPickaxeIronItem;
 import com.cim.main.CrustalIncursionMod;
 import net.minecraft.resources.ResourceLocation;
