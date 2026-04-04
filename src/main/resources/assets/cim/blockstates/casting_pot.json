@@ -1,7 +1,8 @@
 {
   "variants": {
-    "": {
-      "model": "cim:block/casting_pot"
-    }
+    "facing=north": { "model": "cim:block/casting_pot" },
+    "facing=south": { "model": "cim:block/casting_pot", "y": 180 },
+    "facing=west":  { "model": "cim:block/casting_pot", "y": 270 },
+    "facing=east":  { "model": "cim:block/casting_pot", "y": 90 }
   }
 }

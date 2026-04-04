@@ -5,11 +5,11 @@ import com.cim.entity.weapons.grenades.GrenadeIfType;
 import com.cim.entity.weapons.grenades.GrenadeType;
 import com.cim.item.energy.EnergyCellItem;
 import com.cim.item.food.FoodZamaz;
+import com.cim.event.SlagItem;
 import com.cim.item.mobs.MoryLahItem;
 import com.cim.item.energy.WireCoilItem;
-import com.cim.item.tools.BeamPlacerItem;
-import com.cim.item.tools.FluidIdentifierItem;
-import com.cim.item.tools.ScrewdriverItem;
+import com.cim.item.rotation.*;
+import com.cim.item.tools.*;
 import com.cim.item.weapons.grenades.GrenadeIfItem;
 import com.cim.item.weapons.grenades.GrenadeItem;
 import com.cim.item.weapons.grenades.GrenadeNucItem;
@@ -45,8 +45,12 @@ public class ModItems {
             () -> new DepthWormSpawnEggItem(new Item.Properties()));
 
 
-
-
+    public static final RegistryObject<Item> SLAG = ITEMS.register("slag",
+            () -> new SlagItem(new Item.Properties()));
+    public static final RegistryObject<Item> POKER = ITEMS.register("poker",
+            () -> new PokerItem(new Item.Properties()
+                    .stacksTo(1)
+                    .durability(128)));
     //ИНСТРУМЕНТЫ
     public static final RegistryObject<Item> SCREWDRIVER = ITEMS.register("screwdriver",
             () -> new ScrewdriverItem(new Item.Properties().stacksTo(1).durability(256)));
@@ -68,7 +72,16 @@ public class ModItems {
     public static final RegistryObject<Item> REINFORCEDBRICK = ITEMS.register("reinforcedbrick",
             () -> new Item(new Item.Properties()));
 
+    public static final RegistryObject<Item> CAST_PICKAXE_IRON = ITEMS.register("cast_pickaxe_iron",
+            () -> new CastPickaxeIronItem(new Item.Properties()));
+
     public static final RegistryObject<Item> MOLD_INGOT = ITEMS.register("mold_ingot",
+            () -> new Item(new Item.Properties()));
+
+    public static final RegistryObject<Item> MOLD_NUGGET = ITEMS.register("mold_nugget",
+            () -> new Item(new Item.Properties()));
+
+    public static final RegistryObject<Item> MOLD_BLOCK= ITEMS.register("mold_block",
             () -> new Item(new Item.Properties()));
 
     public static final RegistryObject<Item> WIRE_COIL = ITEMS.register("wire_coil",

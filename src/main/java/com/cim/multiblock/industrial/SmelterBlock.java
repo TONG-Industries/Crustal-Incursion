@@ -2,11 +2,16 @@ package com.cim.multiblock.industrial;
 
 import com.cim.block.basic.ModBlocks;
 import com.cim.block.entity.ModBlockEntities;
+import com.cim.event.SlagItem;
+import com.cim.item.ModItems;
 import com.cim.multiblock.system.IMultiblockController;
 import com.cim.multiblock.system.MultiblockStructureHelper;
 import com.cim.multiblock.system.PartRole;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -29,6 +34,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -69,13 +75,10 @@ public class SmelterBlock extends BaseEntityBlock implements IMultiblockControll
                     'O', PartRole.CONTROLLER
             );
 
-            // СТРУКТУРА 3×2×3
-            // Layer 0 (y=0): контроллер в центре
-            // Layer 1 (y=1): полностью из частей
             helper = MultiblockStructureHelper.createFromLayersWithRoles(
                     new String[][]{
-                            {"###", "#O#", "###"},  // Нижний слой
-                            {"###", "###", "###"}   // Верхний слой
+                            {"###", "#O#", "###"},
+                            {"###", "###", "###"}
                     },
                     symbols,
                     () -> ModBlocks.MULTIBLOCK_PART.get().defaultBlockState(),
@@ -96,10 +99,8 @@ public class SmelterBlock extends BaseEntityBlock implements IMultiblockControll
         if (!level.isClientSide) {
             Direction facing = state.getValue(FACING);
 
-            // Проверка перед установкой
             Player player = placer instanceof Player ? (Player) placer : null;
             if (!getStructureHelper().checkPlacement(level, pos, facing, player)) {
-                // Отмена установки
                 level.removeBlock(pos, false);
                 if (player != null && !player.getAbilities().instabuild) {
                     popResource(level, pos, new ItemStack(this));
@@ -116,10 +117,19 @@ public class SmelterBlock extends BaseEntityBlock implements IMultiblockControll
         if (!state.is(newState.getBlock()) && !level.isClientSide) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof SmelterBlockEntity smelter) {
+                // Выбрасываем инвентарь
                 ItemStackHandler inv = smelter.getInventory();
                 for (int i = 0; i < inv.getSlots(); i++) {
                     if (!inv.getStackInSlot(i).isEmpty()) {
                         Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), inv.getStackInSlot(i));
+                    }
+                }
+
+                // Выбрасываем металл как шлак
+                if (smelter.hasMetal()) {
+                    List<ItemStack> slagItems = smelter.dumpMetalAsSlag();
+                    for (ItemStack slag : slagItems) {
+                        Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), slag);
                     }
                 }
             }
@@ -131,15 +141,37 @@ public class SmelterBlock extends BaseEntityBlock implements IMultiblockControll
 
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        if (!level.isClientSide && level.getBlockEntity(pos) instanceof SmelterBlockEntity) {
-            net.minecraftforge.network.NetworkHooks.openScreen(
-                    (net.minecraft.server.level.ServerPlayer) player,
-                    (SmelterBlockEntity) level.getBlockEntity(pos),
-                    pos
-            );
-            return InteractionResult.CONSUME;
+        if (level.isClientSide) {
+            return InteractionResult.sidedSuccess(true);
         }
-        return InteractionResult.sidedSuccess(level.isClientSide);
+
+        BlockEntity be = level.getBlockEntity(pos);
+        if (!(be instanceof SmelterBlockEntity smelter)) {
+            return InteractionResult.PASS;
+        }
+
+        ItemStack heldItem = player.getItemInHand(hand);
+
+        // === КОЧЕРГА - обрабатывается в PokerItem.useOn() ===
+        // Важно: возвращаем PASS чтобы сработал useOn у кочерги
+        if (heldItem.is(ModItems.POKER.get())) {
+            return InteractionResult.PASS;
+        }
+
+        // === Shift + ПКМ без кочерги - сообщение о необходимости кочерги ===
+        // Но только если это НЕ кочерга (выше уже проверили)
+        if (player.isShiftKeyDown()) {
+            player.displayClientMessage(Component.literal("§cДля сброса металла нужна кочерга!"), true);
+            return InteractionResult.CONSUME; // CONSUME чтобы не открылся GUI
+        }
+
+        // Обычное открытие GUI
+        net.minecraftforge.network.NetworkHooks.openScreen(
+                (net.minecraft.server.level.ServerPlayer) player,
+                smelter,
+                pos
+        );
+        return InteractionResult.CONSUME;
     }
 
     @Nullable

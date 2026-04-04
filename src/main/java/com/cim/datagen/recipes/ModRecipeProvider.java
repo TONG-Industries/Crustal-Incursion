@@ -1,5 +1,6 @@
 package com.cim.datagen.recipes;
 
+import com.cim.main.ResourceRegistry;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.recipes.*;
 import net.minecraft.world.item.Items;
@@ -17,20 +18,25 @@ import java.util.function.Consumer;
 public class ModRecipeProvider extends RecipeProvider implements IConditionBuilder {
     public ModRecipeProvider(PackOutput output) {
         super(output);
+        // !!! ВАЖНО: Инициализируем ResourceRegistry !!!
+        ResourceRegistry.init();
     }
 
     @Override
     protected void buildRecipes(Consumer<FinishedRecipe> writer) {
-        // --- 1. КРАФТ НА ВЕРСТАКЕ (Shaped) ---
-        // Пример: Крафт DET_MINER
+        // --- 1. АВТОМАТИЧЕСКИЕ РЕЦЕПТЫ ДЛЯ РЕСУРСОВ ---
+        ResourceRecipeHelper.generateRecipes(writer);
+
+        // --- 2. РУЧНЫЕ РЕЦЕПТЫ ---
         ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ModBlocks.DET_MINER.get())
                 .pattern("III")
                 .pattern("IDI")
                 .pattern("III")
                 .define('I', Items.IRON_INGOT)
                 .define('D', Items.TNT)
-                .unlockedBy("has_tnt", has(Items.TNT)) // Условие открытия в книге рецептов
+                .unlockedBy("has_tnt", has(Items.TNT))
                 .save(writer);
+
 
         // --- 2. КРАФТ БЕЗ ФОРМЫ (Shapeless) ---
         // Пример: Разбор блока обратно в ресурсы

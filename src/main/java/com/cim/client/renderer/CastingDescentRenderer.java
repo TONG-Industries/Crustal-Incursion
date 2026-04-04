@@ -1,6 +1,5 @@
 package com.cim.client.renderer;
-
-import com.cim.api.metal.Metal;
+import com.cim.api.metallurgy.system.Metal;
 import com.cim.block.basic.industrial.casting.CastingDescentBlock;
 import com.cim.block.entity.industrial.casting.CastingDescentBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;

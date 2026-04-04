@@ -1,10 +1,10 @@
 package com.cim.datagen.assets;
 
+import com.cim.main.ResourceRegistry;
 import com.cim.block.basic.necrosis.hive.HiveRootsBlock;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.*;
-import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraftforge.client.model.generators.BlockStateProvider;
 import net.minecraftforge.client.model.generators.ConfiguredModel;
 import net.minecraftforge.client.model.generators.ModelFile;
@@ -23,11 +23,25 @@ public class ModBlockStateProvider extends BlockStateProvider {
     public ModBlockStateProvider(PackOutput output, ExistingFileHelper exFileHelper) {
         super(output, CrustalIncursionMod.MOD_ID, exFileHelper);
         this.existingFileHelper = exFileHelper;
+
+        // !!! ВАЖНО: Инициализируем ResourceRegistry перед использованием !!!
+        ResourceRegistry.init();
     }
 
     @Override
     protected void registerStatesAndModels() {
+        // Генерация блокстейтов для ресурсных блоков (СНАЧАЛА!)
+        for (ResourceRegistry.ResourceEntry resource : ResourceRegistry.getResources()) {
+            if (resource.block != null) {
+                // Используем имя блока напрямую из типа ресурса
+                String blockName = resource.name + "_" + resource.type.blockName;
+                ResourceLocation texture = modLoc("block/" + blockName);
 
+                ModelFile model = models().cubeAll(blockName, texture);
+                simpleBlock(resource.block.get(), model);
+                simpleBlockItem(resource.block.get(), model);
+            }
+        }
         //СТАТИЧНИЫЕ БЛОКИ
 
         cubeAllWithItem(ModBlocks.SEQUOIA_BARK);

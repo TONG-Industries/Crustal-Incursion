@@ -1,7 +1,9 @@
 package com.cim.menu;
 
-import com.cim.api.metal.MetallurgyRegistry;
+
+import com.cim.api.metallurgy.system.MetallurgyRegistry;
 import com.cim.block.basic.ModBlocks;
+import com.cim.event.HotItemHandler;
 import com.cim.multiblock.industrial.SmelterBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -27,27 +29,22 @@ public class SmelterMenu extends AbstractContainerMenu {
         this.data = data;
         this.levelAccess = ContainerLevelAccess.create(entity.getLevel(), entity.getBlockPos());
 
-        // Верхний ряд (0-3): для сплавов
+        // Верхний ряд (слоты 0-3) – сплавы
         for (int i = 0; i < 4; i++) {
             this.addSlot(new SlotItemHandler(entity.getInventory(), i, 95 + i * 18, 13) {
                 @Override
-                public boolean mayPlace(ItemStack stack) {
-                    return !stack.isEmpty(); // Любое количество!
-                }
-
-                @Override
-                public int getMaxStackSize() {
-                    return 64; // Стандартный размер стака
-                }
+                public boolean mayPlace(ItemStack stack) { return true; }
             });
         }
 
-        // Нижний ряд (4-7): для обычной плавки
+        // Нижний ряд (слоты 4-7) – обычная плавка + шлак
         for (int i = 0; i < 4; i++) {
             this.addSlot(new SlotItemHandler(entity.getInventory(), 4 + i, 95 + i * 18, 45) {
                 @Override
                 public boolean mayPlace(ItemStack stack) {
-                    return MetallurgyRegistry.findSimpleRecipe(stack.getItem()) != null;
+                    // Шлак или рецепт плавки
+                    if (stack.getItem() instanceof com.cim.event.SlagItem) return true;
+                    return MetallurgyRegistry.getSmeltRecipe(stack.getItem()) != null;
                 }
             });
         }
@@ -68,27 +65,23 @@ public class SmelterMenu extends AbstractContainerMenu {
     public static SmelterMenu create(int id, Inventory inv, FriendlyByteBuf buf) {
         BlockPos pos = buf.readBlockPos();
         BlockEntity entity = inv.player.level().getBlockEntity(pos);
-        // Увеличили с 9 до 11 для хранения требуемых температур
-        SimpleContainerData data = new SimpleContainerData(11);
+        SimpleContainerData data = new SimpleContainerData(13);
         return new SmelterMenu(id, inv, (SmelterBlockEntity) entity, data);
     }
 
-    // Геттеры для данных
     public int getTemperature() { return data.get(0); }
-    public int getProgressTop() { return data.get(1); }
-    public int getMaxProgressTop() { return data.get(2); }
-    public int getProgressBottom() { return data.get(3); }
-    public int getMaxProgressBottom() { return data.get(4); }
-    public boolean isSmeltingTop() { return data.get(5) > 0; }
-    public boolean isSmeltingBottom() { return data.get(6) > 0; }
-    public boolean hasTopRecipe() {
-        // Проверяем есть ли рецепт прямо сейчас
-        return data.get(7) > 0 || getRequiredTempTop() > 0;
-    }
-    public boolean hasBottomRecipe() { return data.get(8) > 0; }
-    public int getRequiredTempTop() { return data.get(9); }
-    public int getRequiredTempBottom() { return data.get(10); }
-
+    public int getTopProgress() { return data.get(1); }
+    public int getTopMaxProgress() { return data.get(2); }
+    public boolean isTopSmelting() { return data.get(3) > 0; }
+    public int getRequiredTempTop() { return data.get(4); }
+    public int getBottomProgress() { return data.get(5); }
+    public int getBottomMaxProgress() { return data.get(6); }
+    public boolean isBottomSmelting() { return data.get(7) > 0; }
+    public int getRequiredTempBottom() { return data.get(8); }
+    public boolean hasTopRecipe() { return data.get(9) > 0; }
+    public boolean hasBottomRecipe() { return data.get(10) > 0; }
+    public int getTopHeatPerTick() { return data.get(11); }
+    public int getBottomHeatPerTick() { return data.get(12); }
     public SmelterBlockEntity getBlockEntity() { return blockEntity; }
 
     @Override
@@ -105,6 +98,9 @@ public class SmelterMenu extends AbstractContainerMenu {
             ItemStack stack = slot.getItem();
             returnStack = stack.copy();
 
+            // Если предмет горячий - данные уже в NBT, просто логируем если нужно
+            // НЕТ else здесь! Логика перемещения должна работать всегда.
+
             if (index < 8) {
                 // Из печи в инвентарь
                 if (!this.moveItemStackTo(stack, 8, 44, true)) {
@@ -112,16 +108,19 @@ public class SmelterMenu extends AbstractContainerMenu {
                 }
             } else {
                 // Из инвентаря в печь
-                if (MetallurgyRegistry.findSimpleRecipe(stack.getItem()) != null) {
-                    // Сначала пробуем нижний ряд (обычная плавка)
+                boolean isSmeltable = MetallurgyRegistry.getSmeltRecipe(stack.getItem()) != null;
+                boolean isSlag = stack.getItem() instanceof com.cim.event.SlagItem;
+
+                if (isSmeltable || isSlag) {
+                    // Сначала пытаемся в нижний ряд (4-7)
                     if (!this.moveItemStackTo(stack, 4, 8, false)) {
-                        // Если не поместилось - верхний ряд
+                        // Если не получилось – в верхний ряд (0-4)
                         if (!this.moveItemStackTo(stack, 0, 4, false)) {
                             return ItemStack.EMPTY;
                         }
                     }
                 } else {
-                    // Не плавильный предмет - только в верхний ряд
+                    // Не плавильный предмет – только в верхний ряд
                     if (!this.moveItemStackTo(stack, 0, 4, false)) {
                         return ItemStack.EMPTY;
                     }

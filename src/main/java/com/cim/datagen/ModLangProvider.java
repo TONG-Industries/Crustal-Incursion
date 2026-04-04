@@ -1,5 +1,6 @@
 package com.cim.datagen;
 
+import com.cim.main.ResourceRegistry;
 import net.minecraft.data.PackOutput;
 import net.minecraftforge.common.data.LanguageProvider;
 import com.cim.main.CrustalIncursionMod;
@@ -13,10 +14,17 @@ public class ModLangProvider extends LanguageProvider {
     public ModLangProvider(PackOutput output, String locale) {
         super(output, CrustalIncursionMod.MOD_ID, locale);
         this.locale = locale;
+
+        // !!! ВАЖНО: Инициализируем ResourceRegistry !!!
+        ResourceRegistry.init();
     }
 
     @Override
     protected void addTranslations() {
+        // Сначала автоматические переводы для ресурсов
+        ResourceDatagenHelper.generateTranslations(this, locale);
+
+        // Затем ручные переводы
         if (locale.equals("ru_ru")) {
             addRussian();
         } else if (locale.equals("uk_ua")){
@@ -48,6 +56,17 @@ public class ModLangProvider extends LanguageProvider {
         // Подказки
         add("tooltip.cim.detminer.line1", "Mines blocks in explosion radius");
         add("tooltip.cim.detminer.line2", "Completely harmless to entities");
+
+        // Metals
+        add("metal.cim.gold", "Gold");
+        add("metal.cim.iron", "Iron");
+        add("metal.cim.copper", "Copper");
+        add("metal.cim.netherite", "Netherite");
+        add("metal.cim.steel", "Steel");
+        add("metal.cim.aluminum", "Aluminum");
+        add("metal.cim.bronze", "Bronze");
+        add("metal.cim.tin", "Tin");
+        add("metal.cim.zinc", "Zinc");
 
         //Секвойя
         add(ModBlocks.SEQUOIA_BARK.get(), "Sequoia bark");
@@ -175,6 +194,29 @@ public class ModLangProvider extends LanguageProvider {
 
     private void addRussian() {
         //Секвойя
+
+        // Литая кирка
+        add("item.cim.cast_pickaxe_iron", "Литая железная кирка");
+        add("item.cim.cast_pickaxe_iron.desc.charge", "§6Зажмите ПКМ для мощного удара (2 сек)");
+        add("item.cim.cast_pickaxe_iron.desc.power", "§7Мощь: 6 секунд обычной добычи");
+        add("item.cim.cast_pickaxe_iron.desc.twohanded", "§8§oТребуется свободная вторая рука");
+        add("item.cim.cast_pickaxe_iron.warning.twohanded", "Требуется свободная вторая рука!");
+        add("item.cim.cast_pickaxe_iron.desc.hold", "§7Можно держать заряд сколько угодно");
+        add("item.cim.cast_pickaxe_iron.warning.range", "Слишком далеко!");
+        add("item.cim.cast_pickaxe_iron.desc.priority", "§7Приоритет: сначала мобы, потом блоки");
+        add("item.cim.cast_pickaxe_iron.warning.cooldown", "Перезарядка...");
+
+
+        // Металлы
+        add("metal.cim.gold", "Золото");
+        add("metal.cim.iron", "Железо");
+        add("metal.cim.copper", "Медь");
+        add("metal.cim.netherite", "Незерит");
+        add("metal.cim.steel", "Сталь");
+        add("metal.cim.aluminum", "Алюминий");
+        add("metal.cim.bronze", "Бронза");
+        add("metal.cim.tin", "Олово");
+        add("metal.cim.zinc", "Цинк");
 
         add("item.cim.hot_ingot.tooltip", "§6§lРАСКАЛЁННЫЙ! §r§7(%s%%)");
         add(ModBlocks.SEQUOIA_BARK.get(), "Кора секвойи");
@@ -398,6 +440,14 @@ public class ModLangProvider extends LanguageProvider {
         add(ModBlocks.CONCRETE_HAZARD_NEW_SLAB.get(), "Плита з нового небезпечного бетону");
         add(ModBlocks.CONCRETE_HAZARD_OLD_STAIRS.get(), "Сходи зі старого небезпечного бетону");
         add(ModBlocks.CONCRETE_HAZARD_OLD_SLAB.get(), "Плита зі старого небезпечного бетону");
+
+        // Метали
+        add("metal.cim.gold", "Золото");
+        add("metal.cim.iron", "Залізо");
+        add("metal.cim.copper", "Мідь");
+        add("metal.cim.netherite", "Незерит");
+        add("metal.cim.steel", "Сталь");
+        add("metal.cim.aluminum", "Алюміній");
 
         // Вали
 //        add(ModBlocks.DRILL_HEAD.get(), "Бурова головка");

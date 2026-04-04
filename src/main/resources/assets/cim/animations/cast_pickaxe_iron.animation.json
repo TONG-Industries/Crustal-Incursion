@@ -1,0 +1,54 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"charging": {
+			"animation_length": 2,
+			"bones": {
+				"cast_pickaxe": {
+					"rotation": {
+						"0.0": {
+							"vector": [0, 0, 0]
+						},
+						"2.0": {
+							"vector": [-45, 0, 0]
+						}
+					}
+				}
+			}
+		},
+		"holding": {
+			"loop": true,
+			"animation_length": 1,
+			"bones": {
+				"cast_pickaxe": {
+					"rotation": {
+						"0.0": {
+							"vector": [-45, 0, 0]
+						},
+						"1.0": {
+							"vector": [-45, 0, 0]
+						}
+					}
+				}
+			}
+		},
+		"hit": {
+			"animation_length": 0.75,
+			"bones": {
+				"cast_pickaxe": {
+					"rotation": {
+						"0.0": {
+							"vector": [-45, 0, 0]
+						},
+						"0.0833": {
+							"vector": [30, 0, 0]
+						},
+						"0.75": {
+							"vector": [0, 0, 0]
+						}
+					}
+				}
+			}
+		}
+	}
+}
