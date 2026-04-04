@@ -195,6 +195,16 @@ public class ModLangProvider extends LanguageProvider {
     private void addRussian() {
         //Секвойя
 
+        // Литая кирка
+        add("item.cim.cast_pickaxe_iron", "Литая железная кирка");
+        add("item.cim.cast_pickaxe_iron.desc.charge", "§6Зажмите ПКМ для мощного удара (2 сек)");
+        add("item.cim.cast_pickaxe_iron.desc.power", "§7Мощь: 6 секунд обычной добычи");
+        add("item.cim.cast_pickaxe_iron.desc.twohanded", "§8§oТребуется свободная вторая рука");
+        add("item.cim.cast_pickaxe_iron.warning.twohanded", "Требуется свободная вторая рука!");
+        add("item.cim.cast_pickaxe_iron.desc.hold", "§7Можно держать заряд сколько угодно");
+        add("item.cim.cast_pickaxe_iron.warning.range", "Слишком далеко!");
+
+
         // Металлы
         add("metal.cim.gold", "Золото");
         add("metal.cim.iron", "Железо");

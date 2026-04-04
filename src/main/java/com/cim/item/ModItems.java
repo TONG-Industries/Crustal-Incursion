@@ -9,10 +9,7 @@ import com.cim.event.SlagItem;
 import com.cim.item.mobs.MoryLahItem;
 import com.cim.item.energy.WireCoilItem;
 import com.cim.item.rotation.*;
-import com.cim.item.tools.BeamPlacerItem;
-import com.cim.item.tools.FluidIdentifierItem;
-import com.cim.item.tools.PokerItem;
-import com.cim.item.tools.ScrewdriverItem;
+import com.cim.item.tools.*;
 import com.cim.item.weapons.grenades.GrenadeIfItem;
 import com.cim.item.weapons.grenades.GrenadeItem;
 import com.cim.item.weapons.grenades.GrenadeNucItem;
@@ -74,6 +71,9 @@ public class ModItems {
             () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> REINFORCEDBRICK = ITEMS.register("reinforcedbrick",
             () -> new Item(new Item.Properties()));
+
+    public static final RegistryObject<Item> CAST_PICKAXE_IRON = ITEMS.register("cast_pickaxe_iron",
+            () -> new CastPickaxeIronItem(new Item.Properties()));
 
     public static final RegistryObject<Item> MOLD_INGOT = ITEMS.register("mold_ingot",
             () -> new Item(new Item.Properties()));

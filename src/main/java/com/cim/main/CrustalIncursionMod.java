@@ -220,6 +220,7 @@ public class CrustalIncursionMod {
 
 
         if (event.getTab() == ModCreativeTabs.CIM_WEAPONS_TAB.get()) {
+            event.accept(ModItems.CAST_PICKAXE_IRON);
 
             event.accept(ModBlocks.DET_MINER);
             event.accept(ModItems.DETONATOR);
