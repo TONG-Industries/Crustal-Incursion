@@ -1,6 +1,7 @@
 package com.cim.client.overlay.hud;
 
-import com.cim.item.tools.CastPickaxeIronItem;
+
+import com.cim.item.tools.cast_pickaxes.CastPickaxeItem;
 import com.cim.main.CrustalIncursionMod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -16,14 +17,14 @@ public class CastPickaxeIronHud {
 
     @SubscribeEvent
     public static void onRenderGui(RenderGuiOverlayEvent.Pre event) {
-        // Можно проверять конкретный оверлей, например: if (!event.getOverlay().id().equals(VanillaGuiOverlay.CROSSHAIR.id())) return;
-
         Minecraft mc = Minecraft.getInstance();
         Player player = mc.player;
         if (player == null) return;
 
         ItemStack stack = player.getMainHandItem();
-        if (!(stack.getItem() instanceof CastPickaxeIronItem pickaxe)) return;
+        if (!(stack.getItem() instanceof CastPickaxeItem pickaxe)) return;
+
+        int chargeTicks = pickaxe.getStats().getChargeTicks();
 
         GuiGraphics graphics = event.getGuiGraphics();
         int screenWidth = mc.getWindow().getGuiScaledWidth();
@@ -32,7 +33,7 @@ public class CastPickaxeIronHud {
         // Если игрок заряжает (удерживает ПКМ)
         if (player.isUsingItem() && player.getItemInHand(player.getUsedItemHand()) == stack) {
             int useTicks = player.getTicksUsingItem();
-            float progress = Math.min(1.0f, useTicks / (float) CastPickaxeIronItem.CHARGE_TICKS);
+            float progress = Math.min(1.0f, useTicks / (float) chargeTicks);
 
             renderChargeBar(graphics, screenWidth, screenHeight, progress);
         }
@@ -49,13 +50,10 @@ public class CastPickaxeIronHud {
         int x = (screenWidth - barWidth) / 2;
         int y = screenHeight / 2 + 7;
 
-        // Заполнение: от оранжевого (0%) к зеленому (100%)
         int fillWidth = (int)(barWidth * progress);
         int color = progress >= 1.0f ? 0xFF00FF00 : 0xFFFFAA00;
 
         graphics.fill(x, y, x + fillWidth, y + barHeight, color);
-
-        // Текстура или блик (опционально)
         graphics.fill(x, y, x + fillWidth, y + 1, 0xFFFFFFFF & (progress >= 1.0f ? 0x88FFFFFF : 0x44FFFFFF));
     }
 
@@ -65,9 +63,8 @@ public class CastPickaxeIronHud {
         int x = (screenWidth - barWidth) / 2;
         int y = screenHeight / 2 + 7;
 
-        // Заполнение (уменьшается от 100% до 0%)
         int fillWidth = (int)(barWidth * (1.0f - cooldownPercent));
-        int color = 0xFFFFFFFF; // Белый для кулдауна
+        int color = 0xFFFFFFFF;
 
         graphics.fill(x, y, x + fillWidth, y + barHeight, color);
     }
