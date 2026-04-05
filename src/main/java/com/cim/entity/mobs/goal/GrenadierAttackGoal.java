@@ -1,8 +1,8 @@
-package com.cim.entity.mobs;
+package com.cim.entity.mobs.goal;
 
+import com.cim.entity.mobs.GrenadierZombieEntity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.entity.monster.Zombie;
 
 import java.util.EnumSet;
 
@@ -30,7 +30,7 @@ public class GrenadierAttackGoal extends Goal {
     @Override
     public boolean canUse() {
         LivingEntity target = this.zombie.getTarget();
-        return target != null && target.isAlive() && this.zombie.hasGrenades();
+        return target != null && target.isAlive() && this.zombie.hasGrenades() && this.zombie.canThrowGrenade();
     }
 
     @Override
@@ -53,6 +53,12 @@ public class GrenadierAttackGoal extends Goal {
         LivingEntity target = this.zombie.getTarget();
         if (target == null) return;
 
+        // Если на кд — просто приближаемся/отходим, но не атакуем
+        if (!this.zombie.canThrowGrenade()) {
+            this.zombie.setAggressive(false);
+            // Продолжаем двигаться, но не бросаем
+        }
+
         double distanceSq = this.zombie.distanceToSqr(target);
         boolean canSee = this.zombie.getSensing().hasLineOfSight(target);
         boolean hasSeen = this.seeTime > 0;
@@ -69,15 +75,12 @@ public class GrenadierAttackGoal extends Goal {
 
         // Движение
         if (distanceSq < minAttackDistanceSq && canSee) {
-            // Слишком близко — отходим
             this.zombie.getNavigation().stop();
             this.strafingTime++;
         } else if (distanceSq > maxAttackDistanceSq) {
-            // Слишком далеко — приближаемся
             this.zombie.getNavigation().moveTo(target, this.speedModifier);
             this.strafingTime = -1;
         } else {
-            // Оптимальная дистанция — стрейфимся
             this.zombie.getNavigation().stop();
             this.strafingTime++;
         }
@@ -109,8 +112,9 @@ public class GrenadierAttackGoal extends Goal {
             this.zombie.getLookControl().setLookAt(target, 30.0F, 30.0F);
         }
 
-        // Атака
-        if (canSee && this.seeTime >= 5 && distanceSq <= maxAttackDistanceSq && distanceSq >= minAttackDistanceSq) {
+        // Атака только если видим, в зоне, и НЕ на кд
+        if (canSee && this.seeTime >= 5 && distanceSq <= maxAttackDistanceSq &&
+                distanceSq >= minAttackDistanceSq && this.zombie.canThrowGrenade()) {
             this.zombie.setAggressive(true);
             this.zombie.throwGrenade(target);
         } else {

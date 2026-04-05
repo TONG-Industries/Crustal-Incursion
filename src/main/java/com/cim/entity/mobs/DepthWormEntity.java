@@ -19,9 +19,8 @@ import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import com.cim.block.entity.hive.DepthWormNestBlockEntity;
-import com.cim.goal.DepthWormJumpGoal;
-import com.cim.goal.ReturnToHiveGoal;
+import com.cim.entity.mobs.goal.DepthWormJumpGoal;
+import com.cim.entity.mobs.goal.ReturnToHiveGoal;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.AnimatableManager;
@@ -31,7 +30,6 @@ import software.bernie.geckolib.core.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.List;
-import java.util.UUID;
 
 public class DepthWormEntity extends Monster implements GeoEntity {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);

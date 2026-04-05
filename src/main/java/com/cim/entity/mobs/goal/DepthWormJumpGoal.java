@@ -1,4 +1,4 @@
-package com.cim.goal;
+package com.cim.entity.mobs.goal;
 
 
 import net.minecraft.world.entity.LivingEntity;

@@ -1,4 +1,4 @@
-package com.cim.goal;
+package com.cim.entity.mobs.goal;
 
 import com.cim.api.hive.HiveNetwork;
 import com.cim.api.hive.HiveNetworkManager;

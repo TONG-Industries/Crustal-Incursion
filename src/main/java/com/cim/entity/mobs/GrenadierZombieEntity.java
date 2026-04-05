@@ -1,6 +1,7 @@
 package com.cim.entity.mobs;
 
 import com.cim.entity.ModEntities;
+import com.cim.entity.mobs.goal.GrenadierAttackGoal;
 import com.cim.entity.weapons.grenades.*;
 import com.cim.item.ModItems;
 import net.minecraft.nbt.CompoundTag;
@@ -9,6 +10,8 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -29,9 +32,9 @@ import java.util.List;
 public class GrenadierZombieEntity extends Zombie {
 
     public enum GrenadierType {
-        STANDARD,    // 5 обычных гранат (75%)
-        IMPACT,      // 3 ударные (20%)
-        HYDROGEN     // 1 водородная (5%)
+        STANDARD,
+        IMPACT,
+        HYDROGEN
     }
 
     private static final EntityDataAccessor<String> GRENADIER_TYPE =
@@ -41,8 +44,9 @@ public class GrenadierZombieEntity extends Zombie {
             SynchedEntityData.defineId(GrenadierZombieEntity.class, EntityDataSerializers.INT);
 
     private int grenadeCooldown = 0;
-    private final List<ItemStack> grenadeInventory = new ArrayList<>();
+    private List<ItemStack> grenadeInventory = new ArrayList<>();
     private boolean switchedToMelee = false;
+    private boolean initialized = false; // Флаг начальной инициализации
 
     public GrenadierZombieEntity(EntityType<? extends Zombie> entityType, Level level) {
         super(entityType, level);
@@ -57,26 +61,23 @@ public class GrenadierZombieEntity extends Zombie {
 
     @Override
     protected void registerGoals() {
-        // Убираем стандартную атаку зомби — заменим на нашу
-        // Но оставляем остальные голы
         this.goalSelector.addGoal(4, new GrenadierAttackGoal(this, 1.0D, 16.0F, 6.0F));
-
         this.goalSelector.addGoal(6, new MoveThroughVillageGoal(this, 1.0D, true, 4, () -> true));
         this.goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 1.0D));
         this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
 
-        this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        // КАК У ЧЕРВЯ: используем setAlertOthers() для помощи союзникам
+        // Включаем ВСЕХ зомби (обычных и гренадёров)
+        this.targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers(Zombie.class));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
     }
 
     @Override
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty,
                                         MobSpawnType reason, SpawnGroupData spawnData, CompoundTag dataTag) {
-        // Вызываем родительский метод — он наденет случайную броню как у обычного зомби!
         spawnData = super.finalizeSpawn(level, difficulty, reason, spawnData, dataTag);
 
-        // Определяем тип гренадёра
         RandomSource random = level.getRandom();
         double roll = random.nextDouble();
 
@@ -96,12 +97,15 @@ public class GrenadierZombieEntity extends Zombie {
 
         this.entityData.set(GRENADIER_TYPE, type.name());
         this.entityData.set(GRENADES_LEFT, grenadeCount);
-        this.populateGrenadeInventory(type, grenadeCount);
 
-        // Надеваем очки поверх возможной брони (или заменяем шлем)
+        // Создаём инвентарь и сразу ставим гранату в руку
+        this.populateGrenadeInventory(type, grenadeCount);
+        this.setHeldGrenade();
+
         this.setItemSlot(EquipmentSlot.HEAD, new ItemStack(ModItems.GRENADIER_GOGGLES.get()));
-        // Шанс дропа очков — редкий, так как это "специальная" экипировка
-        this.armorDropChances[EquipmentSlot.HEAD.getIndex()] = 0.025F; // 2.5%
+        this.armorDropChances[EquipmentSlot.HEAD.getIndex()] = 0.025F;
+
+        this.initialized = true;
 
         return spawnData;
     }
@@ -144,6 +148,16 @@ public class GrenadierZombieEntity extends Zombie {
         }
     }
 
+    private void setHeldGrenade() {
+        int grenadesLeft = this.entityData.get(GRENADES_LEFT);
+        if (grenadesLeft > 0 && grenadesLeft <= this.grenadeInventory.size()) {
+            ItemStack grenade = this.grenadeInventory.get(grenadesLeft - 1).copy();
+            this.setItemInHand(InteractionHand.MAIN_HAND, grenade);
+        } else {
+            this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        }
+    }
+
     @Override
     public void tick() {
         super.tick();
@@ -152,7 +166,9 @@ public class GrenadierZombieEntity extends Zombie {
             this.grenadeCooldown--;
         }
 
-        // Если гранаты закончились и ещё не переключились — переключаемся на ближний бой
+        // НЕ обновляем гранату в tick() — только при броске и загрузке
+        // Это предотвращает исчезновение
+
         if (!this.hasGrenades() && !this.switchedToMelee) {
             this.switchToMelee();
         }
@@ -160,11 +176,8 @@ public class GrenadierZombieEntity extends Zombie {
 
     private void switchToMelee() {
         this.switchedToMelee = true;
-
-        // Убираем гол метания гранат
+        this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
         this.goalSelector.removeAllGoals(goal -> goal instanceof GrenadierAttackGoal);
-
-        // Добавляем обычную атаку зомби (ближний бой)
         this.goalSelector.addGoal(2, new ZombieAttackGoal(this, 1.0D, false));
     }
 
@@ -184,8 +197,12 @@ public class GrenadierZombieEntity extends Zombie {
         return this.entityData.get(GRENADES_LEFT);
     }
 
+    public boolean canThrowGrenade() {
+        return this.hasGrenades() && this.grenadeCooldown <= 0;
+    }
+
     public void throwGrenade(LivingEntity target) {
-        if (!this.hasGrenades() || this.grenadeCooldown > 0) return;
+        if (!this.canThrowGrenade()) return;
 
         Level level = this.level();
         if (level.isClientSide) return;
@@ -218,8 +235,20 @@ public class GrenadierZombieEntity extends Zombie {
 
             level.addFreshEntity(projectile);
 
-            this.entityData.set(GRENADES_LEFT, grenadesLeft - 1);
-            this.grenadeCooldown = type == GrenadierType.HYDROGEN ? 50 : 20;
+            // Уменьшаем счётчик
+            int newCount = grenadesLeft - 1;
+            this.entityData.set(GRENADES_LEFT, newCount);
+
+            // 3 секунды кд
+            this.grenadeCooldown = 60;
+
+            // Ставим новую гранату в руку (или убираем если закончились)
+            if (newCount > 0 && newCount <= this.grenadeInventory.size()) {
+                ItemStack nextGrenade = this.grenadeInventory.get(newCount - 1).copy();
+                this.setItemInHand(InteractionHand.MAIN_HAND, nextGrenade);
+            } else {
+                this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+            }
         }
     }
 
@@ -254,9 +283,7 @@ public class GrenadierZombieEntity extends Zombie {
                 }
                 yield new GrenadeIfProjectileEntity(level, this, ifType);
             }
-            case HYDROGEN -> {
-                yield new GrenadeNucProjectileEntity(level, this);
-            }
+            case HYDROGEN -> new GrenadeNucProjectileEntity(level, this);
         };
     }
 
@@ -266,27 +293,40 @@ public class GrenadierZombieEntity extends Zombie {
         tag.putString("GrenadierType", this.entityData.get(GRENADIER_TYPE));
         tag.putInt("GrenadesLeft", this.entityData.get(GRENADES_LEFT));
         tag.putBoolean("SwitchedToMelee", this.switchedToMelee);
+        tag.putBoolean("Initialized", this.initialized);
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
+
         if (tag.contains("GrenadierType")) {
             this.entityData.set(GRENADIER_TYPE, tag.getString("GrenadierType"));
         }
+
         if (tag.contains("GrenadesLeft")) {
             int left = tag.getInt("GrenadesLeft");
             this.entityData.set(GRENADES_LEFT, left);
             populateGrenadeInventory(getGrenadierType(), left);
+
+            // Восстанавливаем гранату в руке при загрузке
+            if (left > 0) {
+                setHeldGrenade();
+            }
         }
+
         if (tag.contains("SwitchedToMelee")) {
             this.switchedToMelee = tag.getBoolean("SwitchedToMelee");
-            if (this.switchedToMelee && this.level().isClientSide == false) {
+            if (this.switchedToMelee && !this.level().isClientSide) {
                 this.goalSelector.removeAllGoals(goal -> goal instanceof GrenadierAttackGoal);
                 if (this.goalSelector.getRunningGoals().noneMatch(goal -> goal.getGoal() instanceof ZombieAttackGoal)) {
                     this.goalSelector.addGoal(2, new ZombieAttackGoal(this, 1.0D, false));
                 }
             }
+        }
+
+        if (tag.contains("Initialized")) {
+            this.initialized = tag.getBoolean("Initialized");
         }
     }
 
@@ -294,8 +334,44 @@ public class GrenadierZombieEntity extends Zombie {
         return Monster.createMonsterAttributes()
                 .add(Attributes.FOLLOW_RANGE, 35.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.23D)
-                .add(Attributes.ATTACK_DAMAGE, 4.0D) // Чуть сильнее обычного зомби
+                .add(Attributes.ATTACK_DAMAGE, 4.0D)
                 .add(Attributes.ARMOR, 2.0D)
                 .add(Attributes.SPAWN_REINFORCEMENTS_CHANCE);
     }
+
+    @Override
+    protected void dropCustomDeathLoot(DamageSource source, int looting, boolean recentlyHit) {
+        super.dropCustomDeathLoot(source, looting, recentlyHit);
+
+        // Дропаем гранату, которую держал в руках
+        if (!this.level().isClientSide && this.hasGrenades()) {
+            int grenadesLeft = this.entityData.get(GRENADES_LEFT);
+
+            // Дропаем текущую гранату (которая в руке)
+            if (grenadesLeft > 0 && grenadesLeft <= this.grenadeInventory.size()) {
+                ItemStack currentGrenade = this.grenadeInventory.get(grenadesLeft - 1);
+                if (!currentGrenade.isEmpty()) {
+                    this.spawnAtLocation(currentGrenade.copy());
+                }
+            }
+
+            // Дополнительно: шанс дропнуть ещё 1-2 гранаты из инвентаря (кроме текущей)
+            int extraDrops = 0;
+            if (looting > 0) {
+                extraDrops = this.random.nextInt(looting) + 1;
+            }
+
+            int dropped = 0;
+            for (int i = 0; i < grenadesLeft - 1 && dropped < extraDrops; i++) {
+                if (this.random.nextFloat() < 0.5F) { // 50% шанс на каждую дополнительную
+                    ItemStack extraGrenade = this.grenadeInventory.get(i);
+                    if (!extraGrenade.isEmpty()) {
+                        this.spawnAtLocation(extraGrenade.copy());
+                        dropped++;
+                    }
+                }
+            }
+        }
+    }
+
 }
