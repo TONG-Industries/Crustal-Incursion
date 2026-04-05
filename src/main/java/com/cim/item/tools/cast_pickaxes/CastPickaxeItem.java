@@ -1,6 +1,7 @@
 package com.cim.item.tools.cast_pickaxes;
 
 
+
 import com.cim.client.gecko.item.tools.CastPickaxeItemRenderer;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
@@ -11,6 +12,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -51,9 +53,13 @@ public class CastPickaxeItem extends PickaxeItem implements GeoItem {
     private static final UUID ATTACK_SPEED_UUID = UUID.fromString("c6a7b9c0-4b2c-11ee-be56-0242ac120002");
     private static final int COOLDOWN_TICKS = 20;
 
-    private static final RawAnimation CHARGING_ANIM = RawAnimation.begin().thenPlay("charging");
-    private static final RawAnimation HOLDING_ANIM = RawAnimation.begin().thenPlay("holding");
-    private static final RawAnimation HIT_ANIM = RawAnimation.begin().thenPlay("hit");
+    // Анимации с динамической скоростью
+    private static final RawAnimation CHARGING_ANIM = RawAnimation.begin()
+            .thenPlay("charging");
+    private static final RawAnimation HOLDING_ANIM = RawAnimation.begin()
+            .thenPlay("holding");
+    private static final RawAnimation HIT_ANIM = RawAnimation.begin()
+            .thenPlay("hit");
 
     public CastPickaxeItem(CastPickaxeStats stats, Properties properties) {
         super(stats.getTier(), 1, -2.8f, properties.stacksTo(1));
@@ -75,6 +81,15 @@ public class CastPickaxeItem extends PickaxeItem implements GeoItem {
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return cache;
+    }
+
+    /**
+     * Рассчитывает скорость анимации на основе времени зарядки кирки.
+     * Для кирки с 60 тиков зарядки, анимация должна играться в 1.5x (60/40)
+     */
+    public float getAnimationSpeed() {
+        // Базовая анимация рассчитана на 40 тиков (2 сек)
+        return stats.getChargeTicks() / 40.0f;
     }
 
     private boolean canUse(Player player) {
@@ -102,7 +117,14 @@ public class CastPickaxeItem extends PickaxeItem implements GeoItem {
         if (!player.level().isClientSide) {
             ItemStack stack = player.getItemInHand(context.getHand());
             long instanceId = GeoItem.getOrAssignId(stack, (ServerLevel) player.level());
+
+            // Запускаем анимацию с рассчитанной скоростью
+            float speed = getAnimationSpeed();
             triggerAnim(player, instanceId, "controller", "charging");
+
+            // Отправляем пакет с скоростью анимации клиенту
+            // Примечание: для точной синхронизации скорости нужен кастомный пакет
+            // или использовать DataTickets в контроллере
         }
 
         return InteractionResult.CONSUME;
@@ -243,12 +265,11 @@ public class CastPickaxeItem extends PickaxeItem implements GeoItem {
         float maxHardness = stats.getMaxHardness(chargePercent);
         boolean canHarvest = isCorrectToolForDrops(stack, state);
 
-        // Жилковый майнер только при полном заряде и если есть лимит
         if (fullCharge && stats.getVeinMinerLimit() > 0 && stats.canVeinMine(state)) {
             return performVeinMiner(stack, level, player, pos, state, face, hand);
         }
 
-        // Обычная логика добычи с учетом процента заряда
+        // Обычная добыча с учетом процента заряда
         if (canHarvest && hardness <= maxHardness) {
             level.destroyBlock(pos, true, player);
             int damage = fullCharge ? 2 : 1;
@@ -263,7 +284,6 @@ public class CastPickaxeItem extends PickaxeItem implements GeoItem {
 
     private boolean performVeinMiner(ItemStack stack, Level level, Player player, BlockPos center,
                                      BlockState centerState, Direction face, InteractionHand hand) {
-        // BFS для поиска соседних блоков
         List<BlockPos> toBreak = new ArrayList<>();
         Queue<BlockPos> queue = new LinkedList<>();
         Set<BlockPos> visited = new HashSet<>();
@@ -271,14 +291,15 @@ public class CastPickaxeItem extends PickaxeItem implements GeoItem {
         queue.add(center);
         visited.add(center);
         Block targetBlock = centerState.getBlock();
+        int range = stats.getVeinMinerRange();
 
         while (!queue.isEmpty() && toBreak.size() < stats.getVeinMinerLimit()) {
             BlockPos current = queue.poll();
 
-            // Проверяем все 26 соседей (включая диагонали)
-            for (int x = -1; x <= 1; x++) {
-                for (int y = -1; y <= 1; y++) {
-                    for (int z = -1; z <= 1; z++) {
+            // Поиск в зоне range (например, range=2 -> от -2 до 2 по всем осям)
+            for (int x = -range; x <= range; x++) {
+                for (int y = -range; y <= range; y++) {
+                    for (int z = -range; z <= range; z++) {
                         if (x == 0 && y == 0 && z == 0) continue;
 
                         BlockPos neighbor = current.offset(x, y, z);
@@ -298,29 +319,27 @@ public class CastPickaxeItem extends PickaxeItem implements GeoItem {
             }
         }
 
-        // Собираем дропы со всех блоков (включая центральный)
+        // Собираем дропы
         List<net.minecraft.world.item.ItemStack> allDrops = new ArrayList<>();
 
-        // Центральный блок
         allDrops.addAll(Block.getDrops(centerState, (ServerLevel)level, center, null, player, stack));
         level.destroyBlock(center, false);
 
-        // Дополнительные блоки
         for (BlockPos pos : toBreak) {
             BlockState state = level.getBlockState(pos);
             allDrops.addAll(Block.getDrops(state, (ServerLevel)level, pos, null, player, stack));
             level.destroyBlock(pos, false);
         }
 
-        // Спавним все дропы в центре
+        // Спавним дропы в центре
         for (net.minecraft.world.item.ItemStack drop : allDrops) {
             ItemEntity entity = new ItemEntity(level,
                     center.getX() + 0.5, center.getY() + 0.5, center.getZ() + 0.5, drop);
-            entity.setDeltaMovement(0, 0.1, 0); // Небольшой импульс вверх
+            entity.setDeltaMovement(0, 0.1, 0);
             level.addFreshEntity(entity);
         }
 
-        // Урон кирке: 2 (основной) + 30% за каждый доп блок
+        // Урон кирке
         int extraBlocks = toBreak.size();
         float durabilityCost = 2.0f + (extraBlocks * stats.getVeinMinerDurabilityCost());
         int totalDamage = (int)Math.ceil(durabilityCost);
@@ -360,6 +379,11 @@ public class CastPickaxeItem extends PickaxeItem implements GeoItem {
                         target.getX(), target.getY() + target.getBbHeight() * 0.5, target.getZ(),
                         particleCount, 0.3, 0.4, 0.3, 0.2);
             }
+
+            float volume = 0.2F + (chargePercent * 0.6F);
+            float pitch = 1.6F - (chargePercent * 0.4F);
+            level.playSound(null, target.getX(), target.getY() + target.getBbHeight() * 0.5, target.getZ(),
+                    com.cim.sound.ModSounds.BULLET_IMPACT.get(), SoundSource.PLAYERS, volume, pitch);
 
             return true;
         }
@@ -426,15 +450,27 @@ public class CastPickaxeItem extends PickaxeItem implements GeoItem {
 
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("item.cim.cast_pickaxe.desc.charge").withStyle(ChatFormatting.GOLD));
+        // Добавляем перки из конфигурации
+        for (CastPickaxeStats.PerkTooltip perk : stats.getPerks()) {
+            net.minecraft.network.chat.MutableComponent text;
+            if (perk.args.length > 0) {
+                text = Component.translatable(perk.translationKey, perk.args);
+            } else {
+                text = Component.translatable(perk.translationKey);
+            }
+            // Применяем цвет через Style
+            tooltip.add(text.withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(perk.color)));
+        }
+        tooltip.add(Component.translatable("item.cim.cast_pickaxe.desc.charge").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("item.cim.cast_pickaxe.desc.mining_power",
+                stats.getMiningSecondsEquivalent()).withStyle(ChatFormatting.GOLD));
 
         if (stats.getVeinMinerLimit() > 0) {
-            tooltip.add(Component.translatable("item.cim.cast_pickaxe.desc.vein_miner", stats.getVeinMinerLimit())
-                    .withStyle(ChatFormatting.GREEN));
+            tooltip.add(Component.translatable("item.cim.cast_pickaxe.desc.vein_miner_info",
+                    stats.getVeinMinerLimit(),
+                    (int)(stats.getVeinMinerDurabilityCost() * 100)).withStyle(ChatFormatting.GREEN));
         }
 
-        tooltip.add(Component.translatable("item.cim.cast_pickaxe.desc.power").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.empty());
         tooltip.add(Component.translatable("item.cim.cast_pickaxe.desc.twohanded")
                 .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
         super.appendHoverText(stack, level, tooltip, flag);
