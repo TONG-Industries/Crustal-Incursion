@@ -2,7 +2,7 @@ package com.cim.client.gecko.entity.mobs;
 
 
 import net.minecraft.resources.ResourceLocation;
-import com.cim.entity.mobs.DepthWormEntity;
+import com.cim.entity.mobs.depth_worm.DepthWormEntity;
 import com.cim.main.CrustalIncursionMod;
 import software.bernie.geckolib.model.GeoModel;
 

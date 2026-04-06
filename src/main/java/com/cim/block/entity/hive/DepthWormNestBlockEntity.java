@@ -19,7 +19,7 @@ import com.cim.api.hive.HiveNetworkManager;
 import com.cim.api.hive.HiveNetwork;
 import com.cim.api.hive.HiveNetworkMember;
 import com.cim.block.entity.ModBlockEntities;
-import com.cim.entity.mobs.DepthWormEntity;
+import com.cim.entity.mobs.depth_worm.DepthWormEntity;
 
 import java.util.ArrayList;
 import java.util.List;

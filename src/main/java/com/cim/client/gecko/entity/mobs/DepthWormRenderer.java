@@ -3,7 +3,7 @@ package com.cim.client.gecko.entity.mobs;
 
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.world.entity.LivingEntity;
-import com.cim.entity.mobs.DepthWormEntity;
+import com.cim.entity.mobs.depth_worm.DepthWormEntity;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
 public class DepthWormRenderer extends GeoEntityRenderer<DepthWormEntity> {

@@ -1,7 +1,7 @@
 package com.cim.event;
 
 import com.cim.entity.ModEntities;
-import com.cim.entity.mobs.GrenadierZombieEntity;
+import com.cim.entity.mobs.grenadier.GrenadierZombieEntity;
 import com.cim.main.CrustalIncursionMod;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;

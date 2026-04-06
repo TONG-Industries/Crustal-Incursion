@@ -1,4 +1,4 @@
-package com.cim.entity.mobs;
+package com.cim.entity.mobs.depth_worm;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -19,8 +19,6 @@ import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import com.cim.entity.mobs.goal.DepthWormJumpGoal;
-import com.cim.entity.mobs.goal.ReturnToHiveGoal;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.AnimatableManager;

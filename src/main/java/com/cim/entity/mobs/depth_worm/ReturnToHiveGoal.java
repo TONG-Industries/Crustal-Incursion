@@ -1,4 +1,4 @@
-package com.cim.entity.mobs.goal;
+package com.cim.entity.mobs.depth_worm;
 
 import com.cim.api.hive.HiveNetwork;
 import com.cim.api.hive.HiveNetworkManager;
@@ -6,7 +6,6 @@ import com.cim.api.hive.HiveNetworkMember;
 import com.cim.block.basic.ModBlocks;
 import com.cim.block.entity.hive.DepthWormNestBlockEntity;
 import com.cim.block.entity.hive.HiveSoilBlockEntity;
-import com.cim.entity.mobs.DepthWormEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.LivingEntity;

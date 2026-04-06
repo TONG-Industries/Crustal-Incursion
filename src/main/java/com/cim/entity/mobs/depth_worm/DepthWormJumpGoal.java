@@ -1,10 +1,9 @@
-package com.cim.entity.mobs.goal;
+package com.cim.entity.mobs.depth_worm;
 
 
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.phys.Vec3;
-import com.cim.entity.mobs.DepthWormEntity;
 
 import java.util.EnumSet;
 

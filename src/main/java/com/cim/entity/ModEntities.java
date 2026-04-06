@@ -1,6 +1,6 @@
 package com.cim.entity;
 
-import com.cim.entity.mobs.GrenadierZombieEntity;
+import com.cim.entity.mobs.grenadier.GrenadierZombieEntity;
 import com.cim.entity.weapons.grenades.GrenadeIfProjectileEntity;
 import com.cim.entity.weapons.grenades.GrenadeNucProjectileEntity;
 import com.cim.entity.weapons.grenades.GrenadeProjectileEntity;
@@ -10,7 +10,7 @@ import net.minecraft.world.entity.MobCategory;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
-import com.cim.entity.mobs.DepthWormEntity;
+import com.cim.entity.mobs.depth_worm.DepthWormEntity;
 import com.cim.entity.weapons.bullets.TurretBulletEntity;
 import com.cim.entity.weapons.turrets.TurretLightEntity;
 import com.cim.entity.weapons.turrets.TurretLightLinkedEntity;

@@ -1,7 +1,6 @@
-package com.cim.entity.mobs;
+package com.cim.entity.mobs.grenadier;
 
 import com.cim.entity.ModEntities;
-import com.cim.entity.mobs.goal.GrenadierAttackGoal;
 import com.cim.entity.weapons.grenades.*;
 import com.cim.item.ModItems;
 import net.minecraft.nbt.CompoundTag;
@@ -43,10 +42,13 @@ public class GrenadierZombieEntity extends Zombie {
     private static final EntityDataAccessor<Integer> GRENADES_LEFT =
             SynchedEntityData.defineId(GrenadierZombieEntity.class, EntityDataSerializers.INT);
 
+    private static final EntityDataAccessor<Boolean> IN_RETREAT_MODE =
+            SynchedEntityData.defineId(GrenadierZombieEntity.class, EntityDataSerializers.BOOLEAN);
+
     private int grenadeCooldown = 0;
     private List<ItemStack> grenadeInventory = new ArrayList<>();
-    private boolean switchedToMelee = false;
-    private boolean initialized = false; // Флаг начальной инициализации
+    private boolean initialized = false;
+    private ItemStack hiddenGrenade = ItemStack.EMPTY; // Спрятанная граната при отступлении
 
     public GrenadierZombieEntity(EntityType<? extends Zombie> entityType, Level level) {
         super(entityType, level);
@@ -57,18 +59,31 @@ public class GrenadierZombieEntity extends Zombie {
         super.defineSynchedData();
         this.entityData.define(GRENADIER_TYPE, GrenadierType.STANDARD.name());
         this.entityData.define(GRENADES_LEFT, 5);
+        this.entityData.define(IN_RETREAT_MODE, false);
     }
 
     @Override
     protected void registerGoals() {
-        this.goalSelector.addGoal(4, new GrenadierAttackGoal(this, 1.0D, 16.0F, 6.0F));
+        // Goal 2: Ближний бой - только когда закончились гранаты
+        this.goalSelector.addGoal(2, new ZombieAttackGoal(this, 1.0D, false) {
+            @Override
+            public boolean canUse() {
+                return super.canUse() && !GrenadierZombieEntity.this.hasGrenades();
+            }
+            @Override
+            public boolean canContinueToUse() {
+                return super.canContinueToUse() && !GrenadierZombieEntity.this.hasGrenades();
+            }
+        });
+
+        // Goal 3: Унифицированная логика гренадёра (атака + отступление)
+        this.goalSelector.addGoal(3, new GrenadierCombatGoal(this));
+
         this.goalSelector.addGoal(6, new MoveThroughVillageGoal(this, 1.0D, true, 4, () -> true));
         this.goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 1.0D));
         this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
 
-        // КАК У ЧЕРВЯ: используем setAlertOthers() для помощи союзникам
-        // Включаем ВСЕХ зомби (обычных и гренадёров)
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers(Zombie.class));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
     }
@@ -98,12 +113,11 @@ public class GrenadierZombieEntity extends Zombie {
         this.entityData.set(GRENADIER_TYPE, type.name());
         this.entityData.set(GRENADES_LEFT, grenadeCount);
 
-        // Создаём инвентарь и сразу ставим гранату в руку
         this.populateGrenadeInventory(type, grenadeCount);
-        this.setHeldGrenade();
+        this.updateHeldItem();
 
         this.setItemSlot(EquipmentSlot.HEAD, new ItemStack(ModItems.GRENADIER_GOGGLES.get()));
-        this.armorDropChances[EquipmentSlot.HEAD.getIndex()] = 0.025F;
+        this.setDropChance(EquipmentSlot.HEAD, 0.025F);
 
         this.initialized = true;
 
@@ -148,16 +162,6 @@ public class GrenadierZombieEntity extends Zombie {
         }
     }
 
-    private void setHeldGrenade() {
-        int grenadesLeft = this.entityData.get(GRENADES_LEFT);
-        if (grenadesLeft > 0 && grenadesLeft <= this.grenadeInventory.size()) {
-            ItemStack grenade = this.grenadeInventory.get(grenadesLeft - 1).copy();
-            this.setItemInHand(InteractionHand.MAIN_HAND, grenade);
-        } else {
-            this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-        }
-    }
-
     @Override
     public void tick() {
         super.tick();
@@ -166,23 +170,60 @@ public class GrenadierZombieEntity extends Zombie {
             this.grenadeCooldown--;
         }
 
-        // НЕ обновляем гранату в tick() — только при броске и загрузке
-        // Это предотвращает исчезновение
-
-        if (!this.hasGrenades() && !this.switchedToMelee) {
-            this.switchToMelee();
+        if (!this.level().isClientSide) {
+            updateHeldItem();
         }
     }
 
-    private void switchToMelee() {
-        this.switchedToMelee = true;
-        this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-        this.goalSelector.removeAllGoals(goal -> goal instanceof GrenadierAttackGoal);
-        this.goalSelector.addGoal(2, new ZombieAttackGoal(this, 1.0D, false));
+    // === УПРАВЛЕНИЕ ГРАНАТОЙ В РУКАХ ===
+
+    public void updateHeldItem() {
+        if (this.hasGrenades() && !this.isInRetreatMode()) {
+            int left = getGrenadesLeft();
+            if (left > 0 && left <= grenadeInventory.size()) {
+                ItemStack grenade = grenadeInventory.get(left - 1).copy();
+                this.setItemInHand(InteractionHand.MAIN_HAND, grenade);
+            }
+        } else {
+            this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        }
     }
+
+    /** Вызывается при начале отступления - сохраняет и убирает гранату */
+    public void hideGrenadeForRetreat() {
+        int left = getGrenadesLeft();
+        if (left > 0 && left <= grenadeInventory.size()) {
+            this.hiddenGrenade = this.grenadeInventory.get(left - 1).copy();
+        }
+        this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+    }
+
+    /** Возвращает гранату в руки (при выходе из паники) */
+    public void restoreGrenadeInHand() {
+        this.hiddenGrenade = ItemStack.EMPTY;
+        updateHeldItem();
+    }
+
+    public void clearHiddenGrenade() {
+        this.hiddenGrenade = ItemStack.EMPTY;
+    }
+
+    public ItemStack getHiddenGrenade() {
+        return this.hiddenGrenade;
+    }
+
+    // === ГЕТТЕРЫ/СЕТТЕРЫ ===
 
     public boolean hasGrenades() {
         return this.entityData.get(GRENADES_LEFT) > 0;
+    }
+
+    public boolean isInRetreatMode() {
+        return this.entityData.get(IN_RETREAT_MODE);
+    }
+
+    public void setInRetreatMode(boolean retreat) {
+        this.entityData.set(IN_RETREAT_MODE, retreat);
     }
 
     public GrenadierType getGrenadierType() {
@@ -200,6 +241,8 @@ public class GrenadierZombieEntity extends Zombie {
     public boolean canThrowGrenade() {
         return this.hasGrenades() && this.grenadeCooldown <= 0;
     }
+
+    // === БРОСОК ГРАНАТЫ ===
 
     public void throwGrenade(LivingEntity target) {
         if (!this.canThrowGrenade()) return;
@@ -235,20 +278,10 @@ public class GrenadierZombieEntity extends Zombie {
 
             level.addFreshEntity(projectile);
 
-            // Уменьшаем счётчик
             int newCount = grenadesLeft - 1;
             this.entityData.set(GRENADES_LEFT, newCount);
 
-            // 3 секунды кд
             this.grenadeCooldown = 60;
-
-            // Ставим новую гранату в руку (или убираем если закончились)
-            if (newCount > 0 && newCount <= this.grenadeInventory.size()) {
-                ItemStack nextGrenade = this.grenadeInventory.get(newCount - 1).copy();
-                this.setItemInHand(InteractionHand.MAIN_HAND, nextGrenade);
-            } else {
-                this.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-            }
         }
     }
 
@@ -287,13 +320,18 @@ public class GrenadierZombieEntity extends Zombie {
         };
     }
 
+    // === СОХРАНЕНИЕ ===
+
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putString("GrenadierType", this.entityData.get(GRENADIER_TYPE));
         tag.putInt("GrenadesLeft", this.entityData.get(GRENADES_LEFT));
-        tag.putBoolean("SwitchedToMelee", this.switchedToMelee);
         tag.putBoolean("Initialized", this.initialized);
+        tag.putBoolean("InRetreatMode", this.isInRetreatMode());
+        if (!this.hiddenGrenade.isEmpty()) {
+            tag.put("HiddenGrenade", this.hiddenGrenade.save(new CompoundTag()));
+        }
     }
 
     @Override
@@ -308,25 +346,60 @@ public class GrenadierZombieEntity extends Zombie {
             int left = tag.getInt("GrenadesLeft");
             this.entityData.set(GRENADES_LEFT, left);
             populateGrenadeInventory(getGrenadierType(), left);
-
-            // Восстанавливаем гранату в руке при загрузке
             if (left > 0) {
-                setHeldGrenade();
-            }
-        }
-
-        if (tag.contains("SwitchedToMelee")) {
-            this.switchedToMelee = tag.getBoolean("SwitchedToMelee");
-            if (this.switchedToMelee && !this.level().isClientSide) {
-                this.goalSelector.removeAllGoals(goal -> goal instanceof GrenadierAttackGoal);
-                if (this.goalSelector.getRunningGoals().noneMatch(goal -> goal.getGoal() instanceof ZombieAttackGoal)) {
-                    this.goalSelector.addGoal(2, new ZombieAttackGoal(this, 1.0D, false));
-                }
+                updateHeldItem();
             }
         }
 
         if (tag.contains("Initialized")) {
             this.initialized = tag.getBoolean("Initialized");
+        }
+
+        if (tag.contains("InRetreatMode")) {
+            this.setInRetreatMode(tag.getBoolean("InRetreatMode"));
+        }
+
+        if (tag.contains("HiddenGrenade")) {
+            this.hiddenGrenade = ItemStack.of(tag.getCompound("HiddenGrenade"));
+        }
+    }
+
+    // === ДРОП ПРИ СМЕРТИ ===
+
+    @Override
+    protected void dropCustomDeathLoot(DamageSource source, int looting, boolean recentlyHit) {
+        super.dropCustomDeathLoot(source, looting, recentlyHit);
+
+        // Если умер во время отступления (граната была спрятана) - дропаем её
+        if (!this.hiddenGrenade.isEmpty()) {
+            this.spawnAtLocation(this.hiddenGrenade);
+            this.hiddenGrenade = ItemStack.EMPTY;
+        }
+
+        // Дропаем оставшиеся гранаты из инвентаря
+        if (!this.level().isClientSide && this.hasGrenades()) {
+            int grenadesLeft = this.entityData.get(GRENADES_LEFT);
+
+            // Текущая активная граната (если не в режиме отступления)
+            if (!this.isInRetreatMode() && grenadesLeft > 0 && grenadesLeft <= this.grenadeInventory.size()) {
+                ItemStack current = this.grenadeInventory.get(grenadesLeft - 1);
+                if (!current.isEmpty()) {
+                    this.spawnAtLocation(current.copy());
+                }
+            }
+
+            // Дополнительные гранаты с шансом от лутинга
+            int extraDrops = (looting > 0) ? this.random.nextInt(looting) + 1 : 0;
+            int dropped = 0;
+            for (int i = 0; i < grenadesLeft - 1 && dropped < extraDrops; i++) {
+                if (this.random.nextFloat() < 0.5F) {
+                    ItemStack extra = this.grenadeInventory.get(i);
+                    if (!extra.isEmpty()) {
+                        this.spawnAtLocation(extra.copy());
+                        dropped++;
+                    }
+                }
+            }
         }
     }
 
@@ -338,40 +411,4 @@ public class GrenadierZombieEntity extends Zombie {
                 .add(Attributes.ARMOR, 2.0D)
                 .add(Attributes.SPAWN_REINFORCEMENTS_CHANCE);
     }
-
-    @Override
-    protected void dropCustomDeathLoot(DamageSource source, int looting, boolean recentlyHit) {
-        super.dropCustomDeathLoot(source, looting, recentlyHit);
-
-        // Дропаем гранату, которую держал в руках
-        if (!this.level().isClientSide && this.hasGrenades()) {
-            int grenadesLeft = this.entityData.get(GRENADES_LEFT);
-
-            // Дропаем текущую гранату (которая в руке)
-            if (grenadesLeft > 0 && grenadesLeft <= this.grenadeInventory.size()) {
-                ItemStack currentGrenade = this.grenadeInventory.get(grenadesLeft - 1);
-                if (!currentGrenade.isEmpty()) {
-                    this.spawnAtLocation(currentGrenade.copy());
-                }
-            }
-
-            // Дополнительно: шанс дропнуть ещё 1-2 гранаты из инвентаря (кроме текущей)
-            int extraDrops = 0;
-            if (looting > 0) {
-                extraDrops = this.random.nextInt(looting) + 1;
-            }
-
-            int dropped = 0;
-            for (int i = 0; i < grenadesLeft - 1 && dropped < extraDrops; i++) {
-                if (this.random.nextFloat() < 0.5F) { // 50% шанс на каждую дополнительную
-                    ItemStack extraGrenade = this.grenadeInventory.get(i);
-                    if (!extraGrenade.isEmpty()) {
-                        this.spawnAtLocation(extraGrenade.copy());
-                        dropped++;
-                    }
-                }
-            }
-        }
-    }
-
 }

@@ -7,7 +7,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import com.cim.entity.ModEntities;
-import com.cim.entity.mobs.DepthWormEntity;
+import com.cim.entity.mobs.depth_worm.DepthWormEntity;
 
 public class DepthWormSpawnEggItem extends Item {
     public DepthWormSpawnEggItem(Properties properties) {
