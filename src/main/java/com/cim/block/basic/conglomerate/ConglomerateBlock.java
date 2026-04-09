@@ -51,7 +51,8 @@ public class ConglomerateBlock extends BaseEntityBlock {
         VeinManager manager = VeinManager.get(level);
         VeinManager.VeinData vein = manager.getVein(entity.getVeinId());
 
-        if (vein == null || vein.isDepleted() || entity.isDepleted()) {
+        // Проверяем, не истощен ли уже сам блок (или жила потеряна)
+        if (vein == null || entity.isDepleted() || entity.getBlockOu() <= 0) {
             convertToDepleted(level, pos);
             return;
         }
@@ -60,7 +61,7 @@ public class ConglomerateBlock extends BaseEntityBlock {
         float chunkChance = switch(tier) {
             case IRON -> 0.30f;
             case STEEL -> 0.45f;
-            case TITANIUM -> 0.60f; // На будущее
+            case TITANIUM -> 0.60f;
         };
 
         if (level.random.nextFloat() < chunkChance) {
@@ -72,20 +73,22 @@ public class ConglomerateBlock extends BaseEntityBlock {
             );
             Block.popResource(level, pos, chunk);
 
+            // Тратим 100 OU у блока и у глобальной жилы
+            entity.consumeOu(100);
             vein.consumeUnits(100);
         } else {
-            // Неудача — твёрдая порода
+            // Неудача — твёрдая порода (ОТМЕНЕН РАСХОД OU!)
             Block.popResource(level, pos, new ItemStack(ModItems.HARD_ROCK.get()));
-            vein.consumeUnits(15); // Меньше расход
+            // vein.consumeUnits(15); <--- Убрали! Неудачная попытка больше не сажает жилу
         }
 
-        // Проверяем истощение
-        if (vein.isDepleted()) {
-            // Превращаем ВСЕ блоки жилы в depleted (или только текущий?)
-            // Оптимизация: помечаем жилу как истощённую, превращение при следующей добыче
+        // Проверяем истощение конкретно ЭТОГО блока
+        if (entity.getBlockOu() <= 0) {
             entity.markDepleted();
+            convertToDepleted(level, pos);
         } else {
-            entity.setLocalDepletion(vein.getDepletionRatio());
+            // Визуал обеднения теперь базируется на блоке (от 1000 до 0)
+            entity.setLocalDepletion(1.0f - (entity.getBlockOu() / 1000.0f));
         }
 
         manager.setDirty();

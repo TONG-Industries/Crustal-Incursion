@@ -35,7 +35,7 @@ public class ModPlacedFeatures {
         var conglomerateVein = configuredFeatures.getOrThrow(ModConfiguredFeatures.CONGLOMERATE_VEIN_KEY);
         register(context, CONGLOMERATE_VEIN_PLACED_KEY, conglomerateVein,
                 List.of(
-                        RarityFilter.onAverageOnceEvery(6), // Раз в 6 чанков
+                        RarityFilter.onAverageOnceEvery(2),
                         InSquarePlacement.spread(),
                         HeightRangePlacement.uniform(
                                 VerticalAnchor.absolute(-64),
