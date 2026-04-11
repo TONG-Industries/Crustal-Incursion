@@ -57,7 +57,7 @@ public class SmelterHudOverlay {
         float tempPercent = (float) temp / maxTemp;
         int color = getSmoothTemperatureColor(tempPercent);
 
-        String tempText = String.format("%d / %d °C", temp, maxTemp);
+        String tempText = String.format("%.0f / %d °C", temp, maxTemp);
         int textWidth = font.width(tempText);
 
         int screenWidth = event.getWindow().getGuiScaledWidth();

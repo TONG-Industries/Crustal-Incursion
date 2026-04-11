@@ -13,6 +13,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class GUISmelter extends AbstractContainerScreen<SmelterMenu> {
@@ -83,8 +84,6 @@ public class GUISmelter extends AbstractContainerScreen<SmelterMenu> {
 
         int totalCapacity = SmelterBlockEntity.TANK_CAPACITY;
         int currentY = y + height;
-
-        metals.sort((a, b) -> Integer.compare(b.amount, a.amount));
 
         for (SmelterBlockEntity.MetalStack stack : metals) {
             int segmentHeight = (int)((stack.amount * height) / (float)totalCapacity);
@@ -160,7 +159,6 @@ public class GUISmelter extends AbstractContainerScreen<SmelterMenu> {
 
         gui.renderComponentTooltip(this.font, lines, mx, my);
     }
-
     private void renderMetalTankTooltip(GuiGraphics gui, int mx, int my) {
         List<Component> lines = new ArrayList<>();
         lines.add(Component.literal("§6§lРасплавленные металлы:"));
@@ -170,7 +168,11 @@ public class GUISmelter extends AbstractContainerScreen<SmelterMenu> {
             lines.add(Component.literal("§7Пусто"));
         } else {
             boolean showExact = hasShiftDown();
-            for (SmelterBlockEntity.MetalStack stack : metals) {
+            
+            List<SmelterBlockEntity.MetalStack> displayOrder = new ArrayList<>(metals);
+            Collections.reverse(displayOrder);
+
+            for (SmelterBlockEntity.MetalStack stack : displayOrder) {
                 int units = stack.amount;
                 MetalUnits2.MetalStack converted = MetalUnits2.convertFromUnits(units);
                 String name = Component.translatable(stack.metal.getTranslationKey()).getString();
