@@ -179,22 +179,23 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.CONCRETE_REINFORCED_HEAVY.get());
             event.accept(ModBlocks.CONCRETE_REINFORCED_HEAVY_SLAB.get());
             event.accept(ModBlocks.CONCRETE_REINFORCED_HEAVY_STAIRS.get());
-
             event.accept(ModBlocks.FIREBRICK_BLOCK.get());
             event.accept(ModBlocks.FIREBRICK_SLAB.get());
             event.accept(ModBlocks.FIREBRICK_STAIRS.get());
-
             event.accept(ModBlocks.REINFORCEDBRICK_BLOCK.get());
             event.accept(ModBlocks.REINFORCEDBRICK_SLAB.get());
             event.accept(ModBlocks.REINFORCEDBRICK_STAIRS.get());
-
             event.accept(ModBlocks.SEQUOIA_PLANKS.get());
             event.accept(ModBlocks.SEQUOIA_SLAB.get());
             event.accept(ModBlocks.SEQUOIA_STAIRS.get());
 
             event.accept(ModBlocks.MORY_BLOCK);
             event.accept(ModBlocks.ANTON_CHIGUR);
-
+            event.accept(ModBlocks.MINERAL_BLOCK1.get());
+            event.accept(ModBlocks.MINERAL_BLOCK2.get());
+            event.accept(ModBlocks.MINERAL_TILE.get());
+            event.accept(ModBlocks.DOLOMITE_TILE.get());
+            event.accept(ModBlocks.TILE_LIGHT.get());
             event.accept(ModBlocks.CONCRETE_NET.get());
             event.accept(ModBlocks.DECO_STEEL.get());
             event.accept(ModBlocks.DECO_STEEL_DARK.get());
@@ -314,32 +315,39 @@ public class CrustalIncursionMod {
 
         }
 
-        if (event.getTab() == ModCreativeTabs.CIM_RECOURSES_TAB.get()) {
-
-            event.accept(ModItems.FIREBRICK.get());
-            event.accept(ModItems.REINFORCEDBRICK.get());
-            event.accept(ModItems.FUEL_ASH.get());
 
             if (event.getTab() == ModCreativeTabs.CIM_RECOURSES_TAB.get()) {
-                event.accept(ModItems.FIREBRICK.get());
-                event.accept(ModItems.REINFORCEDBRICK.get());
-                event.accept(ModItems.FUEL_ASH.get());
-
-                // Добавляем демонстрационный шлак для каждого металла (1 слиток = 9 единиц)
                 for (Metal metal : MetallurgyRegistry.getAllMetals()) {
                     ItemStack slagStack = SlagItem.createSlag(metal, MetalUnits2.UNITS_PER_INGOT);
                     event.accept(slagStack);
                 }
+
+                event.accept(ModItems.FIREBRICK.get());
+                event.accept(ModItems.REINFORCEDBRICK.get());
+
+                event.accept(ModItems.CONGLOMERATE_CHUNK);
+                event.accept(ModItems.HARD_ROCK);
+                event.accept(ModItems.DOLOMITE_CHUNK);
+                event.accept(ModItems.BAUXITE_CHUNK);
+
+                event.accept(ModItems.FUEL_ASH.get());
+                event.accept(ModItems.DOLOMITE_POWDER);
+                event.accept(ModItems.BAUXITE_POWDER);
+
+
             }
-        }
+
 
         if (event.getTab() == ModCreativeTabs.CIM_NATURE_TAB.get()) {
 
             event.accept(ModBlocks.CONGLOMERATE.get());
             event.accept(ModBlocks.DEPLETED_CONGLOMERATE.get());
-            event.accept(ModItems.CONGLOMERATE_CHUNK);
-            event.accept(ModItems.HARD_ROCK);
 
+            event.accept(ModBlocks.DOLOMITE.get());
+            event.accept(ModBlocks.LIMESTONE.get());
+            event.accept(ModBlocks.BAUXITE.get());
+            event.accept(ModBlocks.MINERAL1.get());
+            event.accept(ModBlocks.MINERAL3.get());
             event.accept(ModBlocks.SEQUOIA_BARK.get());
             event.accept(ModBlocks.SEQUOIA_HEARTWOOD.get());
             event.accept(ModBlocks.SEQUOIA_LEAVES.get());

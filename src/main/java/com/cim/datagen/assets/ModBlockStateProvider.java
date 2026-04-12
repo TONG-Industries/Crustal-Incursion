@@ -81,7 +81,17 @@ public class ModBlockStateProvider extends BlockStateProvider {
         cubeAllWithItem(ModBlocks.NECROSIS_TEST3);
         cubeAllWithItem(ModBlocks.NECROSIS_TEST4);
         cubeAllWithItem(ModBlocks.NECROSIS_PORTAL);
-
+        cubeAllWithItem(ModBlocks.MINERAL_BLOCK2);
+        cubeAllWithItem(ModBlocks.MINERAL_TILE);
+        cubeAllWithItem(ModBlocks.MINERAL1);
+        cubeAllWithItem(ModBlocks.MINERAL_BLOCK1);
+        cubeAllWithItem(ModBlocks.DOLOMITE);
+        cubeAllWithItem(ModBlocks.TILE_LIGHT);
+        cubeAllWithItem(ModBlocks.LIMESTONE);
+        cubeAllWithItem(ModBlocks.MINERAL3);
+        cubeAllWithItem(ModBlocks.MINERAL2);
+        cubeAllWithItem(ModBlocks.BAUXITE);
+        cubeAllWithItem(ModBlocks.DOLOMITE_TILE);
         cubeAllWithItem(ModBlocks.DECO_STEEL);
         cubeAllWithItem(ModBlocks.DECO_STEEL_DARK);
         cubeAllWithItem(ModBlocks.DECO_STEEL_SMOG);
