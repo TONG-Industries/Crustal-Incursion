@@ -109,6 +109,7 @@ public class ShaftBlockEntity extends BlockEntity implements Rotational {
         super.saveAdditional(tag);
         tag.putLong("Speed", this.speed);
         tag.putLong("LastSyncedSpeed", this.lastSyncedSpeed);
+        tag.putInt("NetworkSign", this.networkSign);
         if (!attachedGear.isEmpty()) {
             tag.put("AttachedGear", attachedGear.save(new CompoundTag()));
         }
@@ -119,6 +120,7 @@ public class ShaftBlockEntity extends BlockEntity implements Rotational {
         super.load(tag);
         this.speed = tag.getLong("Speed");
         this.lastSyncedSpeed = tag.getLong("LastSyncedSpeed");
+        this.networkSign = tag.contains("NetworkSign") ? tag.getInt("NetworkSign") : 1;
         if (tag.contains("AttachedGear")) {
             this.attachedGear = ItemStack.of(tag.getCompound("AttachedGear"));
         } else {
@@ -153,6 +155,19 @@ public class ShaftBlockEntity extends BlockEntity implements Rotational {
                 net.requestRecalculation();
             }
         }
+    }
+
+    @Override
+    public long getVisualSpeed() {
+        BlockState state = getBlockState();
+        if (!state.hasProperty(ShaftBlock.FACING)) return this.speed;
+
+        Direction facing = state.getValue(ShaftBlock.FACING);
+        // Инвертируем визуальную скорость для позитивных осей (правило правой руки)
+        if (facing == Direction.SOUTH || facing == Direction.EAST || facing == Direction.UP) {
+            return -this.speed;
+        }
+        return this.speed;
     }
 
     @Override

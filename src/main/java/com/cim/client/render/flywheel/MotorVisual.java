@@ -87,11 +87,8 @@ public class MotorVisual extends AbstractBlockEntityVisual<MotorElectroBlockEnti
             shaft.rotateY((float) Math.toRadians(180));
         }
 
-        if (facing == Direction.UP) {
-            shaft.rotateZ(-angle);
-        } else {
-            shaft.rotateZ(angle);
-        }
+        // Никаких проверок, просто крутим!
+        shaft.rotateZ(angle);
 
         shaft.translate(-0.5f, -0.5f, -0.5f);
         shaft.setChanged();

@@ -52,4 +52,10 @@ public interface Rotational {
 
     default void setNetworkSign(int sign) {}
     default int getNetworkSign() { return 1; }
+
+    default void forceSyncVisuals(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
+        if (!level.isClientSide && this instanceof net.minecraft.world.level.block.entity.BlockEntity be) {
+            level.sendBlockUpdated(pos, be.getBlockState(), be.getBlockState(), 2);
+        }
+    }
 }

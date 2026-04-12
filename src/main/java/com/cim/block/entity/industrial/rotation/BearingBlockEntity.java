@@ -22,6 +22,7 @@ public class BearingBlockEntity extends BlockEntity implements Rotational {
 
     private long speed = 0;
     private long lastSyncedSpeed = 0;
+    private int networkSign = 1;
 
     private boolean hasShaft = false;
     private ShaftMaterial shaftMaterial = null;
@@ -68,8 +69,10 @@ public class BearingBlockEntity extends BlockEntity implements Rotational {
 
     @Override
     public void setSpeed(long speed) {
-        if (this.speed != speed) {
-            this.speed = speed;
+        long actualSpeed = speed * this.networkSign; // ВАЖНО: Применяем знак!
+
+        if (this.speed != actualSpeed) {
+            this.speed = actualSpeed;
             setChanged();
             if (shouldSyncSpeed()) {
                 this.lastSyncedSpeed = this.speed;
@@ -151,6 +154,8 @@ public class BearingBlockEntity extends BlockEntity implements Rotational {
         tag.putLong("Speed", this.speed);
         tag.putLong("LastSyncedSpeed", this.lastSyncedSpeed);
         tag.putBoolean("HasShaft", this.hasShaft);
+        tag.putLong("LastSyncedSpeed", this.lastSyncedSpeed);
+        tag.putInt("NetworkSign", this.networkSign); // Сохраняем знак
 
         if (this.hasShaft && this.shaftMaterial != null && this.shaftDiameter != null) {
             tag.putString("ShaftMaterial", this.shaftMaterial.name());
@@ -164,6 +169,8 @@ public class BearingBlockEntity extends BlockEntity implements Rotational {
         this.speed = tag.getLong("Speed");
         this.lastSyncedSpeed = tag.getLong("LastSyncedSpeed");
         this.hasShaft = tag.getBoolean("HasShaft");
+        this.lastSyncedSpeed = tag.getLong("LastSyncedSpeed");
+        this.networkSign = tag.contains("NetworkSign") ? tag.getInt("NetworkSign") : 1; // Загружаем знак
 
         if (this.hasShaft) {
             // ИСПРАВЛЕНИЕ: Опускаем регистр в lowercase, чтобы switch находил совпадения
@@ -215,4 +222,10 @@ public class BearingBlockEntity extends BlockEntity implements Rotational {
     public net.minecraft.world.phys.AABB getRenderBoundingBox() {
         return new net.minecraft.world.phys.AABB(worldPosition).inflate(1.2D);
     }
+
+    @Override
+    public void setNetworkSign(int sign) { this.networkSign = sign; }
+
+    @Override
+    public int getNetworkSign() { return this.networkSign; }
 }

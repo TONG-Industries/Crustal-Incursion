@@ -151,6 +151,8 @@ public class KineticNetworkManager extends SavedData {
             KineticNetwork existingNet = neighborNetworks.iterator().next();
             registerBlockToNetwork(pos, existingNet);
 
+            recalculateNetworkSigns(existingNet);
+
             // ПРОВЕРКА КОНФЛИКТА
             if (existingNet.checkConflict(level)) {
                 LOGGER.info("[Kinetic] Direct motor placement conflict at {}!", pos.toShortString());
@@ -283,6 +285,63 @@ public class KineticNetworkManager extends SavedData {
         return newNet;
     }
 
+    private void recalculateNetworkSigns(KineticNetwork net) {
+        if (net.getMembers().isEmpty()) return;
+
+        java.util.Queue<BlockPos> queue = new java.util.LinkedList<>();
+        java.util.Map<BlockPos, Integer> signs = new java.util.HashMap<>();
+        java.util.Set<BlockPos> visited = new java.util.HashSet<>();
+
+        // 1. ИЩЕМ КОРЕНЬ СЕТИ. Начинаем поиск с генератора (мотора), если он есть!
+        BlockPos root = null;
+        if (!net.getGenerators().isEmpty()) {
+            root = net.getGenerators().iterator().next(); // Берем первый попавшийся мотор
+        } else {
+            root = net.getMembers().iterator().next(); // Если моторов нет, берем любой блок
+        }
+
+        queue.add(root);
+        signs.put(root, 1); // Корень (мотор) всегда задает базовое направление (1)
+
+        while (!queue.isEmpty()) {
+            BlockPos current = queue.poll();
+            if (visited.contains(current)) continue;
+            visited.add(current);
+
+            BlockEntity currentBE = level.getBlockEntity(current);
+            if (currentBE instanceof Rotational node) {
+                int currentSign = signs.getOrDefault(current, 1);
+                node.setNetworkSign(currentSign);
+
+                for (Direction dir : node.getPropagationDirections()) {
+                    BlockPos neighborPos = current.relative(dir);
+                    if (net.getMembers().contains(neighborPos) && !visited.contains(neighborPos)) {
+                        BlockEntity neighborBE = level.getBlockEntity(neighborPos);
+                        if (neighborBE instanceof Rotational) {
+
+                            // Определяем, является ли соединение шестереночным (боковым)
+                            boolean isGearMesh = false;
+                            if (level.getBlockState(current).hasProperty(ShaftBlock.FACING)) {
+                                Direction nodeFacing = level.getBlockState(current).getValue(ShaftBlock.FACING);
+                                // Если мы идем НЕ вдоль оси вала — значит передаем вращение боком
+                                if (dir.getAxis() != nodeFacing.getAxis()) {
+                                    isGearMesh = true;
+                                }
+                            }
+
+                            int nextSign = isGearMesh ? -currentSign : currentSign;
+
+                            if (!signs.containsKey(neighborPos)) {
+                                signs.put(neighborPos, nextSign);
+                                queue.add(neighborPos);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private void mergeNetworks(Set<KineticNetwork> networks, BlockPos connectorPos) {
         KineticNetwork mainNet = networks.iterator().next();
         networks.remove(mainNet);
@@ -299,6 +358,7 @@ public class KineticNetworkManager extends SavedData {
         }
 
         registerBlockToNetwork(connectorPos, mainNet);
+        recalculateNetworkSigns(mainNet);
         mainNet.recalculate(level);
     }
 

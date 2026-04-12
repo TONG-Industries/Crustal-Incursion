@@ -105,11 +105,19 @@ public class KineticNetwork {
             if (this.currentSpeed != newSpeed) {
                 this.currentSpeed = newSpeed;
 
+                // Флаг: достигли ли мы предела разгона или полной остановки?
+                boolean reachedTarget = (this.currentSpeed == targetNetworkSpeed) || (this.currentSpeed == 0);
+
                 for (BlockPos pos : members) {
-                    if (level.isLoaded(pos)) { // [cite: 42]
+                    if (level.isLoaded(pos)) {
                         BlockEntity be = level.getBlockEntity(pos);
                         if (be instanceof Rotational node) {
                             node.setSpeed(this.currentSpeed);
+
+                            // Если стабилизировались — заставляем клиент обновиться на 100%
+                            if (reachedTarget) {
+                                node.forceSyncVisuals(level, pos);
+                            }
                         }
                     }
                 }

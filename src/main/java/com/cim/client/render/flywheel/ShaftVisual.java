@@ -84,9 +84,11 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
 
         Direction.Axis axis = facing.getAxis();
         if (axis == Direction.Axis.X) {
-            instance.rotateY((float) Math.toRadians(90));
+            instance.rotateY((float) Math.toRadians(facing == Direction.EAST ? 270 : 90));
         } else if (axis == Direction.Axis.Y) {
-            instance.rotateX((float) Math.toRadians(90));
+            instance.rotateX((float) Math.toRadians(facing == Direction.UP ? 90 : -90));
+        } else if (facing == Direction.SOUTH) {
+            instance.rotateY((float) Math.toRadians(180));
         }
 
         if (initialRotationZ != 0) {
@@ -118,7 +120,9 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
             }
         }
 
-        float speed = blockEntity.getSpeed();
+        // БЫЛО: float speed = blockEntity.getSpeed();
+// СТАЛО: берем адаптированную скорость
+        float speed = blockEntity.getVisualSpeed();
         float time = (float) (System.currentTimeMillis() % 100000) / 50f;
         float angle = speed == 0 ? 0 : time * speed * 0.1f;
 
