@@ -62,7 +62,10 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(ModItems.BATTERY_TRIXITE);
         simpleItem(ModItems.WIRE_COIL);
         simpleItem(ModItems.BEAM_PLACER);
-
+        simpleItem(ModItems.BAUXITE_CHUNK);
+        simpleItem(ModItems.BAUXITE_POWDER);
+        simpleItem(ModItems.DOLOMITE_CHUNK);
+        simpleItem(ModItems.DOLOMITE_POWDER);
         simpleItem(ModItems.PROTECTOR_LEAD);
         simpleItem(ModItems.PROTECTOR_STEEL);
         simpleItem(ModItems.PROTECTOR_TUNGSTEN);
