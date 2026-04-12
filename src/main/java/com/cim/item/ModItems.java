@@ -150,6 +150,14 @@ public class ModItems {
     public static final RegistryObject<Item> HARD_ROCK = ITEMS.register("hard_rock",
             () -> new Item(new Item.Properties()));
 
+    public static final RegistryObject<Item> BAUXITE_CHUNK = ITEMS.register("bauxite_chunk",
+            () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> BAUXITE_POWDER = ITEMS.register("bauxite_powder",
+            () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> DOLOMITE_CHUNK = ITEMS.register("dolomite_chunk",
+            () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> DOLOMITE_POWDER= ITEMS.register("dolomite_powder",
+            () -> new Item(new Item.Properties()));
 
     // BlockItems
     public static final RegistryObject<Item> CONGLOMERATE_BLOCK_ITEM = ITEMS.register("conglomerate",
