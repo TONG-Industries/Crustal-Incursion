@@ -269,6 +269,8 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.LEAD_FLUID_PIPE);
             event.accept(ModBlocks.TUNGSTEN_FLUID_PIPE);
 
+            event.accept(ModBlocks.JERNOVA);
+
             event.accept(ModItems.HEATER_ITEM);
             event.accept(ModBlocks.SMELTER);
             event.accept(ModBlocks.CASTING_POT);
@@ -277,6 +279,7 @@ public class CrustalIncursionMod {
             event.accept(ModItems.MOLD_INGOT.get());
             event.accept(ModItems.MOLD_BLOCK.get());
             event.accept(ModItems.POKER.get());
+
             event.accept(ModItems.GEAR1_STEEL.get());
             event.accept(ModItems.GEAR2_STEEL.get());
         }
