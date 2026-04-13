@@ -321,19 +321,22 @@ public class CrustalIncursionMod {
                     ItemStack slagStack = SlagItem.createSlag(metal, MetalUnits2.UNITS_PER_INGOT);
                     event.accept(slagStack);
                 }
-
+                event.accept(ModItems.FIRE_SMES.get());
+                event.accept(ModItems.DOLOMITE_SMES.get());
                 event.accept(ModItems.FIREBRICK.get());
                 event.accept(ModItems.REINFORCEDBRICK.get());
 
                 event.accept(ModItems.CONGLOMERATE_CHUNK);
                 event.accept(ModItems.HARD_ROCK);
                 event.accept(ModItems.DOLOMITE_CHUNK);
+                event.accept(ModItems.LIMESTONE_CHUNK);
                 event.accept(ModItems.BAUXITE_CHUNK);
 
-                event.accept(ModItems.FUEL_ASH.get());
                 event.accept(ModItems.DOLOMITE_POWDER);
+                event.accept(ModItems.LIMESTONE_POWDER);
                 event.accept(ModItems.BAUXITE_POWDER);
 
+                event.accept(ModItems.FUEL_ASH.get());
 
             }
 
