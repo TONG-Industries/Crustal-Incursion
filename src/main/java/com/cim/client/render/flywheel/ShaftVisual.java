@@ -139,6 +139,11 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
         }
     }
 
+    private float smoothedSpeed = 0f;
+    private float currentAngle = 0f;
+    private long lastFrameTime = -1;
+    private float lastLoggedSpeed = Float.NaN;
+
     @Override
     public void beginFrame(Context ctx) {
         // Мгновенно замечаем установку или снятие шестерни!
@@ -150,16 +155,56 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
             }
         }
 
-        // БЫЛО: float speed = blockEntity.getSpeed();
-// СТАЛО: берем адаптированную скорость
-        float speed = blockEntity.getVisualSpeed();
-        float time = (float) (System.currentTimeMillis() % 100000) / 50f;
-        float angle = speed == 0 ? 0 : time * speed * 0.1f;
+        long now = System.currentTimeMillis();
+        if (lastFrameTime == -1) lastFrameTime = now;
+        float deltaSeconds = (now - lastFrameTime) / 1000f;
+        lastFrameTime = now;
 
-        setupStatic(shaftInstance, angle);
+        float targetSpeed = blockEntity.getVisualSpeed();
+
+        // DIAGNOSTIC: логируем только при изменении скорости
+        if (targetSpeed != lastLoggedSpeed) {
+            com.cim.main.CrustalIncursionMod.LOGGER.info("[VISUAL-DIAG] beginFrame at {} | speed changed: {} -> {}",
+                    pos, lastLoggedSpeed, targetSpeed);
+            lastLoggedSpeed = targetSpeed;
+        }
+
+        // 1. Плавная визуальная инерция (догоняем targetSpeed)
+        float speedDiff = targetSpeed - smoothedSpeed;
+        if (Math.abs(speedDiff) > 0.1f) {
+            smoothedSpeed += speedDiff * 3.0f * deltaSeconds; // Коэффициент 3.0 определяет резкость торможения
+        } else {
+            smoothedSpeed = targetSpeed;
+        }
+
+        // 2. Увеличиваем внутренний угол плавно
+        // Оригинальная формула: time = millis / 50, angle = time * speed * 0.1f
+        // deltaSeconds = deltaMillis / 1000. В тиках это deltaSeconds * 20.
+        // change = (deltaSeconds * 20) * smoothedSpeed * 0.1f = smoothedSpeed * deltaSeconds * 2.0f
+        currentAngle += smoothedSpeed * 2.0f * deltaSeconds;
+        
+        float twoPi = (float) (2 * Math.PI);
+        currentAngle = currentAngle % twoPi;
+        if (currentAngle < 0) currentAngle += twoPi;
+
+        // 3. Синхронизация фазы шестерней при постоянной скорости
+        if (smoothedSpeed == targetSpeed && targetSpeed != 0) {
+            float time = (float) (now % 100000) / 50f;
+            float globalAngle = (time * targetSpeed * 0.1f) % twoPi;
+            if (globalAngle < 0) globalAngle += twoPi;
+            
+            float angleDiff = (globalAngle - currentAngle) % twoPi;
+            if (angleDiff > Math.PI) angleDiff -= twoPi;
+            if (angleDiff < -Math.PI) angleDiff += twoPi;
+            
+            // Плавно подгоняем фазу (2.0f радиан в секунду)
+            currentAngle += angleDiff * 5.0f * deltaSeconds;
+        }
+
+        setupStatic(shaftInstance, currentAngle);
 
         if (gearInstance != null) {
-            setupStatic(gearInstance, angle + phaseOffset);
+            setupStatic(gearInstance, currentAngle + phaseOffset);
         }
     }
 

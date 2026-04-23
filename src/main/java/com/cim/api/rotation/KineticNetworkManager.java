@@ -96,7 +96,7 @@ public class KineticNetworkManager extends SavedData {
 
                         KineticNetwork net = blockToNetwork.get(neighborPos);
                         if (net == null) {
-                            net = createNewNetworkFrom(neighborPos);
+                            net = createNewNetworkFrom(neighborPos, null);
                         }
                         if (net != null) neighborNetworks.add(net);
                     }
@@ -200,16 +200,13 @@ public class KineticNetworkManager extends SavedData {
 
         for (BlockPos memberPos : membersToRebuild) {
             blockToNetwork.remove(memberPos);
-//            if (level.getBlockEntity(memberPos) instanceof Rotational rot) {
-//                rot.setSpeed(0);
-//            }
         }
 
         LOGGER.info("[Kinetic] Network {} dissolved. Rebuilding {} blocks...", oldNet.getId().toString().substring(0, 8), membersToRebuild.size());
 
         for (BlockPos startPos : membersToRebuild) {
             if (!blockToNetwork.containsKey(startPos)) {
-                createNewNetworkFrom(startPos);
+                createNewNetworkFrom(startPos, pos); // ИЗМЕНЕНИЕ: передаем pos как игнорируемый блок
             }
         }
 
@@ -217,7 +214,7 @@ public class KineticNetworkManager extends SavedData {
         this.setDirty();
     }
 
-    private KineticNetwork createNewNetworkFrom(BlockPos start) {
+    private KineticNetwork createNewNetworkFrom(BlockPos start, BlockPos ignorePos) {
         KineticNetwork newNet = new KineticNetwork();
 
         if (level.getBlockEntity(start) instanceof Rotational startNode) {
@@ -241,6 +238,8 @@ public class KineticNetworkManager extends SavedData {
                 // ИСПОЛЬЗУЕМ НОВЫЙ ПОИСК
                 for (BlockPos neighborPos : node.getPotentialConnections(level, current)) {
                     if (visited.contains(neighborPos)) continue;
+                    // ИЗМЕНЕНИЕ: Игнорируем блок, который сейчас ломается!
+                    if (neighborPos.equals(ignorePos)) continue;
 
                     BlockEntity neighborBE = level.getBlockEntity(neighborPos);
                     if (neighborBE instanceof Rotational neighborNode) {
@@ -258,6 +257,13 @@ public class KineticNetworkManager extends SavedData {
         // ВАЖНО: Вызываем метод с множителями, который мы писали в прошлый раз!
         recalculateNetworkSigns(newNet);
         newNet.recalculate(level);
+
+        LOGGER.info("[Kinetic] New sub-network {} created: members={}, generators={}, speed={}, targetSpeed={}",
+                newNet.getId().toString().substring(0, 8),
+                newNet.getMembers().size(),
+                newNet.getGenerators().size(),
+                newNet.getSpeed(),
+                newNet.getTargetSpeed());
         return newNet;
     }
 

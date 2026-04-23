@@ -55,6 +55,13 @@ public class KineticNetwork {
         long oldSpeed = this.currentSpeed;
         long deltaSpeed = 0;
 
+        // DIAGNOSTIC: логируем состояние КАЖДЫЙ тик для сетей без генераторов
+        if (totalGeneratedTorque == 0 && this.currentSpeed != 0) {
+            LOGGER.info("[Kinetic-DIAG] Network {} BRAKING: speed={}, torque={}, friction={}, inertia={}, generators={}",
+                    networkId.toString().substring(0, 8),
+                    this.currentSpeed, this.totalGeneratedTorque, this.totalFriction, this.totalInertia, generators.size());
+        }
+
         // 1. РАЗГОН (если генераторы работают)
         if (totalGeneratedTorque > 0) {
             // Формула из плана
@@ -72,12 +79,19 @@ public class KineticNetwork {
         // 2. ИНЕРЦИЯ И ОСТАНОВКА (моторы выключены) [cite: 30]
         else {
             if (this.currentSpeed != 0) {
-                // Трение всегда против движения [cite: 28, 29]
-                deltaSpeed = (totalFriction / totalInertia);
-                if (deltaSpeed == 0) deltaSpeed = 1;
+                // Мгновенная остановка при минимальной скорости
+                if (Math.abs(this.currentSpeed) <= 1) {
+                    deltaSpeed = -this.currentSpeed; // Прямое обнуление
+                } else {
+                    // Агрессивное торможение: берём максимум из трения и 10% текущей скорости
+                    long frictionBrake = totalFriction / totalInertia;
+                    long percentBrake = Math.abs(this.currentSpeed) / 10; // 10% от текущей скорости
+                    deltaSpeed = Math.max(Math.max(frictionBrake, percentBrake), 1); // Минимум 1
 
-                if (this.currentSpeed > 0) {
-                    deltaSpeed = -deltaSpeed;
+                    // Трение всегда против движения [cite: 28, 29]
+                    if (this.currentSpeed > 0) {
+                        deltaSpeed = -deltaSpeed;
+                    }
                 }
             }
         }
@@ -85,6 +99,12 @@ public class KineticNetwork {
         // 3. ПРИМЕНЯЕМ УСКОРЕНИЕ
         if (deltaSpeed != 0) {
             long newSpeed = this.currentSpeed + deltaSpeed;
+
+            // DIAGNOSTIC
+            if (totalGeneratedTorque == 0) {
+                LOGGER.info("[Kinetic-DIAG] Network {} APPLYING: delta={}, oldSpeed={}, newSpeed={}",
+                        networkId.toString().substring(0, 8), deltaSpeed, this.currentSpeed, newSpeed);
+            }
 
             // Ограничения скорости
             if (totalGeneratedTorque > 0) {

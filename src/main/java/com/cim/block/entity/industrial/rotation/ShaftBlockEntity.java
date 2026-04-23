@@ -165,7 +165,7 @@ public class ShaftBlockEntity extends BlockEntity implements Rotational {
             if (shouldSyncSpeed()) {
                 this.lastSyncedSpeed = this.speed;
                 if (level != null && !level.isClientSide) {
-                    level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
+                    level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
                 }
             }
         }
@@ -216,6 +216,17 @@ public class ShaftBlockEntity extends BlockEntity implements Rotational {
     @Override
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt) {
+        long oldSpeed = this.speed;
+        CompoundTag tag = pkt.getTag();
+        if (tag != null) {
+            load(tag);
+        }
+        com.cim.main.CrustalIncursionMod.LOGGER.info("[CLIENT-DIAG] onDataPacket at {} | oldSpeed={} -> newSpeed={}",
+                worldPosition.toShortString(), oldSpeed, this.speed);
     }
 
     @Override

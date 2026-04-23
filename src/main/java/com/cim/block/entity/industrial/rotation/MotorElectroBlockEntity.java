@@ -78,8 +78,7 @@ public class MotorElectroBlockEntity extends BlockEntity implements Rotational {
             if (shouldSyncSpeed()) {
                 this.lastSyncedSpeed = this.currentSpeed;
                 if (level != null && !level.isClientSide) {
-                    // ФЛАГ 2 ВМЕСТО ФЛАГА 3!
-                    level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
+                    level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
                 }
             }
         }
@@ -99,8 +98,7 @@ public class MotorElectroBlockEntity extends BlockEntity implements Rotational {
         this.reversed = !this.reversed;
         super.setChanged(); // ИСПОЛЬЗУЕМ ВАНИЛЬНЫЙ МЕТОД
         if (level != null && !level.isClientSide) {
-            // ФЛАГ 2 ВМЕСТО ФЛАГА 3!
-            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 2);
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
         }
     }
 
@@ -130,6 +128,14 @@ public class MotorElectroBlockEntity extends BlockEntity implements Rotational {
     @Override
     public net.minecraft.network.protocol.Packet<net.minecraft.network.protocol.game.ClientGamePacketListener> getUpdatePacket() {
         return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket pkt) {
+        net.minecraft.nbt.CompoundTag tag = pkt.getTag();
+        if (tag != null) {
+            load(tag);
+        }
     }
 
     @Override

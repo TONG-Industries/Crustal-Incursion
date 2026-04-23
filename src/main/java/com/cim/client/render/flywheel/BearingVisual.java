@@ -109,6 +109,10 @@ public class BearingVisual extends AbstractBlockEntityVisual<BearingBlockEntity>
         instance.setChanged();
     }
 
+    private float smoothedSpeed = 0f;
+    private float currentAngle = 0f;
+    private long lastFrameTime = -1;
+
     @Override
     public void beginFrame(Context ctx) {
         // 1. АБСОЛЮТНАЯ ЗАЩИТА ОТ ДЕСИНКА
@@ -135,15 +139,45 @@ public class BearingVisual extends AbstractBlockEntityVisual<BearingBlockEntity>
             }
         }
 
-        // 2. ВРАЩЕНИЕ
-        long speed = blockEntity.getVisualSpeed();
-        float time = (float) (System.currentTimeMillis() % 100000) / 50f;
-        // Даже если скорость 0, вызываем пересчет позиций, чтобы модель не исчезла!
-        float angle = speed == 0 ? 0 : time * speed * 0.1f;
+        // 2. ВРАЩЕНИЕ с плавной инерцией
+        long now = System.currentTimeMillis();
+        if (lastFrameTime == -1) lastFrameTime = now;
+        float deltaSeconds = (now - lastFrameTime) / 1000f;
+        lastFrameTime = now;
 
-        applyRotation(this.innerRing, angle);
+        float targetSpeed = blockEntity.getVisualSpeed();
+
+        // 2.1 Плавное изменение скорости
+        float speedDiff = targetSpeed - smoothedSpeed;
+        if (Math.abs(speedDiff) > 0.1f) {
+            smoothedSpeed += speedDiff * 3.0f * deltaSeconds;
+        } else {
+            smoothedSpeed = targetSpeed;
+        }
+
+        // 2.2 Увеличиваем внутренний угол плавно
+        currentAngle += smoothedSpeed * 2.0f * deltaSeconds;
+        
+        float twoPi = (float) (2 * Math.PI);
+        currentAngle = currentAngle % twoPi;
+        if (currentAngle < 0) currentAngle += twoPi;
+
+        // 2.3 Синхронизация фазы при постоянной скорости
+        if (smoothedSpeed == targetSpeed && targetSpeed != 0) {
+            float time = (float) (now % 100000) / 50f;
+            float globalAngle = (time * targetSpeed * 0.1f) % twoPi;
+            if (globalAngle < 0) globalAngle += twoPi;
+            
+            float angleDiff = (globalAngle - currentAngle) % twoPi;
+            if (angleDiff > Math.PI) angleDiff -= twoPi;
+            if (angleDiff < -Math.PI) angleDiff += twoPi;
+            
+            currentAngle += angleDiff * 5.0f * deltaSeconds;
+        }
+
+        applyRotation(this.innerRing, currentAngle);
         if (this.shaft != null) {
-            applyRotation(this.shaft, angle);
+            applyRotation(this.shaft, currentAngle);
         }
     }
 
