@@ -16,6 +16,7 @@ import com.cim.block.basic.fluids.FluidPipeBlock;
 import com.cim.block.basic.industrial.MillstoneBlock;
 import com.cim.block.basic.industrial.casting.CastingDescentBlock;
 import com.cim.block.basic.industrial.casting.CastingPotBlock;
+import com.cim.block.basic.industrial.casting.SmallSmelterBlock;
 import com.cim.block.basic.industrial.energy.*;
 
 import com.cim.block.basic.industrial.rotation.BearingBlock;
@@ -141,8 +142,8 @@ public class ModBlocks {
             () -> new HiveRootsBlock(BlockBehaviour.Properties.copy(Blocks.SPORE_BLOSSOM).noCollission().instabreak()));
 
 
-    public static final RegistryObject<Block> SMELTER_SMALL = registerBlock("smelter_small",
-            () -> new SideOBlock(BlockBehaviour.Properties.of()
+    public static final RegistryObject<Block> SMALL_SMELTER = registerBlock("small_smelter",
+            () -> new SmallSmelterBlock(BlockBehaviour.Properties.of()
                     .strength(1.2F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
 
 

@@ -126,7 +126,7 @@ public class ModBlockStateProvider extends BlockStateProvider {
 
 
         //С ПОВОРОТОМ К ИГРОКУ
-        horizontalBlockWithItem(ModBlocks.SMELTER_SMALL,
+        horizontalBlockWithItem(ModBlocks.SMALL_SMELTER,
                 modLoc("block/smelter_small_side"),
                 modLoc("block/smelter_small_back"),
                 modLoc("block/smelter_small_side"),

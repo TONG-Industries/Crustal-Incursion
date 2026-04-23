@@ -273,7 +273,7 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.TUNGSTEN_FLUID_PIPE);
 
             event.accept(ModBlocks.JERNOVA);
-            event.accept(ModBlocks.SMELTER_SMALL);
+            event.accept(ModBlocks.SMALL_SMELTER);
 
             event.accept(ModItems.HEATER_ITEM);
             event.accept(ModBlocks.SMELTER);
