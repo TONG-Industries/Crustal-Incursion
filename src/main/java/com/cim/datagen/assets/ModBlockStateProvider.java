@@ -126,7 +126,15 @@ public class ModBlockStateProvider extends BlockStateProvider {
 
 
         //С ПОВОРОТОМ К ИГРОКУ
-        fullOrientableBlockWithItem(ModBlocks.DET_MINER,
+        horizontalBlockWithItem(ModBlocks.SMELTER_SMALL,
+                modLoc("block/smelter_small_side"),
+                modLoc("block/smelter_small_back"),
+                modLoc("block/smelter_small_side"),
+                modLoc("block/smelter_small_top"),
+                modLoc("block/smelter_small_bottom")
+        );
+
+        horizontalBlockWithItem(ModBlocks.DET_MINER,
                 modLoc("block/det_miner_side"),
                 modLoc("block/det_miner_front"),
                 modLoc("block/det_miner_front"),
@@ -437,21 +445,21 @@ public class ModBlockStateProvider extends BlockStateProvider {
     public void fullOrientableBlockWithItem(RegistryObject<Block> block, ResourceLocation side, ResourceLocation front, ResourceLocation back, ResourceLocation top, ResourceLocation bottom) {
         String name = block.getId().getPath();
 
-        // Используем "minecraft:block/cube" - это база, она есть всегда
         ModelFile model = models().withExistingParent(name, "minecraft:block/cube")
                 .texture("up", top)
                 .texture("down", bottom)
                 .texture("east", side)
                 .texture("west", side)
-                .texture("north", front) // Лицо
-                .texture("south", back)  // Зад
+                .texture("north", front)
+                .texture("south", back)
                 .texture("particle", side);
 
-        // Важно: horizontalBlock сам покрутит эту модель,
-        // сопоставляя текстуры north/south с направлением FACING
-        horizontalBlock(block.get(), model);
+        directionalBlock(block.get(), model);
+
         simpleBlockItem(block.get(), model);
     }
+
+
     private void stairsAndSlabs(Block fullBlock, StairBlock stairs, SlabBlock slab) {
         ResourceLocation texture = blockTexture(fullBlock);
         stairsBlock(stairs, texture);
@@ -486,14 +494,22 @@ public class ModBlockStateProvider extends BlockStateProvider {
 
 
     // 1. Улучшенный метод для горизонтально-поворачиваемых блоков (печи, батареи)
-    // Генерирует модель и прописывает вращение в блокстейт
-    public void horizontalBlockWithItem(RegistryObject<Block> block, ResourceLocation side, ResourceLocation front, ResourceLocation top) {
+    public void horizontalBlockWithItem(RegistryObject<Block> block, ResourceLocation side, ResourceLocation front, ResourceLocation back, ResourceLocation top, ResourceLocation bottom) {
         String name = block.getId().getPath();
-        ModelFile model = models().orientable(name, side, front, top);
 
-        // Создает 4 варианта вращения (North, South, East, West)
+        // Используем "minecraft:block/cube" - это база, она есть всегда
+        ModelFile model = models().withExistingParent(name, "minecraft:block/cube")
+                .texture("up", top)
+                .texture("down", bottom)
+                .texture("east", side)
+                .texture("west", side)
+                .texture("north", front) // Лицо
+                .texture("south", back)  // Зад
+                .texture("particle", side);
+
+        // Важно: horizontalBlock сам покрутит эту модель,
+        // сопоставляя текстуры north/south с направлением FACING
         horizontalBlock(block.get(), model);
-        // Создает модель предмета на основе этой же модели
         simpleBlockItem(block.get(), model);
     }
 

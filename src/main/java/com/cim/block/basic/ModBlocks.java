@@ -8,6 +8,7 @@ import com.cim.block.basic.conglomerate.ConglomerateBlock;
 import com.cim.block.basic.deco.BeamBlock;
 import com.cim.block.basic.deco.BeamCollisionBlock;
 import com.cim.block.basic.deco.SteelPropsBlock;
+import com.cim.block.basic.direction.SideOBlock;
 import com.cim.block.basic.fluids.FluidBarrelBlock;
 
 import com.cim.block.basic.fluids.FluidPipeBlock;
@@ -138,6 +139,11 @@ public class ModBlocks {
             () -> new HiveSoilBlock(BlockBehaviour.Properties.copy(Blocks.MUD).sound(SoundType.MUD)));
     public static final RegistryObject<Block> HIVE_ROOTS = registerBlock("hive_roots",
             () -> new HiveRootsBlock(BlockBehaviour.Properties.copy(Blocks.SPORE_BLOSSOM).noCollission().instabreak()));
+
+
+    public static final RegistryObject<Block> SMELTER_SMALL = registerBlock("smelter_small",
+            () -> new SideOBlock(BlockBehaviour.Properties.of()
+                    .strength(1.2F, 6.0F).sound(SoundType.STONE).requiresCorrectToolForDrops()));
 
 
     //ОБЫЧНЫЕ БЛОКИ

@@ -234,6 +234,9 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.SHAFT_MEDIUM_TUNGSTEN_CARBIDE);
             event.accept(ModBlocks.SHAFT_HEAVY_TUNGSTEN_CARBIDE);
 
+            event.accept(ModItems.GEAR1_STEEL.get());
+            event.accept(ModItems.GEAR2_STEEL.get());
+
             event.accept(ModBlocks.MOTOR_ELECTRO);
             event.accept(ModBlocks.BEARING_BLOCK);
 
@@ -270,6 +273,7 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.TUNGSTEN_FLUID_PIPE);
 
             event.accept(ModBlocks.JERNOVA);
+            event.accept(ModBlocks.SMELTER_SMALL);
 
             event.accept(ModItems.HEATER_ITEM);
             event.accept(ModBlocks.SMELTER);
@@ -280,8 +284,6 @@ public class CrustalIncursionMod {
             event.accept(ModItems.MOLD_BLOCK.get());
             event.accept(ModItems.POKER.get());
 
-            event.accept(ModItems.GEAR1_STEEL.get());
-            event.accept(ModItems.GEAR2_STEEL.get());
         }
 
 
