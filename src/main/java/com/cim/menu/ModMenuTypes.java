@@ -26,6 +26,9 @@ public class ModMenuTypes {
                 return new TurretLightMenu(windowId, inv, data);
             }));
 
+    public static final RegistryObject<MenuType<SmallSmelterMenu>> SMALL_SMELTER_MENU =
+            MENUS.register("small_smelter_menu", () -> IForgeMenuType.create(SmallSmelterMenu::create));
+
     public static final RegistryObject<MenuType<HeaterMenu>> HEATER_MENU =
             MENUS.register("heater_menu", () -> IForgeMenuType.create(HeaterMenu::create));
 

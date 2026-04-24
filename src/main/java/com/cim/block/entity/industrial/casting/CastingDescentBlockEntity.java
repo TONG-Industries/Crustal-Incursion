@@ -1,8 +1,10 @@
 package com.cim.block.entity.industrial.casting;
 
+import com.cim.api.metallurgy.system.ISmelter;
 import com.cim.api.metallurgy.system.Metal;
 import com.cim.api.metallurgy.system.MetallurgyRegistry;
 import com.cim.block.basic.industrial.casting.CastingDescentBlock;
+import com.cim.block.basic.industrial.casting.SmallSmelterBlock;
 import com.cim.block.entity.ModBlockEntities;
 import com.cim.multiblock.industrial.SmelterBlockEntity;
 import com.cim.multiblock.system.MultiblockPartEntity;
@@ -47,20 +49,6 @@ public class CastingDescentBlockEntity extends BlockEntity {
         Direction back = facing.getOpposite();
         BlockPos smelterPos = pos.relative(back);
 
-        // Проверка подключения к плавильне
-        BlockEntity behind = level.getBlockEntity(smelterPos);
-        if (!(behind instanceof SmelterBlockEntity) && !(behind instanceof MultiblockPartEntity)) {
-            be.setPouring(false, null);
-            return;
-        }
-
-        if (behind instanceof MultiblockPartEntity part) {
-            BlockPos controllerPos = part.getControllerPos();
-            if (controllerPos == null || !(level.getBlockEntity(controllerPos) instanceof SmelterBlockEntity)) {
-                be.setPouring(false, null);
-                return;
-            }
-        }
 
         // Кулдаун для замедления передачи
         if (be.transferCooldown > 0) be.transferCooldown--;
@@ -77,7 +65,7 @@ public class CastingDescentBlockEntity extends BlockEntity {
         // Передача только когда кулдаун закончился
         if (be.transferCooldown > 0) return;
 
-        SmelterBlockEntity smelter = be.findSmelter(level, pos);
+        ISmelter smelter = be.findSmelter(level, pos);
         if (smelter == null) {
             be.setPouring(false, null);
             return;
@@ -165,17 +153,69 @@ public class CastingDescentBlockEntity extends BlockEntity {
         }
     }
 
-    private SmelterBlockEntity findSmelter(Level level, BlockPos pos) {
+    private ISmelter findSmelter(Level level, BlockPos pos) {
+        BlockState descentState = level.getBlockState(pos);
+        Direction facing = descentState.getValue(CastingDescentBlock.FACING);
+        Direction back = facing.getOpposite();
+
+        // 1. Приоритет: позиция прямо сзади спуска (фронтовая сторона для мелкой плавильни)
+        ISmelter smelter = checkSmelterAt(level, pos.relative(back), facing, true);
+        if (smelter != null) return smelter;
+
+        // 2. Остальные горизонтальные стороны — только для большой плавильни/нагревателя
         for (Direction dir : Direction.Plane.HORIZONTAL) {
-            BlockPos neighborPos = pos.relative(dir);
-            BlockEntity be = level.getBlockEntity(neighborPos);
-            if (be instanceof SmelterBlockEntity smelter) return smelter;
-            if (be instanceof MultiblockPartEntity part) {
-                BlockPos controllerPos = part.getControllerPos();
-                if (controllerPos != null && level.getBlockEntity(controllerPos) instanceof SmelterBlockEntity smelter)
+            if (dir == back) continue; // уже проверяли
+            smelter = checkSmelterAt(level, pos.relative(dir), facing, false);
+            if (smelter != null) return smelter;
+        }
+
+        return null;
+    }
+
+    private ISmelter checkSmelterAt(Level level, BlockPos checkPos, Direction descentFacing, boolean allowSmall) {
+        BlockEntity be = level.getBlockEntity(checkPos);
+        if (be instanceof ISmelter smelter) {
+            // === МЕЛКАЯ ПЛАВИЛЬНЯ ===
+            // Только фронтовое подключение: мелкая плавильня должна смотреть на спуск
+            if (be instanceof SmallSmelterBlockEntity) {
+                if (!allowSmall) return null;
+                BlockState smelterState = level.getBlockState(checkPos);
+                if (smelterState.hasProperty(SmallSmelterBlock.FACING)) {
+                    Direction smelterFacing = smelterState.getValue(SmallSmelterBlock.FACING);
+                    if (smelterFacing == descentFacing) {
+                        return smelter;
+                    }
+                }
+                return null;
+            }
+
+            // === БОЛЬШАЯ ПЛАВИЛЬНЯ / НАГРЕВАТЕЛЬ ===
+            // Любая боковая сторона подходит
+            return smelter;
+        }
+
+        // === МУЛЬТИБЛОК-ЧАСТИ ===
+        if (be instanceof com.cim.multiblock.system.MultiblockPartEntity part) {
+            BlockPos controllerPos = part.getControllerPos();
+            if (controllerPos != null) {
+                BlockEntity controller = level.getBlockEntity(controllerPos);
+                if (controller instanceof ISmelter smelter) {
+                    if (controller instanceof SmallSmelterBlockEntity) {
+                        if (!allowSmall) return null;
+                        BlockState smelterState = level.getBlockState(controllerPos);
+                        if (smelterState.hasProperty(SmallSmelterBlock.FACING)) {
+                            Direction smelterFacing = smelterState.getValue(SmallSmelterBlock.FACING);
+                            if (smelterFacing == descentFacing) {
+                                return smelter;
+                            }
+                        }
+                        return null;
+                    }
                     return smelter;
+                }
             }
         }
+
         return null;
     }
 

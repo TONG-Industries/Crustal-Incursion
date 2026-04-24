@@ -149,7 +149,14 @@ public class ModItems {
 
     public static final RegistryObject<Item> HARD_ROCK = ITEMS.register("hard_rock",
             () -> new Item(new Item.Properties()));
-
+    public static final RegistryObject<Item> DOLOMITE_SMES = ITEMS.register("dolomite_smes",
+            () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> FIRE_SMES = ITEMS.register("fire_smes",
+            () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> LIMESTONE_CHUNK = ITEMS.register("limestone_chunk",
+            () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> LIMESTONE_POWDER = ITEMS.register("limestone_powder",
+            () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> BAUXITE_CHUNK = ITEMS.register("bauxite_chunk",
             () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> BAUXITE_POWDER = ITEMS.register("bauxite_powder",

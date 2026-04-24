@@ -6,6 +6,8 @@ import com.cim.block.entity.fluids.FluidBarrelBlockEntity;
 
 import com.cim.block.entity.fluids.FluidPipeBlockEntity;
 
+import com.cim.block.entity.industrial.MillstoneBlockEntity;
+import com.cim.block.entity.industrial.casting.SmallSmelterBlockEntity;
 import com.cim.block.entity.industrial.rotation.BearingBlockEntity;
 import com.cim.block.entity.industrial.rotation.MotorElectroBlockEntity;
 import com.cim.block.entity.industrial.rotation.ShaftBlockEntity;
@@ -49,6 +51,14 @@ public class ModBlockEntities {
                     BlockEntityType.Builder.of(HiveSoilBlockEntity::new, ModBlocks.HIVE_SOIL.get())
                             .build(null)
             );
+
+    public static final RegistryObject<BlockEntityType<MillstoneBlockEntity>> MILLSTONE =
+            BLOCK_ENTITIES.register("millstone",
+                    () -> BlockEntityType.Builder.of(MillstoneBlockEntity::new, ModBlocks.JERNOVA.get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<SmallSmelterBlockEntity>> SMALL_SMELTER_BE =
+            BLOCK_ENTITIES.register("small_smelter",
+                    () -> BlockEntityType.Builder.of(SmallSmelterBlockEntity::new, ModBlocks.SMALL_SMELTER.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<ConglomerateBlockEntity>> CONGLOMERATE =
             BLOCK_ENTITIES.register("conglomerate",

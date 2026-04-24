@@ -1,5 +1,6 @@
 package com.cim.multiblock.industrial;
 
+import com.cim.api.metallurgy.system.ISmelter;
 import com.cim.api.metallurgy.system.Metal;
 import com.cim.api.metallurgy.system.MetalUnits2;
 import com.cim.api.metallurgy.system.MetallurgyRegistry;
@@ -38,7 +39,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import javax.annotation.Nullable;
 import java.util.*;
 
-public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
+public class SmelterBlockEntity extends BlockEntity implements MenuProvider, ISmelter {
     public static final int MAX_TEMP = 1600;
     public static final int BLOCK_CAPACITY = 4;
     public static final int TANK_CAPACITY = BLOCK_CAPACITY * MetalUnits2.UNITS_PER_BLOCK;
@@ -60,6 +61,15 @@ public class SmelterBlockEntity extends BlockEntity implements MenuProvider {
         }
     };
 
+    @Override
+    public BlockEntity asBlockEntity() {
+        return this;
+    }
+
+    @Override
+    public int getSmelterCapacity() {
+        return TANK_CAPACITY;
+    }
     // === НАГРЕВ ПРЕДМЕТОВ ===
     // Температура каждого слота (только для визуализации и логики)
     private final float[] slotTemperatures = new float[8];

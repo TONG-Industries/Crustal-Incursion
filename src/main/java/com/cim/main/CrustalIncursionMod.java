@@ -234,6 +234,9 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.SHAFT_MEDIUM_TUNGSTEN_CARBIDE);
             event.accept(ModBlocks.SHAFT_HEAVY_TUNGSTEN_CARBIDE);
 
+            event.accept(ModItems.GEAR1_STEEL.get());
+            event.accept(ModItems.GEAR2_STEEL.get());
+
             event.accept(ModBlocks.MOTOR_ELECTRO);
             event.accept(ModBlocks.BEARING_BLOCK);
 
@@ -269,6 +272,9 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.LEAD_FLUID_PIPE);
             event.accept(ModBlocks.TUNGSTEN_FLUID_PIPE);
 
+            event.accept(ModBlocks.JERNOVA);
+            event.accept(ModBlocks.SMALL_SMELTER);
+
             event.accept(ModItems.HEATER_ITEM);
             event.accept(ModBlocks.SMELTER);
             event.accept(ModBlocks.CASTING_POT);
@@ -277,8 +283,7 @@ public class CrustalIncursionMod {
             event.accept(ModItems.MOLD_INGOT.get());
             event.accept(ModItems.MOLD_BLOCK.get());
             event.accept(ModItems.POKER.get());
-            event.accept(ModItems.GEAR1_STEEL.get());
-            event.accept(ModItems.GEAR2_STEEL.get());
+
         }
 
 
@@ -321,19 +326,22 @@ public class CrustalIncursionMod {
                     ItemStack slagStack = SlagItem.createSlag(metal, MetalUnits2.UNITS_PER_INGOT);
                     event.accept(slagStack);
                 }
-
+                event.accept(ModItems.FIRE_SMES.get());
+                event.accept(ModItems.DOLOMITE_SMES.get());
                 event.accept(ModItems.FIREBRICK.get());
                 event.accept(ModItems.REINFORCEDBRICK.get());
 
                 event.accept(ModItems.CONGLOMERATE_CHUNK);
                 event.accept(ModItems.HARD_ROCK);
                 event.accept(ModItems.DOLOMITE_CHUNK);
+                event.accept(ModItems.LIMESTONE_CHUNK);
                 event.accept(ModItems.BAUXITE_CHUNK);
 
-                event.accept(ModItems.FUEL_ASH.get());
                 event.accept(ModItems.DOLOMITE_POWDER);
+                event.accept(ModItems.LIMESTONE_POWDER);
                 event.accept(ModItems.BAUXITE_POWDER);
 
+                event.accept(ModItems.FUEL_ASH.get());
 
             }
 
