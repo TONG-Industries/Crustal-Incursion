@@ -34,13 +34,13 @@ public class MillstoneBlockEntity extends BlockEntity {
 
     static {
         RECIPES.put(ModItems.LIMESTONE_CHUNK.get(), new GrindRecipe(
-                ModItems.LIMESTONE_POWDER.get(), 4
+                ModItems.LIMESTONE_POWDER.get(), 4, 1
         ));
         RECIPES.put(ModItems.BAUXITE_CHUNK.get(), new GrindRecipe(
-                ModItems.BAUXITE_POWDER.get(), 6
+                ModItems.BAUXITE_POWDER.get(), 6, 1
         ));
         RECIPES.put(ModItems.DOLOMITE_CHUNK.get(), new GrindRecipe(
-                ModItems.DOLOMITE_POWDER.get(), 5
+                ModItems.DOLOMITE_POWDER.get(), 5, 1
         ));
     }
 
@@ -245,5 +245,5 @@ public class MillstoneBlockEntity extends BlockEntity {
         Containers.dropItemStack(level, worldPosition.getX(), worldPosition.getY(), worldPosition.getZ(), itemHandler.getStackInSlot(1));
     }
 
-    public record GrindRecipe(Item output, int grindsRequired) {}
+    public record GrindRecipe(Item output, int grindsRequired, int outputCount) {}
 }
