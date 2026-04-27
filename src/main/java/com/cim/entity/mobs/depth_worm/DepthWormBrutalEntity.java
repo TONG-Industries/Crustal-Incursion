@@ -18,7 +18,6 @@ import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-
 import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.core.animation.AnimatableManager;
 import software.bernie.geckolib.core.animation.AnimationController;
@@ -37,16 +36,21 @@ public class DepthWormBrutalEntity extends DepthWormEntity {
     private LivingEntity impaledTargetCache = null;
     private int attackAnimTimer = 0;
 
+    // ⭐ CHANGED: кулдаун рукопашной (1 сек = 20 тиков)
+    private int meleeCooldown = 0;
+
     public DepthWormBrutalEntity(EntityType<? extends Monster> entityType, Level level) {
         super(entityType, level);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 45.0D)          // 3x от обычного
-                .add(Attributes.MOVEMENT_SPEED, 0.22D)      // чуть медленнее
-                .add(Attributes.ATTACK_DAMAGE, 6.0D)        // 1.5x от обычного
-                .add(Attributes.FOLLOW_RANGE, 28.0D)
+                .add(Attributes.MAX_HEALTH, 45.0D)
+                // ⭐ CHANGED: скорость ходьбы ×2
+                .add(Attributes.MOVEMENT_SPEED, 0.44D)
+                .add(Attributes.ATTACK_DAMAGE, 6.0D)
+                // ⭐ CHANGED: больше агро-радиус — нет «слепоты» в ближнем бою
+                .add(Attributes.FOLLOW_RANGE, 40.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.4D);
     }
 
@@ -60,14 +64,13 @@ public class DepthWormBrutalEntity extends DepthWormEntity {
 
     @Override
     protected void registerGoals() {
-        // Главная фишка — пронзающий прыжок (обычный прыжок убран)
         this.goalSelector.addGoal(0, new DepthWormBrutalJumpGoal(this, 1.8D, 6.0F, 24.0F));
         this.goalSelector.addGoal(1, new ReturnToHiveGoal(this));
-        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.2D, false));
+        // ⭐ CHANGED: followingTargetEvenIfNotSeen = true — не теряет цель за углом
+        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.4D, true));
         this.goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this, 0.8D));
         this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
 
-        // Не атакуем обычных червей и других бруталов
         this.targetSelector.addGoal(0, new NearestAttackableTargetGoal<>(this, Player.class, true));
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, LivingEntity.class, true,
                 (target) -> target.isAlive()
@@ -79,43 +82,48 @@ public class DepthWormBrutalEntity extends DepthWormEntity {
 
     @Override
     public boolean doHurtTarget(Entity target) {
-        // Включаем флаг для анимации/текстуры обычной атаки
+        // ⭐ CHANGED: кулдаун 1 секунда + гарантированная анимация
+        if (this.meleeCooldown > 0) return false;
+
+        this.meleeCooldown = 20;
         this.setAttacking(true);
-        this.attackAnimTimer = 15;
+        this.attackAnimTimer = 10; // 0.5 сек анимации удара
         return super.doHurtTarget(target);
     }
 
     @Override
     public void aiStep() {
         boolean wasFlying = this.isFlying();
-
         super.aiStep();
 
+        if (this.onGround() && this.isFlying() && !this.isImpaling()) {
+            this.setFlying(false);
+            this.setPreparingJump(false);
+            this.handleLanding();
+        }
+        
         if (this.level().isClientSide) return;
 
-        // Таймер сброса анимации обычной атаки
+        // ⭐ CHANGED: таймеры
+        if (this.meleeCooldown > 0) this.meleeCooldown--;
         if (this.attackAnimTimer > 0) {
             if (--this.attackAnimTimer == 0) {
                 this.setAttacking(false);
             }
         }
 
-        // Приземление: если в прошлом тике летели, а сейчас на земле — обрабатываем
         if (this.onGround() && wasFlying && !this.isFlying()) {
             this.handleLanding();
         }
 
-        // Удерживаем жертву на «языке» пока летим
         if (this.isImpaling()) {
             this.updateImpaledTargetPosition();
         }
     }
 
-    /** Вызывается в момент приземления после прыжка */
     private void handleLanding() {
         LivingEntity target = getImpaledTarget();
         if (target != null && target.isAlive()) {
-            // Передаём урон от падения червя насаженной цели
             float fall = this.fallDistance;
             if (fall > 3.0F) {
                 target.hurt(this.damageSources().mobAttack(this), fall - 3.0F);
@@ -125,7 +133,6 @@ public class DepthWormBrutalEntity extends DepthWormEntity {
         this.setPreparingJump(false);
     }
 
-    /** Прикрепляет жертву к кости 12 языка (примерно спереди червя) */
     private void updateImpaledTargetPosition() {
         LivingEntity target = getImpaledTarget();
         if (target == null || !target.isAlive()) {
@@ -135,7 +142,6 @@ public class DepthWormBrutalEntity extends DepthWormEntity {
 
         Vec3 pos = this.position();
         Vec3 look = this.getLookAngle();
-        // Позиция «языка» — ~1.3 блока впереди, на уровне тела
         Vec3 tongue = pos.add(look.x * 1.3, this.getBbHeight() * 0.4, look.z * 1.3);
 
         target.setPos(tongue.x, tongue.y, tongue.z);
@@ -150,8 +156,7 @@ public class DepthWormBrutalEntity extends DepthWormEntity {
 
     @Override
     public boolean causeFallDamage(float distance, float multiplier, DamageSource source) {
-        // Брутальный червь получает только половину урона от падения
-        return super.causeFallDamage(distance, multiplier * 0.5F, source);
+        return this.ignoreFallDamageTicks <= 0 && super.causeFallDamage(distance, multiplier * 0.5F, source);
     }
 
     @Override
@@ -161,17 +166,15 @@ public class DepthWormBrutalEntity extends DepthWormEntity {
                 return state.setAndContinue(RawAnimation.begin().thenPlayAndHold("death"));
             }
 
-            // Полёт с жертвой или без — анимация jump
             if (this.isImpaling() || (this.isFlying() && !this.onGround())) {
                 return state.setAndContinue(RawAnimation.begin().thenLoop("jump"));
             }
 
-            // Подготовка к прыжку (~2 сек)
             if (this.isPreparingJump()) {
                 return state.setAndContinue(RawAnimation.begin().thenPlayAndHold("prepare"));
             }
 
-            // Обычная атака ближнего боя
+            // ⭐ CHANGED: attack теперь гарантированно проигрывается при setAttacking
             if (this.isAttacking()) {
                 return state.setAndContinue(RawAnimation.begin().thenPlayAndHold("attack"));
             }
@@ -183,8 +186,6 @@ public class DepthWormBrutalEntity extends DepthWormEntity {
             return state.setAndContinue(RawAnimation.begin().thenLoop("idle"));
         }));
     }
-
-    // === Геттеры / сеттеры ===
 
     public boolean isPreparingJump() {
         return this.entityData.get(IS_PREPARING_JUMP);

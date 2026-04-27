@@ -3,7 +3,6 @@ package com.cim.entity.mobs.depth_worm;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -11,25 +10,26 @@ import java.util.EnumSet;
 
 public class DepthWormBrutalJumpGoal extends Goal {
     private final DepthWormBrutalEntity worm;
-    private final double speedModifier;
     private final float jumpRangeMin, jumpRangeMax;
 
     private LivingEntity target;
     private int prepareTimer;
     private boolean jumpPerformed;
-    private static final int PREPARE_TIME = 40; // ~2 секунды (40 тиков)
+    private static final int PREPARE_TIME = 10; // 0.5 сек
 
-    // Параметры прыжка
-    private Vec3 jumpStartPos;
-    private Vec3 jumpTargetPos;
-    private static final double BASE_HORIZONTAL_SPEED = 1.1;
-    private static final double MAX_HORIZONTAL_SPEED = 2.2;
-    private static final double MIN_VERTICAL_BOOST = 0.35;
-    private static final double MAX_VERTICAL_BOOST = 0.85;
+    // Ракетная баллистика
+    private static final double MAX_HORIZONTAL_SPEED = 3.5;
+    private static final double MAX_VERTICAL_SPEED = 2.0;
+    private static final double GRAVITY = 0.08; // стандартная гравитация LivingEntity
+
+    // Анти-застревание
+    private int jumpTickCounter = 0;
+    private static final int MAX_JUMP_TICKS = 60; // 3 сек максимум
+    private int noMovementTicks = 0;
+    private Vec3 lastJumpPos = Vec3.ZERO;
 
     public DepthWormBrutalJumpGoal(DepthWormBrutalEntity worm, double speedModifier, float jumpRangeMin, float jumpRangeMax) {
         this.worm = worm;
-        this.speedModifier = speedModifier;
         this.jumpRangeMin = jumpRangeMin;
         this.jumpRangeMax = jumpRangeMax;
         this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
@@ -39,8 +39,6 @@ public class DepthWormBrutalJumpGoal extends Goal {
     public boolean canUse() {
         this.target = this.worm.getTarget();
         if (this.target == null || !this.target.isAlive()) return false;
-
-        // Не прыгаем если уже кого-то насаживаем или готовимся
         if (this.worm.isImpaling() || this.worm.isPreparingJump()) return false;
 
         double dist = this.worm.distanceTo(this.target);
@@ -49,18 +47,25 @@ public class DepthWormBrutalJumpGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        if (jumpPerformed && !worm.isFlying() && worm.onGround()) return false;
-        if (jumpPerformed) return true; // Долетаем/падаем
-        return prepareTimer > 0 && target != null && target.isAlive();
+        if (!jumpPerformed) {
+            return prepareTimer > 0 && target != null && target.isAlive();
+        }
+        // Зависли в воздухе слишком долго
+        if (jumpTickCounter > MAX_JUMP_TICKS) return false;
+        // Приземлились и не насаживаем — мгновенный сброс
+        if (worm.onGround() && !worm.isImpaling()) return false;
+        return true;
     }
 
     @Override
     public void start() {
         this.prepareTimer = PREPARE_TIME;
         this.jumpPerformed = false;
+        this.jumpTickCounter = 0;
+        this.noMovementTicks = 0;
         this.worm.setPreparingJump(true);
         this.worm.getNavigation().stop();
-        this.worm.setAttacking(true); // Для текстуры attack
+        this.worm.setAttacking(true);
     }
 
     @Override
@@ -68,8 +73,17 @@ public class DepthWormBrutalJumpGoal extends Goal {
         this.target = null;
         this.worm.setPreparingJump(false);
         this.worm.setAttacking(false);
+        this.worm.setFlying(false);
         this.jumpPerformed = false;
+        this.jumpTickCounter = 0;
+        this.noMovementTicks = 0;
         this.worm.getNavigation().stop();
+
+        // Если остались висеть в воздухе без жертвы — сбрасываем вниз
+        if (!worm.onGround() && !worm.isImpaling()) {
+            Vec3 v = this.worm.getDeltaMovement();
+            this.worm.setDeltaMovement(v.multiply(0.5, -0.3, 0.5));
+        }
     }
 
     @Override
@@ -79,28 +93,36 @@ public class DepthWormBrutalJumpGoal extends Goal {
             return;
         }
 
-        double dist = this.worm.distanceTo(this.target);
-
-        // Если цель убежала слишком далеко во время прицеливания — сброс
-        if (!jumpPerformed && dist > this.jumpRangeMax + 4.0F) {
-            abortPrepare();
-            return;
-        }
-
-        // Смотрим на цель
-        this.worm.getLookControl().setLookAt(this.target, 30.0F, 30.0F);
-
         if (!jumpPerformed) {
-            // Фаза прицеливания
+            // Фаза прицеливания (0.5 сек)
+            if (this.worm.distanceTo(this.target) > this.jumpRangeMax + 6.0F) {
+                abortPrepare();
+                return;
+            }
+
+            this.worm.getLookControl().setLookAt(this.target, 30.0F, 30.0F);
+
             if (--this.prepareTimer <= 0) {
                 if (tryExecuteJump()) {
                     jumpPerformed = true;
+                    lastJumpPos = this.worm.position();
                 } else {
-                    abortPrepare(); // Не удалось — траектория заблокирована
+                    abortPrepare();
                 }
             }
         } else {
-            // Фаза полёта — проверяем столкновение с целью в воздухе
+            // Фаза полёта
+            jumpTickCounter++;
+
+            // Анти-застревание: если не двигаемся — считаем тики
+            Vec3 cur = this.worm.position();
+            if (cur.distanceToSqr(lastJumpPos) < 0.0025) { // 0.05 блока
+                if (++noMovementTicks > 8) return; // canContinueToUse сбросит в следующем тике
+            } else {
+                noMovementTicks = 0;
+                lastJumpPos = cur;
+            }
+
             checkMidAirCollision();
         }
     }
@@ -109,132 +131,121 @@ public class DepthWormBrutalJumpGoal extends Goal {
         this.prepareTimer = 0;
         this.worm.setPreparingJump(false);
         this.worm.setAttacking(false);
-        this.jumpPerformed = true; // Чтобы canContinueToUse вернул false
+        this.jumpPerformed = true;
     }
 
-    /** Проверяет траекторию и выполняет прыжок на упреждение */
+    // =====================================================================
+    // БАЛЛИСТИКА (адаптировано с TurretLightComputer)
+    // =====================================================================
+
     private boolean tryExecuteJump() {
         Vec3 wormPos = this.worm.position();
         Vec3 targetPos = this.target.position();
         Vec3 targetVel = this.target.getDeltaMovement();
 
-        // === РАСЧЁТ УПРЕЖДЕНИЯ ===
-        // Предполагаемое время полёта ~1.5-2.5 сек в зависимости от дистанции
-        double horizontalDist = Math.sqrt(
+        // 1. Предсказание позиции цели (итеративное, как у турели)
+        double flatDist = Math.sqrt(
                 (targetPos.x - wormPos.x) * (targetPos.x - wormPos.x) +
                         (targetPos.z - wormPos.z) * (targetPos.z - wormPos.z)
         );
-        double estimatedFlightTime = 0.6 + horizontalDist * 0.08;
-        estimatedFlightTime = Math.min(estimatedFlightTime, 2.5);
 
-        // Куда цель будет через estimatedFlightTime
-        Vec3 predictedPos = targetPos.add(
-                targetVel.x * estimatedFlightTime,
-                0, // Вертикаль не предсказываем (сложно)
-                targetVel.z * estimatedFlightTime
-        );
+        double t = solveFlightTime(flatDist, targetPos.y - wormPos.y);
+        if (t < 0) return false;
 
-        // Разница по осям
+        // 2 итерации упреждения — достаточно для моба
+        Vec3 predictedPos = targetPos;
+        for (int i = 0; i < 2; i++) {
+            predictedPos = targetPos.add(targetVel.x * t, 0, targetVel.z * t);
+            double newFlat = Math.sqrt(
+                    (predictedPos.x - wormPos.x) * (predictedPos.x - wormPos.x) +
+                            (predictedPos.z - wormPos.z) * (predictedPos.z - wormPos.z)
+            );
+            t = solveFlightTime(newFlat, predictedPos.y - wormPos.y);
+            if (t < 0) return false;
+        }
+
         double dx = predictedPos.x - wormPos.x;
-        double dy = (targetPos.y + this.target.getBbHeight() * 0.5) - (wormPos.y + this.worm.getBbHeight() * 0.3);
+        double dy = (predictedPos.y + this.target.getBbHeight() * 0.5) - (wormPos.y + this.worm.getBbHeight() * 0.3);
         double dz = predictedPos.z - wormPos.z;
 
-        double predHorizontalDist = Math.sqrt(dx * dx + dz * dz);
-        if (predHorizontalDist < 1.0) return false; // Слишком близко после предсказания
+        // 2. Расчёт вектора запуска
+        Vec3 velocity = calculateLaunchVelocity(dx, dy, dz, t);
+        if (velocity == null) return false;
 
-        // === ПРОВЕРКА ТРАЕКТОРИИ НА БЛОКИ ===
-        if (!isTrajectoryClear(wormPos, predictedPos, dy)) {
+        // 3. Проверка точной траектории на столкновения
+        if (!isTrajectoryClear(wormPos, velocity, t)) {
             return false;
         }
 
-        // === РАСЧЁТ СКОРОСТИ ===
-        double speed = BASE_HORIZONTAL_SPEED + (predHorizontalDist * 0.06);
-        speed = Math.min(speed, MAX_HORIZONTAL_SPEED);
-
-        // Вертикальный импульс
-        double verticalBoost;
-        if (dy > 3.0) {
-            verticalBoost = MAX_VERTICAL_BOOST + Math.min(dy * 0.08, 0.4);
-        } else if (dy > 0.5) {
-            verticalBoost = 0.55 + dy * 0.06;
-        } else if (dy > -1.5) {
-            verticalBoost = MIN_VERTICAL_BOOST + 0.15;
-        } else {
-            verticalBoost = MIN_VERTICAL_BOOST; // Цель ниже — минимальный бросок вверх
-        }
-
-        // Нормализуем горизонтальное направление
-        Vec3 horizontalDir = new Vec3(dx, 0, dz).normalize();
-
-        // Итоговая скорость
-        Vec3 velocity = horizontalDir.scale(speed).add(0, verticalBoost, 0);
-
-        // Поворачиваем мордой
+        // 4. Применение
         double yaw = Math.atan2(dz, dx) * (180 / Math.PI) - 90;
         this.worm.setYRot((float) yaw);
         this.worm.yHeadRot = (float) yaw;
         this.worm.yBodyRot = (float) yaw;
 
-        // Применяем
         this.worm.setDeltaMovement(velocity);
         this.worm.setFlying(true);
         this.worm.hasImpulse = true;
-        this.worm.setPreparingJump(false);
-        this.worm.setAttacking(false); // Сбрасываем attack, включается jump анимация
+        this.worm.ignoreFallDamageTicks = 60;
 
-        this.jumpStartPos = wormPos;
-        this.jumpTargetPos = predictedPos;
+        this.worm.setPreparingJump(false);
+        this.worm.setAttacking(false);
 
         return true;
     }
 
-    /** Проверяет, что между start и end нет сплошных блоков */
-    private boolean isTrajectoryClear(Vec3 start, Vec3 end, double targetYDiff) {
-        Vec3 dir = end.subtract(start);
-        double length = dir.length();
-        if (length < 0.1) return true;
+    /** Подбирает время полёта так, чтобы вертикальная скорость не превысила лимит */
+    private double solveFlightTime(double horizontalDist, double dy) {
+        double t = Math.max(3.0, horizontalDist / MAX_HORIZONTAL_SPEED);
+        double vy = dy / t + 0.5 * GRAVITY * t;
 
-        Vec3 step = dir.normalize().scale(0.5); // Шаг проверки — полблока
-        int steps = (int) (length / 0.5) + 1;
-
-        // Проверяем траекторию с небольшим запасом по высоте (червь ~0.6 блока высотой)
-        AABB wormBox = new AABB(-0.3, 0, -0.3, 0.3, 0.6, 0.3);
-
-        Vec3 current = start;
-        for (int i = 0; i < steps; i++) {
-            // Поднимаем проверочную точку по параболе (упрощённо)
-            double progress = i / (double) steps;
-            double arcHeight = Math.sin(progress * Math.PI) * Math.max(0.5, targetYDiff * 0.3);
-            Vec3 checkPos = current.add(0, arcHeight, 0);
-
-            AABB checkBox = wormBox.move(checkPos);
-
-            // Проверяем столкновение со сплошными блоками
-            BlockPos min = BlockPos.containing(checkBox.minX, checkBox.minY, checkBox.minZ);
-            BlockPos max = BlockPos.containing(checkBox.maxX, checkBox.maxY, checkBox.maxZ);
-
-            for (int x = min.getX(); x <= max.getX(); x++) {
-                for (int y = min.getY(); y <= max.getY(); y++) {
-                    for (int z = min.getZ(); z <= max.getZ(); z++) {
-                        BlockPos pos = new BlockPos(x, y, z);
-                        BlockState state = this.worm.level().getBlockState(pos);
-                        if (state.isSolid() && state.getCollisionShape(this.worm.level(), pos) != null) {
-                            // Есть блок на пути
-                            return false;
-                        }
-                    }
-                }
-            }
-
-            current = current.add(step);
+        // Если нужно слишком сильно вверх — увеличиваем t (более пологая дуга)
+        while (vy > MAX_VERTICAL_SPEED && t < 80.0) {
+            t += 1.0;
+            vy = dy / t + 0.5 * GRAVITY * t;
         }
 
+        if (vy > MAX_VERTICAL_SPEED * 1.3) return -1; // недостижимо
+        return t;
+    }
+
+    /** Расчёт скорости: x = vx*t, y = vy*t - 0.5*g*t² */
+    private Vec3 calculateLaunchVelocity(double dx, double dy, double dz, double t) {
+        if (t <= 0) return null;
+        double vx = dx / t;
+        double vz = dz / t;
+        double vy = dy / t + 0.5 * GRAVITY * t;
+
+        double hSpeed = Math.sqrt(vx * vx + vz * vz);
+        if (hSpeed > MAX_HORIZONTAL_SPEED * 1.1) return null;
+        if (vy > MAX_VERTICAL_SPEED * 1.2 || vy < -MAX_VERTICAL_SPEED) return null;
+
+        return new Vec3(vx, vy, vz);
+    }
+
+    /** Точная проверка траектории по параболе с шагом 0.5 блока */
+    private boolean isTrajectoryClear(Vec3 start, Vec3 velocity, double flightTime) {
+        int steps = (int) (flightTime * 2.0) + 1;
+        for (int i = 0; i <= steps; i++) {
+            double t = (i / (double) steps) * flightTime;
+            double x = start.x + velocity.x * t;
+            double z = start.z + velocity.z * t;
+            double y = start.y + velocity.y * t - 0.5 * GRAVITY * t * t;
+
+            AABB box = new AABB(x - 0.3, y, z - 0.3, x + 0.3, y + 0.6, z + 0.3);
+            if (!worm.level().noCollision(box)) {
+                return false;
+            }
+        }
         return true;
     }
 
-    /** Проверяет столкновение с целью в полёте */
+    // =====================================================================
+    // КОЛЛИЗИЯ С ЦЕЛЬЮ
+    // =====================================================================
+
     private void checkMidAirCollision() {
-        if (this.worm.isImpaling()) return; // Уже насажили
+        if (this.worm.isImpaling()) return;
 
         AABB wormBox = this.worm.getBoundingBox().inflate(0.4);
         if (wormBox.intersects(this.target.getBoundingBox())) {
@@ -242,28 +253,20 @@ public class DepthWormBrutalJumpGoal extends Goal {
         }
     }
 
-    /** Либо насаживаем, либо отскакиваем */
     private void executeImpaleOrBounce() {
         int armor = this.target.getArmorValue();
 
         if (armor < 12) {
-            // === НАСАЖИВАНИЕ ===
             this.target.hurt(this.worm.damageSources().mobAttack(this.worm), 10.0F);
             this.worm.setImpaledTarget(this.target);
 
-            // Червь продолжает лететь, но чуть замедляется от тяжести
             Vec3 vel = this.worm.getDeltaMovement();
             this.worm.setDeltaMovement(vel.scale(0.85).add(0, 0.05, 0));
-
         } else {
-            // === ОТСКОК ===
             this.target.hurt(this.worm.damageSources().mobAttack(this.worm), 5.0F);
 
-            // Червь отскакивает назад и вверх
             Vec3 bounce = this.worm.getLookAngle().scale(-0.6).add(0, 0.4, 0);
             this.worm.setDeltaMovement(bounce);
-
-            // Короткий стан
             this.worm.setFlying(false);
         }
     }
