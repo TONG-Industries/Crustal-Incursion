@@ -50,6 +50,7 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(ModItems.CROWBAR);
         simpleItem(ModItems.RANGE_DETONATOR);
         simpleItem(ModItems.DEPTH_WORM_SPAWN_EGG);
+        simpleItem(ModItems.DEPTH_WORM_BRUTAL_SPAWN_EGG);
         simpleItem(ModItems.DETONATOR);
         simpleItem(ModItems.MULTI_DETONATOR);
         simpleItem(ModItems.HARD_ROCK);

@@ -9,6 +9,7 @@ import com.cim.api.metallurgy.system.MetalUnits2;
 import com.cim.api.metallurgy.system.MetallurgyRegistry;
 import com.cim.api.vein.VeinManager;
 import com.cim.block.entity.conglomerate.ConglomerateBlockEntity;
+import com.cim.entity.mobs.depth_worm.DepthWormBrutalEntity;
 import com.cim.entity.mobs.grenadier.GrenadierZombieEntity;
 import com.cim.event.SlagItem;
 import com.cim.worldgen.feature.ModBiomeModifiers;
@@ -368,6 +369,7 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.DIRT_ROUGH.get());
             event.accept(ModBlocks.BASALT_ROUGH.get());
             event.accept(ModItems.DEPTH_WORM_SPAWN_EGG);
+            event.accept(ModItems.DEPTH_WORM_BRUTAL_SPAWN_EGG);
             event.accept(ModBlocks.DEPTH_WORM_NEST);
             event.accept(ModBlocks.HIVE_SOIL);
             event.accept(ModBlocks.HIVE_ROOTS.get()); // Обычная версия
@@ -384,6 +386,7 @@ public class CrustalIncursionMod {
         event.put(ModEntities.TURRET_LIGHT.get(), TurretLightEntity.createAttributes().build());
         event.put(ModEntities.TURRET_LIGHT_LINKED.get(), TurretLightEntity.createAttributes().build());
         event.put(ModEntities.GRENADIER_ZOMBIE.get(), GrenadierZombieEntity.createAttributes().build());
+        event.put(ModEntities.DEPTH_WORM_BRUTAL.get(), DepthWormBrutalEntity.createAttributes().build());
     }
     @SubscribeEvent
     public static void onEntitySpawn(MobSpawnEvent.FinalizeSpawn event) {

@@ -33,22 +33,18 @@ public class HiveNetwork {
     private boolean isAwakened = false;
     private static final int AWAKEN_THRESHOLD = 2;
 
-    // ⭐ ИЗМЕНЕНИЕ 1: Резерв активируется ТОЛЬКО после 6 червей
     private static final int RESERVE_POINTS = 10;
     private static final int MIN_WORMS_FOR_RESERVE = 6;
-
     private int rootsBuilt = 0;
     private int soilBuilt = 0;
 
     private static final int ROOTS_FOR_SOIL = 3;
     private static final int SOIL_FOR_NEST = 3;
 
-    // ⭐ ИЗМЕНЕНИЕ 2: Биологическая память — направления роста
     private final Map<Direction, Integer> growthMomentum = new EnumMap<>(Direction.class);
     private BlockPos lastSuccessfulExpansion = null;
     private int consecutiveSuccesses = 0;
 
-    // ⭐ ИЗМЕНЕНИЕ 3: "Пульс" улья — фазы активности
     private int pulsePhase = 0;
     private static final int PULSE_CYCLE = 200;
 
@@ -97,12 +93,15 @@ public class HiveNetwork {
         return Math.max(50, wormCounts.size() * 50);
     }
 
-    // ⭐ ИЗМЕНЕНИЕ 4: Проверка доступа к резерву
     public boolean canSpendReserve() {
         return getTotalWormsIncludingActive(null) >= MIN_WORMS_FOR_RESERVE;
     }
 
-    // ⭐ ИЗМЕНЕНИЕ 5: Доступные очки (без резерва если червей < 6)
+    // ⭐ Убран автоспавн брутальных червей — они теперь эволюционируют из обычных
+    public void onSuccessfulExpansion(Level level, BlockPos expansionPos) {
+        // Ничего не делаем — бруталы не спавнятся автоматически
+    }
+
     public int getAvailablePoints() {
         int totalWorms = getTotalWormsIncludingActive(null);
         if (totalWorms >= MIN_WORMS_FOR_RESERVE) {
@@ -281,7 +280,6 @@ public class HiveNetwork {
         boolean needMoreNests = totalWorms >= maxCapacity - 1 && nests < 8;
         int soilCount = Math.max(0, members.size() - nests);
 
-        // ⭐ Проверяем "ловушку бедности" — много почвы, мало гнёзд, нет очков
         boolean povertyTrap = soilCount >= SOIL_FOR_NEST * 2 && nests <= 2 && getAvailablePoints() < 15;
 
         if (currentState == HiveState.STARVATION) {
@@ -289,22 +287,19 @@ public class HiveNetwork {
             return;
         }
 
-        // ⭐ Если в ловушке — принудительно CONSOLIDATE и не расширяемся
         if (povertyTrap) {
             if (currentScenario != DevelopmentScenario.CONSOLIDATE) {
                 currentScenario = DevelopmentScenario.CONSOLIDATE;
                 System.out.println("[Hive " + id + "] 🚨 POVERTY TRAP detected! Switching to CONSOLIDATE. " +
                         "Soil=" + soilCount + " Nests=" + nests + " Points=" + getAvailablePoints());
             }
-            // В ловушке не строим почву, только пытаемся накопить на гнездо
-            // Но если есть 15 очков — строим гнездо даже из резерва (приоритет выживания)
             if (killsPool >= 15 && soilCount >= SOIL_FOR_NEST) {
                 boolean upgraded = tryUpgradeSoilToNestEmergency(level);
                 if (upgraded) {
                     System.out.println("[Hive " + id + "] 🏗️ Emergency nest built! Escaping poverty trap.");
                 }
             }
-            return; // Не расширяемся пока в ловушке
+            return;
         }
 
         if (level.getGameTime() % 100 == 0 || currentScenario == null) {
@@ -316,7 +311,6 @@ public class HiveNetwork {
             if (tryBuildRootsSmart(level)) lastRootAttempt = time;
         }
 
-        // Апгрейд почвы до гнезда (обычный)
         if (needMoreNests && soilCount >= SOIL_FOR_NEST && getAvailablePoints() >= 15) {
             boolean upgraded = tryUpgradeSoilToNest(level, true);
             if (upgraded) {
@@ -329,7 +323,6 @@ public class HiveNetwork {
             }
         }
 
-        // Расширение почвы (только если не в ловушке)
         if (time - lastExpansionAttempt > EXPANSION_COOLDOWN) {
             boolean expanded = tryExpandBiological(level);
             lastExpansionAttempt = time;
@@ -348,28 +341,22 @@ public class HiveNetwork {
             }
         }
 
-        // Спавн червей
         if (totalWorms < maxCapacity && getAvailablePoints() >= 10) {
             spawnNewWormOptimally(level);
         }
     }
 
-    // ⭐ НОВЫЙ МЕТОД: Аварийное строительство гнезда (может использовать резерв)
     private boolean tryUpgradeSoilToNestEmergency(Level level) {
         if (wormCounts.size() >= 8) return false;
-        if (killsPool < 15) return false; // Проверяем killsPool, не getAvailablePoints!
+        if (killsPool < 15) return false;
 
         int totalWorms = getTotalWormsIncludingActive(level);
         int maxCapacity = wormCounts.size() * 3;
-
-        // Аварийный режим: строим если червей почти максимум или почвы слишком много
         int soilCount = Math.max(0, members.size() - wormCounts.size());
         boolean emergency = soilCount >= SOIL_FOR_NEST * 2 || totalWorms >= maxCapacity - 1;
         if (!emergency) return false;
 
         HiveNetworkManager manager = HiveNetworkManager.get(level);
-
-        // Находим почву с наибольшим количеством соседей-гнёзд (оптимально)
         List<ScoredPosition> candidates = new ArrayList<>();
 
         for (BlockPos soilPos : members) {
@@ -392,7 +379,6 @@ public class HiveNetwork {
             }
             if (tooClose) continue;
 
-            // В аварийном режиме приоритет — близость к гнездам
             double score = nearbyNests * 30.0 + level.getRandom().nextDouble() * 10;
             candidates.add(new ScoredPosition(soilPos, score));
         }
@@ -419,7 +405,7 @@ public class HiveNetwork {
         members.add(pos);
 
         nestsBuiltTotal++;
-        killsPool -= 15; // Тратим из общего пула, включая резерв если нужно
+        killsPool -= 15;
 
         lastSuccessfulExpansion = pos;
         consecutiveSuccesses++;
@@ -435,20 +421,16 @@ public class HiveNetwork {
         }
     }
 
-    // ⭐ ИЗМЕНЕНИЕ 8: Метод размещения корней с правильной логикой hanging
     private boolean tryPlaceRootsOnBlock(Level level, BlockPos basePos) {
         if (basePos == null) return false;
         if (getAvailablePoints() < 2 && killsPool < 2) return false;
 
         List<BlockPos> candidates = new ArrayList<>();
-
-        // Позиция сверху — корни растут ВВЕРХ (hanging = false)
         BlockPos above = basePos.above();
         if (level.getBlockState(above).isAir() && isValidRootPlacement(above)) {
             candidates.add(above);
         }
 
-        // Позиция снизу — корни свисают ВНИЗ (hanging = true)
         BlockPos below = basePos.below();
         if (level.getBlockState(below).isAir() && isValidRootPlacement(below)) {
             candidates.add(below);
@@ -457,7 +439,6 @@ public class HiveNetwork {
         if (candidates.isEmpty()) return false;
 
         BlockPos target = candidates.get(level.getRandom().nextInt(candidates.size()));
-        // hanging = true если корни НИЖЕ базового блока (свисают вниз)
         boolean hanging = target.getY() < basePos.getY();
 
         BlockState rootState = ModBlocks.HIVE_ROOTS.get().defaultBlockState()
@@ -466,6 +447,7 @@ public class HiveNetwork {
 
         killsPool -= 2;
         rootsBuilt++;
+        onSuccessfulExpansion(level, basePos);
         System.out.println("[Hive " + id + "] 🌿 Roots placed " + (hanging ? "hanging down" : "growing up") +
                 " at " + target + " on " + basePos);
         return true;
@@ -518,7 +500,6 @@ public class HiveNetwork {
         return false;
     }
 
-    // ⭐ ИЗМЕНЕНИЕ 9: Биологическое расширение вместо рандома
     private boolean tryExpandBiological(Level level) {
         int available = getAvailablePoints();
         if (available < 5 && killsPool < 5) return false;
@@ -537,8 +518,7 @@ public class HiveNetwork {
         if (target == null) return false;
 
         placeHiveSoil(level, target);
-
-        // Обновляем моментум
+        onSuccessfulExpansion(level, target);
         if (lastSuccessfulExpansion != null) {
             Direction dir = getDirectionFromTo(lastSuccessfulExpansion, target);
             if (dir != null) {
@@ -584,11 +564,9 @@ public class HiveNetwork {
         return scored.get(choice).pos;
     }
 
-    // ⭐ ИЗМЕНЕНИЕ 10: Биологический скоринг позиции
     private double calculateBiologicalScore(Level level, BlockPos pos) {
         double score = 0.0;
 
-        // 1. Плотность соседей
         int neighborMembers = 0;
         int neighborNests = 0;
         for (Direction dir : Direction.values()) {
@@ -601,7 +579,6 @@ public class HiveNetwork {
         score += neighborMembers * 25.0;
         score += neighborNests * 40.0;
 
-        // 2. Моментум направления
         if (lastSuccessfulExpansion != null) {
             Direction dir = getDirectionFromTo(lastSuccessfulExpansion, pos);
             if (dir != null) {
@@ -613,7 +590,6 @@ public class HiveNetwork {
             }
         }
 
-        // 3. Расстояние от центра
         if (hiveCenter != null) {
             double dist = Math.sqrt(pos.distSqr(hiveCenter));
             if (dist < 3) {
@@ -625,13 +601,11 @@ public class HiveNetwork {
             }
         }
 
-        // 4. Вертикальная оптимизация
         if (hiveCenter != null) {
             int yDiff = Math.abs(pos.getY() - hiveCenter.getY());
             score -= yDiff * 3;
         }
 
-        // 5. Фаза пульса
         if (pulsePhase < PULSE_CYCLE / 2) {
             if (hiveCenter != null) {
                 double dist = Math.sqrt(pos.distSqr(hiveCenter));
@@ -641,7 +615,6 @@ public class HiveNetwork {
             score += neighborMembers * 10;
         }
 
-        // 6. Шум инстинкта
         score += level.getRandom().nextDouble() * 10;
 
         return score;
@@ -766,6 +739,7 @@ public class HiveNetwork {
         members.add(pos);
 
         nestsBuiltTotal++;
+        onSuccessfulExpansion(level, pos);
         killsPool -= 15;
 
         lastSuccessfulExpansion = pos;
@@ -781,10 +755,9 @@ public class HiveNetwork {
         int maxCapacity = nests * 3;
         int soilCount = Math.max(0, members.size() - nests);
 
-        DevelopmentScenario newScenario = currentScenario;
-
-        // ⭐ Проверка ловушки бедности
         boolean povertyTrap = soilCount >= SOIL_FOR_NEST * 2 && nests <= 2 && getAvailablePoints() < 15;
+
+        DevelopmentScenario newScenario = currentScenario;
 
         if (povertyTrap) {
             newScenario = DevelopmentScenario.CONSOLIDATE;
@@ -836,6 +809,7 @@ public class HiveNetwork {
                     CompoundTag newWorm = new CompoundTag();
                     newWorm.putFloat("Health", 15.0F);
                     newWorm.putInt("Kills", 0);
+                    newWorm.putInt("RawKills", 0);
                     newWorm.putLong("BoundNest", bestNest.asLong());
                     nest.addWormTag(newWorm);
                     wormCounts.put(bestNest, nest.getStoredWormsCount());
@@ -862,7 +836,6 @@ public class HiveNetwork {
         if (wormCounts.get(nestPos) < 0) wormCounts.put(nestPos, 0);
     }
 
-    // Вспомогательный класс для скоринга
     private static class ScoredPosition {
         final BlockPos pos;
         final double score;
@@ -895,7 +868,6 @@ public class HiveNetwork {
             tag.putLong("LastExpansion", lastSuccessfulExpansion.asLong());
         }
 
-        // Сохраняем моментум
         CompoundTag momentumTag = new CompoundTag();
         for (Map.Entry<Direction, Integer> entry : growthMomentum.entrySet()) {
             momentumTag.putInt(entry.getKey().getName(), entry.getValue());
@@ -931,7 +903,6 @@ public class HiveNetwork {
             net.lastSuccessfulExpansion = BlockPos.of(tag.getLong("LastExpansion"));
         }
 
-        // Восстанавливаем моментум
         CompoundTag momentumTag = tag.getCompound("GrowthMomentum");
         for (Direction dir : Direction.values()) {
             if (momentumTag.contains(dir.getName())) {

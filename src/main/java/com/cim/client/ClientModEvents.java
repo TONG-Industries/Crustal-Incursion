@@ -1,6 +1,7 @@
 package com.cim.client;
 
 import com.cim.api.metallurgy.system.ItemHeatColorRegistry;
+import com.cim.client.gecko.entity.mobs.DepthWormBrutalRenderer;
 import com.cim.main.ResourceRegistry;
 import com.cim.block.basic.ModBlocks;
 import com.cim.block.entity.fluids.FluidPipeBlockEntity;
@@ -197,6 +198,7 @@ public class ClientModEvents {
     public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
         EntityRenderers.register(ModEntities.TURRET_BULLET.get(), TurretBulletRenderer::new);
         EntityRenderers.register(ModEntities.DEPTH_WORM.get(), DepthWormRenderer::new);
+        EntityRenderers.register(ModEntities.DEPTH_WORM_BRUTAL.get(), DepthWormBrutalRenderer::new);
         event.registerEntityRenderer(ModEntities.TURRET_LIGHT.get(), TurretLightRenderer::new);
         EntityRenderers.register(ModEntities.TURRET_LIGHT_LINKED.get(), TurretLightLinkedRenderer::new);
     }

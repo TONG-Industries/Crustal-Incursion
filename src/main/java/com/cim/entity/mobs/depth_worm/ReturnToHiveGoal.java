@@ -224,7 +224,6 @@ public class ReturnToHiveGoal extends Goal {
         BlockEntity be = worm.level().getBlockEntity(entryPos);
         UUID netId = (be instanceof HiveNetworkMember member) ? member.getNetworkId() : null;
 
-        // Если не нашли ID прямо в точке входа, пробуем текущую позицию червя
         if (netId == null) {
             BlockEntity be2 = worm.level().getBlockEntity(worm.blockPosition());
             if (be2 instanceof HiveNetworkMember member2) {
@@ -245,8 +244,10 @@ public class ReturnToHiveGoal extends Goal {
 
         CompoundTag tag = new CompoundTag();
         worm.saveWithoutId(tag);
-        tag.putInt("Kills", 0);
-        tag.putLong("BoundNest", actualNest.asLong());
+        // ⭐ Фикс: явно сохраняем тип сущности (обычный или брутальный)
+        tag.putString("id", net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(worm.getType()).toString());
+        tag.putInt("Kills", 0); // Сбрасываем только очки улия
+        // RawKills остаётся в теге — не трогаем!
 
         boolean success = manager.addWormToNetwork(netId, tag, entryPos, worm.level());
 

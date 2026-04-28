@@ -1,3 +1,4 @@
+
 package com.cim.block.entity.hive;
 
 import net.minecraft.core.BlockPos;
@@ -130,8 +131,12 @@ public class DepthWormNestBlockEntity extends BlockEntity implements HiveNetwork
         }
 
         for (CompoundTag wormTag : this.storedWorms) {
-            wormTag.putString("id", "cim:depth_worm");
+            // ⭐ Сохраняем оригинальный ID. Если его нет (старые сохранения) — ставим обычного
+            if (!wormTag.contains("id")) {
+                wormTag.putString("id", "cim:depth_worm");
+            }
             wormTag.remove("UUID");
+            if (!wormTag.contains("BoundNest")) wormTag.putLong("BoundNest", this.worldPosition.asLong());
             if (!wormTag.contains("BoundNest")) wormTag.putLong("BoundNest", this.worldPosition.asLong());
 
             final UUID netId = this.networkId;

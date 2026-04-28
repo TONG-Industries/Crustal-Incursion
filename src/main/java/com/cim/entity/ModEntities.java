@@ -1,5 +1,6 @@
 package com.cim.entity;
 
+import com.cim.entity.mobs.depth_worm.DepthWormBrutalEntity;
 import com.cim.entity.mobs.grenadier.GrenadierZombieEntity;
 import com.cim.entity.weapons.grenades.GrenadeIfProjectileEntity;
 import com.cim.entity.weapons.grenades.GrenadeNucProjectileEntity;
@@ -51,6 +52,12 @@ public class ModEntities {
                     () -> EntityType.Builder.of(DepthWormEntity::new, MobCategory.MONSTER)
                             .sized(0.6f, 0.6f) // Размер хитбокса (сделаем его поменьше для лучшего пути)
                             .build(new ResourceLocation(CrustalIncursionMod.MOD_ID, "depth_worm").toString()));
+
+    public static final RegistryObject<EntityType<DepthWormBrutalEntity>> DEPTH_WORM_BRUTAL =
+            ENTITY_TYPES.register("depth_worm_brutal",
+                    () -> EntityType.Builder.of(DepthWormBrutalEntity::new, MobCategory.MONSTER)
+                            .sized(0.7F, 0.6F)
+                            .build("depth_worm_brutal"));
 
     public static final RegistryObject<EntityType<GrenadeProjectileEntity>> GRENADE_PROJECTILE =
             ENTITY_TYPES.register("grenade_projectile",

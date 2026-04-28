@@ -10,6 +10,7 @@ import com.cim.item.conglomerates.ConglomerateItem;
 import com.cim.item.energy.EnergyCellItem;
 import com.cim.item.food.FoodZamaz;
 import com.cim.event.SlagItem;
+import com.cim.item.mobs.DepthWormBrutalSpawnEggItem;
 import com.cim.item.mobs.MoryLahItem;
 import com.cim.item.energy.WireCoilItem;
 import com.cim.item.rotation.GearItem;
@@ -54,6 +55,8 @@ public class ModItems {
     public static final RegistryObject<Item> DEPTH_WORM_SPAWN_EGG = ITEMS.register("depth_worm_spawn_egg",
             () -> new DepthWormSpawnEggItem(new Item.Properties()));
 
+    public static final RegistryObject<Item> DEPTH_WORM_BRUTAL_SPAWN_EGG = ITEMS.register("depth_worm_brutal_spawn_egg",
+            () -> new DepthWormBrutalSpawnEggItem(new Item.Properties()));
 
     public static final RegistryObject<Item> SLAG = ITEMS.register("slag",
             () -> new SlagItem(new Item.Properties()));
