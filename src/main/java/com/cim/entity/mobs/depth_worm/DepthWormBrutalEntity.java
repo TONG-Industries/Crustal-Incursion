@@ -136,24 +136,39 @@ public class DepthWormBrutalEntity extends DepthWormEntity {
             return;
         }
 
-        // ⭐ НОВОЕ: Червь застревает ВНУТРИ цели, а не "носит" её на языке
+        // ⭐ ИСПРАВЛЕНО: Привязываемся к ЦЕНТРУ хитбокса цели, не к ногам
+        // target.position() — ноги, getBoundingBox().getCenter() — центр
+        Vec3 targetCenter = target.getBoundingBox().getCenter();
+
+        // Червь "впивается" в центр тела цели
+        // Небольшой сдвиг вперёд по направлению движения цели
+        Vec3 targetVel = target.getDeltaMovement();
+        Vec3 velDir = targetVel.lengthSqr() > 0.001
+                ? targetVel.normalize()
+                : target.getLookAngle();
+
+        double offsetForward = 0.15; // Чуть впереди центра
+        Vec3 attachPos = targetCenter.add(velDir.scale(offsetForward));
+
+        // Плавное прилипание
         Vec3 wormPos = this.position();
-        Vec3 targetPos = target.position();
+        double lerp = 0.5; // Мягче, чтобы не дергаться
+        double newX = wormPos.x + (attachPos.x - wormPos.x) * lerp;
+        double newY = wormPos.y + (attachPos.y - wormPos.y) * lerp;
+        double newZ = wormPos.z + (attachPos.z - wormPos.z) * lerp;
 
-        // Интерполируем позицию цели к центру червя
-        double lerpFactor = 0.3; // Плавное "втягивание"
-        double newX = targetPos.x + (wormPos.x - targetPos.x) * lerpFactor;
-        double newY = targetPos.y + (wormPos.y + this.getBbHeight() * 0.5 - targetPos.y - target.getBbHeight() * 0.5) * lerpFactor;
-        double newZ = targetPos.z + (wormPos.z - targetPos.z) * lerpFactor;
+        this.setPos(newX, newY, newZ);
+        this.setDeltaMovement(targetVel);
 
-        target.setPos(newX, newY, newZ);
-        target.setDeltaMovement(Vec3.ZERO);
-        target.hurtMarked = true;
-        target.fallDistance = 0F;
+        // Поворот червя = поворот цели (как будто вцепился боком)
+        this.setYRot(target.getYRot() + 90); // +90 чтобы червь был поперёк цели
+        this.yHeadRot = target.getYHeadRot();
+        this.yBodyRot = target.getYRot() + 90;
 
-        // Червь тоже замедляется от "застрявшей" массы
-        Vec3 wormVel = this.getDeltaMovement();
-        this.setDeltaMovement(wormVel.scale(0.85));
+        // Урон каждые 10 тиков
+        if (this.tickCount % 10 == 0) {
+            target.hurt(this.damageSources().mobAttack(this), 2.0F);
+        }
 
         if (target instanceof Player player) {
             player.hurtMarked = true;

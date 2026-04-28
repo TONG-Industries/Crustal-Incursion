@@ -28,34 +28,6 @@ public class DepthWormBrutalJumpGoal extends Goal {
     private int noMovementTicks = 0;
     private Vec3 lastJumpPos = Vec3.ZERO;
 
-    public DepthWormBrutalJumpGoal(DepthWormBrutalEntity worm, double speedModifier, float jumpRangeMin, float jumpRangeMax) {
-        this.worm = worm;
-        this.jumpRangeMin = jumpRangeMin;
-        this.jumpRangeMax = jumpRangeMax;
-        this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
-    }
-
-    @Override
-    public boolean canUse() {
-        this.target = this.worm.getTarget();
-        if (this.target == null || !this.target.isAlive()) return false;
-        if (this.worm.isImpaling() || this.worm.isPreparingJump()) return false;
-
-        double dist = this.worm.distanceTo(this.target);
-        return dist >= this.jumpRangeMin && dist <= this.jumpRangeMax;
-    }
-
-    @Override
-    public boolean canContinueToUse() {
-        if (!jumpPerformed) {
-            return prepareTimer > 0 && target != null && target.isAlive();
-        }
-        // Зависли в воздухе слишком долго
-        if (jumpTickCounter > MAX_JUMP_TICKS) return false;
-        // Приземлились и не насаживаем — мгновенный сброс
-        if (worm.onGround() && !worm.isImpaling()) return false;
-        return true;
-    }
 
     @Override
     public void start() {
@@ -87,6 +59,58 @@ public class DepthWormBrutalJumpGoal extends Goal {
         this.worm.triggerPostAttackAnim();
     }
 
+    public DepthWormBrutalJumpGoal(DepthWormBrutalEntity worm, double speedModifier, float jumpRangeMin, float jumpRangeMax) {
+        this.worm = worm;
+        this.jumpRangeMin = 4.0F;   // ⭐ Ближе 4 блоков — ближний бой
+        this.jumpRangeMax = 32.0F;  // ⭐ Дальше 32 — подходит ближе
+        this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+    }
+
+    @Override
+    public boolean canUse() {
+        this.target = this.worm.getTarget();
+        if (this.target == null || !this.target.isAlive()) return false;
+
+        // ⭐ ИСПРАВЛЕНО: Не сбрасываем preparingJump здесь!
+        // Если уже готовится — пусть продолжает через canContinueToUse
+        if (this.worm.isImpaling()) return false;
+        if (this.worm.isPreparingJump()) return false; // Просто блокируем, не сбрасываем
+
+        double dist = this.worm.distanceTo(this.target);
+        return dist >= this.jumpRangeMin && dist <= this.jumpRangeMax;
+    }
+
+    @Override
+    public boolean canContinueToUse() {
+        // ⭐ Если цель умерла/пропала — сброс
+        if (this.target == null || !this.target.isAlive()) return false;
+
+        // ⭐ Если уже впился — держимся пока цель жива
+        if (this.worm.isImpaling()) {
+            LivingEntity impaled = this.worm.getImpaledTarget();
+            return impaled != null && impaled.isAlive();
+        }
+
+        // ⭐ Фаза подготовки — продолжаем пока есть таймер и цель в допустимых пределах
+        if (!jumpPerformed) {
+            if (prepareTimer <= 0) return false;
+            // ⭐ Цель ушла слишком далеко — сброс
+            double dist = this.worm.distanceTo(this.target);
+            if (dist > this.jumpRangeMax + 4.0F) return false;
+            // ⭐ Цель подошла слишком близко — тоже сброс, переключится на ближний бой
+            if (dist < this.jumpRangeMin - 1.0F) {
+                abortPrepare();
+                return false;
+            }
+            return true;
+        }
+
+        // Фаза полёта
+        if (jumpTickCounter > MAX_JUMP_TICKS) return false;
+        if (worm.onGround() && !worm.isImpaling()) return false;
+        return true;
+    }
+
     @Override
     public void tick() {
         if (this.target == null || !this.target.isAlive()) {
@@ -95,8 +119,15 @@ public class DepthWormBrutalJumpGoal extends Goal {
         }
 
         if (!jumpPerformed) {
-            // Фаза прицеливания (0.5 сек)
-            if (this.worm.distanceTo(this.target) > this.jumpRangeMax + 6.0F) {
+            double dist = this.worm.distanceTo(this.target);
+
+            // ⭐ Цель ушла за пределы — сброс
+            if (dist > this.jumpRangeMax + 4.0F) {
+                abortPrepare();
+                return;
+            }
+            // ⭐ Цель подошла слишком близко — сброс, пусть бьёт в ближнем
+            if (dist < this.jumpRangeMin) {
                 abortPrepare();
                 return;
             }
@@ -112,18 +143,14 @@ public class DepthWormBrutalJumpGoal extends Goal {
                 }
             }
         } else {
-            // Фаза полёта
             jumpTickCounter++;
-
-            // Анти-застревание: если не двигаемся — считаем тики
             Vec3 cur = this.worm.position();
-            if (cur.distanceToSqr(lastJumpPos) < 0.0025) { // 0.05 блока
-                if (++noMovementTicks > 8) return; // canContinueToUse сбросит в следующем тике
+            if (cur.distanceToSqr(lastJumpPos) < 0.0025) {
+                if (++noMovementTicks > 8) return;
             } else {
                 noMovementTicks = 0;
                 lastJumpPos = cur;
             }
-
             checkMidAirCollision();
         }
     }
@@ -132,9 +159,25 @@ public class DepthWormBrutalJumpGoal extends Goal {
         this.prepareTimer = 0;
         this.worm.setPreparingJump(false);
         this.worm.setAttacking(false);
-        this.jumpPerformed = true;
+        this.jumpPerformed = true; // Чтобы canContinueToUse вернул false и goal перезапустился
     }
+    private void executeImpaleOrBounce() {
+        int armor = this.target.getArmorValue();
 
+        if (armor < 12) {
+            this.target.hurt(this.worm.damageSources().mobAttack(this.worm), 8.0F);
+            this.worm.setImpaledTarget(this.target);
+            Vec3 targetVel = this.target.getDeltaMovement();
+            this.worm.setDeltaMovement(targetVel.scale(0.5));
+            this.worm.setFlying(false);
+        } else {
+            this.target.hurt(this.worm.damageSources().mobAttack(this.worm), 3.0F);
+            this.worm.setImpaledTarget(this.target);
+            Vec3 bounce = this.worm.getLookAngle().scale(-0.3).add(0, 0.2, 0);
+            this.worm.setDeltaMovement(bounce);
+            this.worm.setFlying(false);
+        }
+    }
     // =====================================================================
     // БАЛЛИСТИКА (адаптировано с TurretLightComputer)
     // =====================================================================
@@ -264,22 +307,4 @@ public class DepthWormBrutalJumpGoal extends Goal {
         }
     }
 
-    private void executeImpaleOrBounce() {
-        int armor = this.target.getArmorValue();
-
-        if (armor < 12) {
-            this.target.hurt(this.worm.damageSources().mobAttack(this.worm), 10.0F);
-            this.worm.setImpaledTarget(this.target);
-
-            // ⭐ НОВОЕ: Небольшой отскок червя при застревании,
-            // но не сильный чтобы не выбросить цель
-            Vec3 vel = this.worm.getDeltaMovement();
-            this.worm.setDeltaMovement(vel.scale(0.3).add(0, 0.1, 0));
-        } else {
-            this.target.hurt(this.worm.damageSources().mobAttack(this.worm), 5.0F);
-            Vec3 bounce = this.worm.getLookAngle().scale(-0.6).add(0, 0.4, 0);
-            this.worm.setDeltaMovement(bounce);
-            this.worm.setFlying(false);
-        }
-    }
 }
