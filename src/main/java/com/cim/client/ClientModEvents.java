@@ -331,6 +331,8 @@ public class ClientModEvents {
                 Items.GOLDEN_CHESTPLATE,
                 Items.GOLDEN_LEGGINGS,
                 Items.GOLDEN_BOOTS,
+                ModItems.CAST_PICKAXE_STEEL_BASE.get(),
+                ModItems.CAST_PICKAXE_IRON_BASE.get(),
                 ResourceRegistry.getMainUnit("steel"),
                 ResourceRegistry.getSmallUnit("steel"),
                 ResourceRegistry.getBlock("steel"),
@@ -365,6 +367,8 @@ public class ClientModEvents {
                 Items.IRON_HELMET, Items.IRON_CHESTPLATE, Items.IRON_LEGGINGS, Items.IRON_BOOTS,
                 ResourceRegistry.getMainUnit("steel"),
                 ResourceRegistry.getSmallUnit("steel"),
+                ModItems.CAST_PICKAXE_STEEL_BASE.get(),
+                ModItems.CAST_PICKAXE_IRON_BASE.get(),
                 ResourceRegistry.getBlock("steel").asItem()
         );
 

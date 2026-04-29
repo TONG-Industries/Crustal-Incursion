@@ -3,6 +3,8 @@ package com.cim.block.entity.industrial.casting;
 import com.cim.api.metallurgy.system.Metal;
 import com.cim.api.metallurgy.system.MetallurgyRegistry;
 import com.cim.api.metallurgy.system.MetalUnits2;
+import com.cim.api.metallurgy.system.recipe.MoldRecipe;
+import com.cim.api.metallurgy.system.recipe.MoldRecipeRegistry;
 import com.cim.block.entity.ModBlockEntities;
 import com.cim.item.ModItems;
 import com.cim.event.SlagItem;
@@ -136,20 +138,15 @@ public class CastingPotBlockEntity extends BlockEntity {
     private void createOutputItem() {
         if (currentMetal == null || storedUnits < capacity) return;
 
-        ItemStack result = ItemStack.EMPTY;
+        MoldRecipe recipe = MoldRecipeRegistry.getRecipe(mold.getItem());
+        if (recipe == null) return;
 
-        if (mold.is(ModItems.MOLD_INGOT.get()) && currentMetal.hasIngot()) {
-            result = new ItemStack(currentMetal.getIngot());
-        } else if (mold.is(ModItems.MOLD_NUGGET.get()) && currentMetal.hasNugget()) {
-            result = new ItemStack(currentMetal.getNugget());
-        } else if (mold.is(ModItems.MOLD_BLOCK.get()) && currentMetal.hasBlock()) {
-            // Для блока создаём ItemStack блока
-            result = new ItemStack(currentMetal.getBlock());
-            // Сохраняем металл для рендера (если нужно для визуала)
-            this.blockRenderMetal = currentMetal;
-        }
+        ItemStack result = recipe.createOutput(currentMetal);
 
         if (!result.isEmpty()) {
+            if (mold.is(ModItems.MOLD_BLOCK.get()) && currentMetal.hasBlock()) {
+                this.blockRenderMetal = currentMetal;
+            }
             HotItemHandler.setHot(result, currentMetal.getMeltingPoint(), true);
             this.outputItem = result;
         }
@@ -164,6 +161,29 @@ public class CastingPotBlockEntity extends BlockEntity {
 
         setChanged();
         level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+    }
+
+    private void updateCapacity() {
+        if (mold.isEmpty()) {
+            this.capacity = 0;
+            return;
+        }
+        MoldRecipe recipe = MoldRecipeRegistry.getRecipe(mold.getItem());
+        this.capacity = recipe != null ? recipe.getRequiredUnits() : 0;
+    }
+
+    public boolean canAcceptMetal(Metal metal) {
+        if (isSlagged) return false;
+        if (mold.isEmpty()) return false;
+        if (!outputItem.isEmpty()) return false;
+        if (coolingTimer > 0.5f) return false;
+        updateCapacity();
+        if (storedUnits >= capacity) return false;
+        if (storedUnits > 0 && currentMetal != null && !currentMetal.equals(metal)) {
+            return false;
+        }
+        MoldRecipe recipe = MoldRecipeRegistry.getRecipe(mold.getItem());
+        return recipe != null && recipe.isValidFor(metal);
     }
 
     /**
@@ -570,17 +590,6 @@ public class CastingPotBlockEntity extends BlockEntity {
         return super.getCapability(cap, side);
     }
 
-    private void updateCapacity() {
-        if (mold.is(ModItems.MOLD_INGOT.get())) {
-            this.capacity = CAPACITY_MOLD_INGOT;
-        } else if (mold.is(ModItems.MOLD_NUGGET.get())) {
-            this.capacity = CAPACITY_MOLD_NUGGET;
-        } else if (mold.is(ModItems.MOLD_BLOCK.get())) {
-            this.capacity = CAPACITY_MOLD_BLOCK;
-        } else {
-            this.capacity = 0;
-        }
-    }
 
     public void clearMetal() {
         this.storedUnits = 0;
@@ -779,18 +788,6 @@ public class CastingPotBlockEntity extends BlockEntity {
     }
 
     // === Методы для работы с металлом ===
-    public boolean canAcceptMetal(Metal metal) {
-        if (isSlagged) return false;
-        if (mold.isEmpty()) return false;
-        if (!outputItem.isEmpty()) return false;
-        if (coolingTimer > 0.5f) return false;
-        updateCapacity();
-        if (storedUnits >= capacity) return false;
-        if (storedUnits > 0 && currentMetal != null && !currentMetal.equals(metal)) {
-            return false;
-        }
-        return true;
-    }
 
     public int getRemainingCapacity() {
         updateCapacity();

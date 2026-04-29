@@ -4,6 +4,7 @@ import com.cim.item.ModItems;
 import com.cim.main.ResourceRegistry;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.recipes.*;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -127,6 +128,42 @@ public class ModRecipeProvider extends RecipeProvider implements IConditionBuild
                 .unlockedBy("has_iron_ingot", has(Items.IRON_INGOT))
                 .save(writer);
 
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ModItems.ROPE.get())
+                .pattern(" @ ")
+                .pattern(" @ ")
+                .pattern(" @ ")
+                .define('@', Items.STRING)
+                .unlockedBy("has_string", has(Items.STRING))
+                .save(writer);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ModItems.WOODEN_HANDLE.get())
+                .pattern("  @")
+                .pattern(" @ ")
+                .pattern("@  ")
+                .define('@', ItemTags.LOGS)
+                .unlockedBy("has_logs", has(ItemTags.LOGS))
+                .save(writer);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ModItems.CAST_PICKAXE_IRON.get())
+                .pattern(" @#")
+                .pattern(" $@")
+                .pattern("$  ")
+                .define('@', ModItems.CAST_PICKAXE_IRON_BASE.get())
+                .define('$', ModItems.WOODEN_HANDLE.get())
+                .define('#', ModItems.ROPE.get())
+                .unlockedBy("has_cast_pickaxe_iron_base", has(ModItems.CAST_PICKAXE_IRON_BASE.get()))
+                .save(writer);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ModItems.CAST_PICKAXE_STEEL.get())
+                .pattern(" @#")
+                .pattern(" $@")
+                .pattern("$  ")
+                .define('@', ModItems.CAST_PICKAXE_STEEL_BASE.get())
+                .define('$', ModItems.WOODEN_HANDLE.get())
+                .define('#', ModItems.ROPE.get())
+                .unlockedBy("has_cast_pickaxe_steel_base", has(ModItems.CAST_PICKAXE_STEEL_BASE.get()))
+                .save(writer);
+
         ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ModBlocks.CASTING_POT.get())
                 .pattern("   ")
                 .pattern("$#$")
@@ -142,7 +179,7 @@ public class ModRecipeProvider extends RecipeProvider implements IConditionBuild
                 .pattern("@#@")
                 .pattern("@@@")
                 .define('@', ModItems.FIREBRICK.get())
-                .define('#', ModItems.DOLOMITE_SMES.get())
+                .define('#', ModItems.FIRE_SMES.get())
                 .unlockedBy("has_firebrick", has(ModItems.FIREBRICK.get()))
                 .save(writer);
 
@@ -151,7 +188,16 @@ public class ModRecipeProvider extends RecipeProvider implements IConditionBuild
                 .pattern("###")
                 .pattern("@@@")
                 .define('@', ModItems.FIREBRICK.get())
-                .define('#', ModItems.DOLOMITE_SMES.get())
+                .define('#', ModItems.FIRE_SMES.get())
+                .unlockedBy("has_firebrick", has(ModItems.FIREBRICK.get()))
+                .save(writer);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ModItems.MOLD_PICKAXE.get())
+                .pattern("##@")
+                .pattern("@@#")
+                .pattern("@@#")
+                .define('@', ModItems.FIREBRICK.get())
+                .define('#', ModItems.FIRE_SMES.get())
                 .unlockedBy("has_firebrick", has(ModItems.FIREBRICK.get()))
                 .save(writer);
 
@@ -160,7 +206,7 @@ public class ModRecipeProvider extends RecipeProvider implements IConditionBuild
                 .pattern("###")
                 .pattern("@#@")
                 .define('@', ModItems.FIREBRICK.get())
-                .define('#', ModItems.DOLOMITE_SMES.get())
+                .define('#', ModItems.FIRE_SMES.get())
                 .unlockedBy("has_firebrick", has(ModItems.FIREBRICK.get()))
                 .save(writer);
 

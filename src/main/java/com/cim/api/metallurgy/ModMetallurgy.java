@@ -5,8 +5,11 @@ import com.cim.api.metallurgy.system.MetalUnits2;
 import com.cim.api.metallurgy.system.MetallurgyRegistry;
 import com.cim.api.metallurgy.system.recipe.AlloyRecipe;
 import com.cim.api.metallurgy.system.recipe.AlloySlot;
+import com.cim.api.metallurgy.system.recipe.MoldRecipeRegistry;
+import com.cim.item.ModItems;
 import com.cim.main.ResourceRegistry;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -48,7 +51,7 @@ public class ModMetallurgy {
         MetallurgyRegistry.addSmeltRecipe(Items.IRON_CHESTPLATE, iron, 72, 958, 0.9f, 180);
         MetallurgyRegistry.addSmeltRecipe(Items.IRON_LEGGINGS, iron, 63, 958, 0.9f, 160);
         MetallurgyRegistry.addSmeltRecipe(Items.IRON_BOOTS, iron, 36, 958, 0.7f, 100);
-
+        MetallurgyRegistry.addSmeltRecipe(ModItems.CAST_PICKAXE_IRON_BASE.get(), iron, 45, 958, 0.8f, 180);
         // === МЕДЬ ===
         Metal copper = registerMetalWithItems("copper", 0xc15a36, 1085, 0.6f,
                 Items.COPPER_INGOT, null, Blocks.COPPER_BLOCK);
@@ -89,9 +92,10 @@ public class ModMetallurgy {
                 steel,
                 18, // Точный выход: 18 единиц = 2 слитка стали
                 1.5f, // Потребление 1.5 градуса/тик
-                300   // 15 секунд плавки
+                200   // 10 секунд плавки
         );
         MetallurgyRegistry.addAlloyRecipe(steelAlloy);
+        MetallurgyRegistry.addSmeltRecipe(ModItems.CAST_PICKAXE_STEEL_BASE.get(), steel, 45, 1440, 1.2f, 180);
 
         // === АЛЮМИНИЙ ===
         Metal aluminum = registerMetalWithItems("aluminum", 0x8ebcd4, 660, 0.4f,
@@ -116,6 +120,33 @@ public class ModMetallurgy {
                 ResourceRegistry.getMainUnit("tin"),
                 ResourceRegistry.getSmallUnit("tin"),
                 ResourceRegistry.getBlock("tin"));
+
+
+        // === РЕГИСТРАЦИЯ ФОРМ ЛИТЬЯ ===
+        MoldRecipeRegistry.register(ModItems.MOLD_INGOT.get(), MetalUnits2.UNITS_PER_INGOT, metal ->
+                metal.hasIngot() ? new ItemStack(metal.getIngot()) : ItemStack.EMPTY
+        );
+
+        MoldRecipeRegistry.register(ModItems.MOLD_NUGGET.get(), MetalUnits2.UNITS_PER_NUGGET, metal ->
+                metal.hasNugget() ? new ItemStack(metal.getNugget()) : ItemStack.EMPTY
+        );
+
+        MoldRecipeRegistry.register(ModItems.MOLD_BLOCK.get(), MetalUnits2.UNITS_PER_BLOCK, metal ->
+                metal.hasBlock() ? new ItemStack(metal.getBlock()) : ItemStack.EMPTY
+        );
+
+
+        MoldRecipeRegistry.register(ModItems.MOLD_PICKAXE.get(), 45, metal -> {
+            String path = metal.getId().getPath();
+            if (path.equals("iron")) {
+                return new ItemStack(ModItems.CAST_PICKAXE_IRON_BASE.get());
+            }
+            if (path.equals("steel")) {
+                return new ItemStack(ModItems.CAST_PICKAXE_STEEL_BASE.get());
+            }
+            return ItemStack.EMPTY;
+        });
+
 
 
         MetallurgyRegistry.generateStandardRecipes();

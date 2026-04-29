@@ -280,10 +280,18 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.SMELTER);
             event.accept(ModBlocks.CASTING_POT);
             event.accept(ModBlocks.CASTING_DESCENT);
+            event.accept(ModItems.MOLD_EMPTY.get());
             event.accept(ModItems.MOLD_NUGGET.get());
             event.accept(ModItems.MOLD_INGOT.get());
             event.accept(ModItems.MOLD_BLOCK.get());
+            event.accept(ModItems.MOLD_PICKAXE.get());
             event.accept(ModItems.POKER.get());
+
+            event.accept(ModItems.CAST_PICKAXE_IRON_BASE.get());
+            event.accept(ModItems.CAST_PICKAXE_STEEL_BASE.get());
+            event.accept(ModItems.WOODEN_HANDLE.get());
+
+            event.accept(ModItems.ROPE.get());
 
         }
 

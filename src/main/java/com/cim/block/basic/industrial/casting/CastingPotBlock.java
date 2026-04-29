@@ -1,5 +1,6 @@
 package com.cim.block.basic.industrial.casting;
 
+import com.cim.api.metallurgy.system.recipe.MoldRecipeRegistry;
 import com.cim.block.entity.ModBlockEntities;
 import com.cim.block.entity.industrial.casting.CastingPotBlockEntity;
 import com.cim.event.HotItemHandler;
@@ -324,12 +325,8 @@ public class CastingPotBlock extends BaseEntityBlock {
         }
 
         // Вставка формы
-        // Вставка формы
         if (moldStack.isEmpty()) {
-            if (heldItem.is(ModItems.MOLD_INGOT.get()) ||
-                    heldItem.is(ModItems.MOLD_NUGGET.get()) ||
-                    heldItem.is(ModItems.MOLD_BLOCK.get())) {
-
+            if (MoldRecipeRegistry.hasRecipe(heldItem.getItem())) {
                 ItemStack toInsert = heldItem.copy();
                 toInsert.setCount(1);
                 pot.setMold(toInsert);

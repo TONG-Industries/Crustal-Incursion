@@ -85,6 +85,18 @@ public class ModItems {
     public static final RegistryObject<Item> REINFORCEDBRICK = ITEMS.register("reinforcedbrick",
             () -> new Item(new Item.Properties()));
 
+    public static final RegistryObject<Item> CAST_PICKAXE_IRON_BASE = ITEMS.register("cast_pickaxe_iron_base",
+            () -> new Item(new Item.Properties()));
+
+    public static final RegistryObject<Item> CAST_PICKAXE_STEEL_BASE = ITEMS.register("cast_pickaxe_steel_base",
+            () -> new Item(new Item.Properties()));
+
+    public static final RegistryObject<Item> WOODEN_HANDLE = ITEMS.register("wooden_handle",
+            () -> new Item(new Item.Properties()));
+
+    public static final RegistryObject<Item> ROPE = ITEMS.register("rope",
+            () -> new Item(new Item.Properties()));
+
     public static final RegistryObject<Item> CAST_PICKAXE_IRON = ITEMS.register("cast_pickaxe_iron",
             () -> new CastPickaxeIronItem(new Item.Properties()));
 
@@ -92,6 +104,12 @@ public class ModItems {
             () -> new CastPickaxeSteelItem(new Item.Properties()));
 
     public static final RegistryObject<Item> MOLD_INGOT = ITEMS.register("mold_ingot",
+            () -> new Item(new Item.Properties()));
+
+    public static final RegistryObject<Item> MOLD_PICKAXE = ITEMS.register("mold_pickaxe",
+            () -> new Item(new Item.Properties()));
+
+    public static final RegistryObject<Item> MOLD_EMPTY= ITEMS.register("mold_empty",
             () -> new Item(new Item.Properties()));
 
     public static final RegistryObject<GrenadierGogglesItem> GRENADIER_GOGGLES = ITEMS.register("grenadier_goggles",
