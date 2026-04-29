@@ -256,7 +256,7 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
         }
 
         // =========================================================
-        // 5. АНИМАЦИЯ РЕМНЯ (Уроборос)
+        // 5. АНИМАЦИЯ РЕМНЯ (Уроборос 1:1)
         // =========================================================
         float radius = getPulleyRadius(blockEntity);
         float speedScroll = currentAngle * radius;
@@ -264,19 +264,27 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
         net.minecraft.client.resources.model.BakedModel bakedModel = ModModels.BELT_SEGMENT.get();
         net.minecraft.client.renderer.texture.TextureAtlasSprite sprite = bakedModel.getParticleIcon();
 
-        // ВАЖНО: Раздели высоту твоего оригинала (кадра) на общую высоту текстуры!
         float vHeight = sprite.getV1() - sprite.getV0();
-
-// Так как текстура двойная, один кадр — это ровно половина её реальной высоты
         float frameHeightOnAtlas = vHeight / 2.0f;
-
-        float scrollFraction = speedScroll % 1.0f;
-        if (scrollFraction < 0) scrollFraction += 1.0f;
-        float finalScroll = scrollFraction * frameHeightOnAtlas;
-
+        
         for (BeltInstance segment : beltSegments) {
-            segment.setUvScroll(finalScroll);
-            // Если на коротких дугах текстура "сплющивается", мы потом добавим в шейдер компенсацию через длину (length)
+            // Для двойной текстуры (верхняя половина - первый кадр, нижняя - второй):
+            // Модель использует UV верхней половины. Чтобы не выйти за пределы атласа,
+            // сдвиг (offset) должен быть СТРОГО ПОЛОЖИТЕЛЬНЫМ (от 0 до frameHeightOnAtlas).
+            
+            // Берем остаток от деления сдвига по длине и анимации
+            float totalScroll = (-segment.cumulativeLength - speedScroll) % 1.0f;
+            if (totalScroll < 0) totalScroll += 1.0f; // Приводим к [0, 1)
+
+            // offset сдвигает UV ВНИЗ (в пределы второго кадра)
+            float offset = totalScroll * frameHeightOnAtlas;
+            
+            // Компенсация длины сегмента: так как V в модели идет от 8 к 0,
+            // на сегментах короче 1 блока мы должны уменьшить "пробег" текстуры.
+            // При длине < 1 mult будет отрицательным, компенсируя падение V до 0.
+            float mult = (1.0f - segment.segmentLength) * frameHeightOnAtlas;
+            
+            segment.setScroll(offset, mult);
             segment.setChanged();
         }
 
@@ -340,44 +348,44 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
 
         com.cim.main.CrustalIncursionMod.LOGGER.info("[BELT-DEBUG] ===== rebuildBelt at {} =====", pos);
         com.cim.main.CrustalIncursionMod.LOGGER.info("[BELT-DEBUG] axis={} r1={} r2={} distance={}", axis, r1, r2, distance);
-        com.cim.main.CrustalIncursionMod.LOGGER.info("[BELT-DEBUG] du={} dv={} baseAngle={}° alpha={}°", du, dv,
-                Math.toDegrees(baseAngle), Math.toDegrees(alpha));
-        com.cim.main.CrustalIncursionMod.LOGGER.info("[BELT-DEBUG] TOP tangent: dirAngle={}° touchAngle={}° start=({},{}) len={}",
-                Math.toDegrees(dirAngle1), Math.toDegrees(touchAngle1), uTop, vTop, straightLength);
-        com.cim.main.CrustalIncursionMod.LOGGER.info("[BELT-DEBUG] BOT tangent: dirAngle={}° touchAngle={}° start=({},{}) len={}",
-                Math.toDegrees(dirAngle2), Math.toDegrees(touchAngle2), uBot, vBot, straightLength);
 
-        // Прямые участки (без разбиения — старый код работал без него)
-        addBeltSegment(axis, uTop, vTop, dirAngle1, straightLength);
-        addBeltSegment(axis, uBot, vBot, dirAngle2, straightLength);
+        float currentCumulativeLength = 0.0f;
 
-        // === Дуга на шкиве A (от touchAngle1 до touchAngle2, CCW — задняя сторона) ===
-        float arc1Start = touchAngle1;
-        float arc1End = touchAngle2;
-        while (arc1End <= arc1Start) arc1End += (float) (2 * Math.PI);
-        com.cim.main.CrustalIncursionMod.LOGGER.info("[BELT-DEBUG] ARC A: startAngle={}° endAngle={}° sweep={}°",
-                Math.toDegrees(arc1Start), Math.toDegrees(arc1End), Math.toDegrees(arc1End - arc1Start));
-        renderArc(axis, 0, 0, r1, arc1Start, arc1End);
+        // Строим единый непрерывный контур (по часовой стрелке, CW):
+        // 1. Верхний прямой участок (A -> B) (разбитый на куски <= 1.0f)
+        currentCumulativeLength = addStraightBeltSegments(axis, uTop, vTop, dirAngle1, straightLength, currentCumulativeLength);
 
-        // === Дуга на шкиве B (от touchAngle2 до touchAngle1, CCW — передняя сторона) ===
-        float arc2Start = touchAngle2;
-        float arc2End = touchAngle1;
-        while (arc2End <= arc2Start) arc2End += (float) (2 * Math.PI);
-        com.cim.main.CrustalIncursionMod.LOGGER.info("[BELT-DEBUG] ARC B: startAngle={}° endAngle={}° sweep={}°",
-                Math.toDegrees(arc2Start), Math.toDegrees(arc2End), Math.toDegrees(arc2End - arc2Start));
-        renderArc(axis, du, dv, r2, arc2Start, arc2End);
+        // 2. Дуга на шкиве B (от верха к низу, CW)
+        float arcBStart = touchAngle1;
+        float arcBEnd = touchAngle2;
+        while (arcBEnd >= arcBStart) arcBEnd -= (float) (2 * Math.PI);
+        currentCumulativeLength = renderArc(axis, du, dv, r2, arcBStart, arcBEnd, currentCumulativeLength);
 
-        com.cim.main.CrustalIncursionMod.LOGGER.info("[BELT-DEBUG] Total segments created: {}", beltSegments.size());
+        // 3. Нижний прямой участок (B -> A) (разбитый на куски <= 1.0f)
+        // Начало в точке касания на B, направление противоположное dirAngle2
+        float uBotB = du + r2 * (float) Math.cos(touchAngle2);
+        float vBotB = dv + r2 * (float) Math.sin(touchAngle2);
+        currentCumulativeLength = addStraightBeltSegments(axis, uBotB, vBotB, dirAngle2 + (float) Math.PI, straightLength, currentCumulativeLength);
+
+        // 4. Дуга на шкиве A (от низа к верху, CW)
+        float arcAStart = touchAngle2;
+        float arcAEnd = touchAngle1;
+        while (arcAEnd >= arcAStart) arcAEnd -= (float) (2 * Math.PI);
+        currentCumulativeLength = renderArc(axis, 0, 0, r1, arcAStart, arcAEnd, currentCumulativeLength);
+
+        com.cim.main.CrustalIncursionMod.LOGGER.info("[BELT-DEBUG] Total segments created: {}, Belt Total Length: {}", beltSegments.size(), currentCumulativeLength);
     }
 
     /**
      * Рисует дугу ремня вокруг шкива, разбивая на маленькие сегменты.
-     * Обход ПРОТИВ часовой стрелки (startAngle → endAngle, endAngle > startAngle).
+     * Обход по часовой стрелке (CW), startAngle -> endAngle, где endAngle < startAngle.
      */
-    private void renderArc(Direction.Axis axis, float uCenter, float vCenter, float radius, float startAngle, float endAngle) {
-        float step = (float) Math.toRadians(10);
-        for (float angle = startAngle; angle < endAngle; angle += step) {
-            float nextAngle = Math.min(angle + step, endAngle);
+    private float renderArc(Direction.Axis axis, float uCenter, float vCenter, float radius, float startAngle, float endAngle, float cumulativeLen) {
+        float step = (float) Math.toRadians(10); // Шаг 10 градусов
+        float currentCumLen = cumulativeLen;
+
+        for (float angle = startAngle; angle > endAngle; angle -= step) {
+            float nextAngle = Math.max(angle - step, endAngle);
 
             float u1 = uCenter + radius * (float) Math.cos(angle);
             float v1 = vCenter + radius * (float) Math.sin(angle);
@@ -389,14 +397,37 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
             float len = (float) Math.sqrt(segDu * segDu + segDv * segDv);
             float dirAngle = (float) Math.atan2(segDv, segDu);
 
-            addBeltSegment(axis, u1, v1, dirAngle, len);
+            currentCumLen = addBeltSegment(axis, u1, v1, dirAngle, len, currentCumLen);
         }
+        return currentCumLen;
     }
 
     /**
-     * Создаёт один сегмент ремня с заданной позицией, направлением и длиной.
+     * Разбивает длинный прямой участок ремня на сегменты длиной не более 1.0f,
+     * чтобы текстура не выходила за пределы атласа при масштабировании.
      */
-    private void addBeltSegment(Direction.Axis axis, float u, float v, float angle, float length) {
+    private float addStraightBeltSegments(Direction.Axis axis, float uStart, float vStart, float angle, float totalLength, float cumulativeLen) {
+        float currentCumLen = cumulativeLen;
+        float remaining = totalLength;
+        float currentU = uStart;
+        float currentV = vStart;
+
+        // Идем по прямой, отрезая куски максимум по 1 блоку
+        while (remaining > 0.0001f) {
+            float len = Math.min(remaining, 1.0f);
+            currentCumLen = addBeltSegment(axis, currentU, currentV, angle, len, currentCumLen);
+            remaining -= len;
+            currentU += len * (float) Math.cos(angle);
+            currentV += len * (float) Math.sin(angle);
+        }
+        return currentCumLen;
+    }
+
+    /**
+     * Создаёт один сегмент ремня с заданной позицией, направлением и длиной (<= 1.0f).
+     * Возвращает обновленную кумулятивную длину.
+     */
+    private float addBeltSegment(Direction.Axis axis, float u, float v, float angle, float length, float cumulativeLen) {
         BeltInstance segment = instancerProvider()
                 .instancer(TYPE, Models.partial(ModModels.BELT_SEGMENT))
                 .createInstance();
@@ -428,9 +459,14 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
         // 1. Центрируем геометрию belt_segment.json
         segment.translate(-0.5f, -0.5f, 0.0f);
 
+        segment.cumulativeLength = cumulativeLen;
+        segment.segmentLength = length;
+
         segment.setChanged();
         relight(pos, segment);
         beltSegments.add(segment);
+
+        return cumulativeLen + length;
     }
 
     @Override
