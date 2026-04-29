@@ -431,5 +431,12 @@ public class ClientModEvents {
         event.register((stack, tintIndex) -> ItemHeatColorRegistry.getSlagHeatColor(stack, tintIndex),
                 ModItems.SLAG.get()
         );
+
+        event.register((stack, tintIndex) -> {
+            if (tintIndex == 0 && stack.hasTag() && stack.getTag().contains("MetalColor")) {
+                return stack.getTag().getInt("MetalColor");
+            }
+            return 0xFFFFFF;
+        }, ModItems.LIQUID_METAL.get());
     }
 }

@@ -4,6 +4,7 @@ import com.cim.api.rotation.ShaftMaterial;
 import com.cim.entity.ModEntities;
 import com.cim.entity.weapons.grenades.GrenadeIfType;
 import com.cim.entity.weapons.grenades.GrenadeType;
+import com.cim.event.LiquidMetalItem;
 import com.cim.item.armor.GrenadierArmorMaterial;
 import com.cim.item.armor.GrenadierGogglesItem;
 import com.cim.item.conglomerates.ConglomerateItem;
@@ -96,6 +97,9 @@ public class ModItems {
 
     public static final RegistryObject<Item> ROPE = ITEMS.register("rope",
             () -> new Item(new Item.Properties()));
+
+    public static final RegistryObject<Item> LIQUID_METAL = ITEMS.register("liquid_metal",
+            () -> new LiquidMetalItem(new Item.Properties()));
 
     public static final RegistryObject<Item> CAST_PICKAXE_IRON = ITEMS.register("cast_pickaxe_iron",
             () -> new CastPickaxeIronItem(new Item.Properties()));

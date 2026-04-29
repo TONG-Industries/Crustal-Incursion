@@ -27,7 +27,9 @@ public class MetallurgyRegistry {
         METALS.put(id, metal);
         return metal;
     }
-
+    public static Collection<SmeltRecipe> getAllSmeltRecipes() {
+        return Collections.unmodifiableCollection(SMELT_RECIPES.values());
+    }
     /**
      * Генерирует стандартные рецепты для всех зарегистрированных металлов
      * Использует фиксированные времена плавки + потребление из металла

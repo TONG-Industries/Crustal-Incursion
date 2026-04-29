@@ -54,6 +54,7 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(ModItems.MOLD_PICKAXE);
         simpleItem(ModItems.MOLD_EMPTY);
         simpleItem(ModItems.ROPE);
+        simpleItem(ModItems.LIQUID_METAL);
         simpleItem(ModItems.RANGE_DETONATOR);
         simpleItem(ModItems.DEPTH_WORM_SPAWN_EGG);
         simpleItem(ModItems.DEPTH_WORM_BRUTAL_SPAWN_EGG);
