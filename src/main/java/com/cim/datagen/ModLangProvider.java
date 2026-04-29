@@ -68,6 +68,11 @@ public class ModLangProvider extends LanguageProvider {
         add("metal.cim.tin", "Tin");
         add("metal.cim.zinc", "Zinc");
 
+        add("jei.category.cim.smelting", "Smelting");
+        add("jei.category.cim.casting", "Casting");
+        add("jei.category.cim.alloying", "Alloying");
+        add(ModItems.LIQUID_METAL.get(), "Liquid metal");
+
         //Секвойя
         add(ModBlocks.SEQUOIA_BARK.get(), "Sequoia bark");
         add(ModBlocks.SEQUOIA_HEARTWOOD.get(), "Sequoia heartwood");
@@ -291,7 +296,10 @@ public class ModLangProvider extends LanguageProvider {
 //        add(ModBlocks.RCONVERTER.get(), "Преобразователь вращения в энергию");
 //        add(ModBlocks.SHAFT_PLACER.get(), "Установщик валов");
 //        add(ModBlocks.MINING_PORT.get(), "Сборочный порт");
-
+        add("jei.category.cim.smelting", "Плавка");
+        add("jei.category.cim.casting", "Выплавка");
+        add("jei.category.cim.alloying", "Сплав");
+        add(ModItems.LIQUID_METAL.get(), "Жидкий металл");
         //Другие предметы
         add(ModBlocks.DET_MINER.get(), "Шахтёрский заряд");
         add(ModItems.RANGE_DETONATOR.get(), "Детонатор дальнего действия");

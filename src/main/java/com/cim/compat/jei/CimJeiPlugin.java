@@ -18,6 +18,7 @@ import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.helpers.IGuiHelper;
+import mezz.jei.api.ingredients.subtypes.IIngredientSubtypeInterpreter;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.RecipeType;
@@ -25,6 +26,7 @@ import mezz.jei.api.recipe.category.IRecipeCategory;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
+import mezz.jei.api.registration.ISubtypeRegistration;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -54,6 +56,17 @@ public class CimJeiPlugin implements IModPlugin {
     }
 
     @Override
+    public void registerItemSubtypes(ISubtypeRegistration registration) {
+        registration.registerSubtypeInterpreter(VanillaTypes.ITEM_STACK, ModItems.LIQUID_METAL.get(),
+                (stack, context) -> {
+                    if (stack.hasTag() && stack.getTag().contains("MetalId")) {
+                        return stack.getTag().getString("MetalId");
+                    }
+                    return IIngredientSubtypeInterpreter.NONE;
+                });
+    }
+
+    @Override
     public void registerCategories(IRecipeCategoryRegistration registration) {
         IGuiHelper guiHelper = registration.getJeiHelpers().getGuiHelper();
         registration.addRecipeCategories(new SmeltingCategory(guiHelper));
@@ -63,10 +76,8 @@ public class CimJeiPlugin implements IModPlugin {
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
-        // === ПЛАВКА (предмет → жидкий металл) ===
         List<SmeltingWrapper> smeltingRecipes = new ArrayList<>();
 
-        // Обычные рецепты
         for (var recipe : MetallurgyRegistry.getAllSmeltRecipes()) {
             smeltingRecipes.add(new SmeltingWrapper(
                     new ItemStack(recipe.input()),
@@ -78,7 +89,6 @@ public class CimJeiPlugin implements IModPlugin {
             ));
         }
 
-        // Шлаковые рецепты (переплавка)
         for (Metal metal : MetallurgyRegistry.getAllMetals()) {
             ItemStack slag = SlagItem.createSlag(metal, MetalUnits2.UNITS_PER_INGOT);
             smeltingRecipes.add(new SmeltingWrapper(
@@ -93,7 +103,6 @@ public class CimJeiPlugin implements IModPlugin {
 
         registration.addRecipes(SMELTING_TYPE, smeltingRecipes);
 
-        // === ЛИТЬЁ (жидкий металл + форма → предмет) ===
         List<CastingWrapper> castingRecipes = new ArrayList<>();
         for (MoldRecipe mold : MoldRecipeRegistry.getAllRecipes()) {
             for (Metal metal : MetallurgyRegistry.getAllMetals()) {
@@ -105,7 +114,6 @@ public class CimJeiPlugin implements IModPlugin {
         }
         registration.addRecipes(CASTING_TYPE, castingRecipes);
 
-        // === СПЛАВЫ ===
         List<AlloyingWrapper> alloyingRecipes = new ArrayList<>();
         for (AlloyRecipe recipe : MetallurgyRegistry.getAllAlloyRecipes()) {
             alloyingRecipes.add(new AlloyingWrapper(recipe));
@@ -119,17 +127,6 @@ public class CimJeiPlugin implements IModPlugin {
         registration.addRecipeCatalyst(new ItemStack(ModBlocks.SMALL_SMELTER.get()), SMELTING_TYPE);
     }
 
-    // ==================== ОБЁРТКИ ====================
-
-    public record SmeltingWrapper(ItemStack input, Metal metal, int outputUnits,
-                                  int temp, float heatConsumption, int timeTicks) {}
-
-    public record CastingWrapper(MoldRecipe mold, Metal metal, ItemStack output, int requiredUnits) {}
-
-    public record AlloyingWrapper(AlloyRecipe recipe) {}
-
-    // ==================== УТИЛИТЫ ====================
-
     private static ItemStack createLiquidMetalStack(Metal metal, int amount) {
         ItemStack stack = new ItemStack(ModItems.LIQUID_METAL.get());
         stack.getOrCreateTag().putString("MetalId", metal.getId().toString());
@@ -138,7 +135,12 @@ public class CimJeiPlugin implements IModPlugin {
         return stack;
     }
 
-    // ==================== КАТЕГОРИЯ: ПЛАВКА ====================
+    public record SmeltingWrapper(ItemStack input, Metal metal, int outputUnits,
+                                  int temp, float heatConsumption, int timeTicks) {}
+
+    public record CastingWrapper(MoldRecipe mold, Metal metal, ItemStack output, int requiredUnits) {}
+
+    public record AlloyingWrapper(AlloyRecipe recipe) {}
 
     public static class SmeltingCategory implements IRecipeCategory<SmeltingWrapper> {
         private final IDrawable background;
@@ -159,65 +161,37 @@ public class CimJeiPlugin implements IModPlugin {
             );
         }
 
-        @Override
-        public RecipeType<SmeltingWrapper> getRecipeType() {
-            return SMELTING_TYPE;
-        }
-
-        @Override
-        public Component getTitle() {
-            return title;
-        }
-
-        @Override
-        public IDrawable getBackground() {
-            return background;
-        }
-
-        @Override
-        public IDrawable getIcon() {
-            return icon;
-        }
+        @Override public RecipeType<SmeltingWrapper> getRecipeType() { return SMELTING_TYPE; }
+        @Override public Component getTitle() { return title; }
+        @Override public IDrawable getBackground() { return background; }
+        @Override public IDrawable getIcon() { return icon; }
 
         @Override
         public void setRecipe(IRecipeLayoutBuilder builder, SmeltingWrapper recipe, IFocusGroup focuses) {
-            // Вход: 2×2 сетка, предмет в первом слоте
-            builder.addSlot(RecipeIngredientRole.INPUT, 5, 13)
-                    .addItemStack(recipe.input());
-
-            // Остальные 3 входных слота пустые (для фона)
+            builder.addSlot(RecipeIngredientRole.INPUT, 5, 13).addItemStack(recipe.input());
             builder.addSlot(RecipeIngredientRole.INPUT, 23, 13);
             builder.addSlot(RecipeIngredientRole.INPUT, 5, 31);
             builder.addSlot(RecipeIngredientRole.INPUT, 23, 31);
 
-            // Выход: жидкий металл в первом слоте правой сетки
             ItemStack liquidMetal = createLiquidMetalStack(recipe.metal(), recipe.outputUnits());
-            builder.addSlot(RecipeIngredientRole.OUTPUT, 81, 13)
-                    .addItemStack(liquidMetal);
-
-            // Остальные 3 выходных слота пустые
+            builder.addSlot(RecipeIngredientRole.OUTPUT, 81, 13).addItemStack(liquidMetal);
             builder.addSlot(RecipeIngredientRole.OUTPUT, 99, 13);
             builder.addSlot(RecipeIngredientRole.OUTPUT, 81, 31);
             builder.addSlot(RecipeIngredientRole.OUTPUT, 99, 31);
         }
 
         @Override
-        public void draw(SmeltingWrapper recipe, IRecipeSlotsView recipeSlotsView, GuiGraphics guiGraphics,
-                         double mouseX, double mouseY) {
-            // Декоративная плавильня в центре
+        public void draw(SmeltingWrapper recipe, IRecipeSlotsView view, GuiGraphics gg, double mx, double my) {
             long sec = System.currentTimeMillis() / 1000;
             ItemStack machine = machines.get((int) (sec % machines.size()));
-            guiGraphics.renderItem(machine, 52, 13);
-            guiGraphics.renderItemDecorations(Minecraft.getInstance().font, machine, 52, 13);
+            gg.renderItem(machine, 52, 13);
+            gg.renderItemDecorations(Minecraft.getInstance().font, machine, 52, 13);
 
-            // Текст: температура и время
             var font = Minecraft.getInstance().font;
-            guiGraphics.drawString(font, recipe.temp() + "°C", 42, 41, 0xFF555555, false);
-            guiGraphics.drawString(font, String.format("%.1fs", recipe.timeTicks() / 20f), 42, 51, 0xFF555555, false);
+            gg.drawString(font, recipe.temp() + "°C", 42, 41, 0xFF555555, false);
+            gg.drawString(font, String.format("%.1fs", recipe.timeTicks() / 20f), 42, 51, 0xFF555555, false);
         }
     }
-
-    // ==================== КАТЕГОРИЯ: ЛИТЬЁ ====================
 
     public static class CastingCategory implements IRecipeCategory<CastingWrapper> {
         private final IDrawable background;
@@ -229,56 +203,32 @@ public class CimJeiPlugin implements IModPlugin {
                     new ResourceLocation(CrustalIncursionMod.MOD_ID, "textures/gui/jei/jei_cast_gui.png"),
                     0, 0, 120, 60);
             this.icon = guiHelper.createDrawableIngredient(VanillaTypes.ITEM_STACK,
-                    new ItemStack(ModItems.MOLD_INGOT.get()));
+                    new ItemStack(ModBlocks.SMELTER.get()));
             this.title = Component.translatable("jei.category.cim.casting");
         }
 
-        @Override
-        public RecipeType<CastingWrapper> getRecipeType() {
-            return CASTING_TYPE;
-        }
-
-        @Override
-        public Component getTitle() {
-            return title;
-        }
-
-        @Override
-        public IDrawable getBackground() {
-            return background;
-        }
-
-        @Override
-        public IDrawable getIcon() {
-            return icon;
-        }
+        @Override public RecipeType<CastingWrapper> getRecipeType() { return CASTING_TYPE; }
+        @Override public Component getTitle() { return title; }
+        @Override public IDrawable getBackground() { return background; }
+        @Override public IDrawable getIcon() { return icon; }
 
         @Override
         public void setRecipe(IRecipeLayoutBuilder builder, CastingWrapper recipe, IFocusGroup focuses) {
-            // Вход: жидкий металл в первом слоте левой сетки
             ItemStack liquidMetal = createLiquidMetalStack(recipe.metal(), recipe.requiredUnits());
-            builder.addSlot(RecipeIngredientRole.INPUT, 5, 13)
-                    .addItemStack(liquidMetal);
-
+            builder.addSlot(RecipeIngredientRole.INPUT, 5, 13).addItemStack(liquidMetal);
             builder.addSlot(RecipeIngredientRole.INPUT, 23, 13);
             builder.addSlot(RecipeIngredientRole.INPUT, 5, 31);
             builder.addSlot(RecipeIngredientRole.INPUT, 23, 31);
 
-            // Центр: форма (реальный ингредиент!)
             builder.addSlot(RecipeIngredientRole.INPUT, 52, 13)
                     .addItemStack(new ItemStack(recipe.mold().getMoldItem()));
 
-            // Выход: готовый предмет в первом слоте правой сетки
-            builder.addSlot(RecipeIngredientRole.OUTPUT, 81, 13)
-                    .addItemStack(recipe.output());
-
+            builder.addSlot(RecipeIngredientRole.OUTPUT, 81, 13).addItemStack(recipe.output());
             builder.addSlot(RecipeIngredientRole.OUTPUT, 99, 13);
             builder.addSlot(RecipeIngredientRole.OUTPUT, 81, 31);
             builder.addSlot(RecipeIngredientRole.OUTPUT, 99, 31);
         }
     }
-
-    // ==================== КАТЕГОРИЯ: СПЛАВЫ ====================
 
     public static class AlloyingCategory implements IRecipeCategory<AlloyingWrapper> {
         private final IDrawable background;
@@ -290,62 +240,40 @@ public class CimJeiPlugin implements IModPlugin {
                     new ResourceLocation(CrustalIncursionMod.MOD_ID, "textures/gui/jei/jei_alloy_gui.png"),
                     0, 0, 120, 60);
             this.icon = guiHelper.createDrawableIngredient(VanillaTypes.ITEM_STACK,
-                    new ItemStack(Items.BLAST_FURNACE)); // или иконка сплава
+                    new ItemStack(ModBlocks.SMELTER.get()));
             this.title = Component.translatable("jei.category.cim.alloying");
         }
 
-        @Override
-        public RecipeType<AlloyingWrapper> getRecipeType() {
-            return ALLOYING_TYPE;
-        }
-
-        @Override
-        public Component getTitle() {
-            return title;
-        }
-
-        @Override
-        public IDrawable getBackground() {
-            return background;
-        }
-
-        @Override
-        public IDrawable getIcon() {
-            return icon;
-        }
+        @Override public RecipeType<AlloyingWrapper> getRecipeType() { return ALLOYING_TYPE; }
+        @Override public Component getTitle() { return title; }
+        @Override public IDrawable getBackground() { return background; }
+        @Override public IDrawable getIcon() { return icon; }
 
         @Override
         public void setRecipe(IRecipeLayoutBuilder builder, AlloyingWrapper wrapper, IFocusGroup focuses) {
             AlloyRecipe recipe = wrapper.recipe();
             AlloySlot[] slots = recipe.getSlots();
-
-            // Вход: 1×4 слота
             int[] xs = {5, 23, 41, 59};
+
             for (int i = 0; i < 4; i++) {
                 if (slots[i].item() != null && slots[i].count() > 0) {
-                    ItemStack stack = new ItemStack(slots[i].item(), slots[i].count());
                     builder.addSlot(RecipeIngredientRole.INPUT, xs[i], 22)
-                            .addItemStack(stack);
+                            .addItemStack(new ItemStack(slots[i].item(), slots[i].count()));
                 } else {
                     builder.addSlot(RecipeIngredientRole.INPUT, xs[i], 22);
                 }
             }
 
-            // Выход: жидкий металл сплава
             ItemStack liquidMetal = createLiquidMetalStack(recipe.getOutputMetal(), recipe.getOutputUnits());
-            builder.addSlot(RecipeIngredientRole.OUTPUT, 99, 22)
-                    .addItemStack(liquidMetal);
+            builder.addSlot(RecipeIngredientRole.OUTPUT, 99, 22).addItemStack(liquidMetal);
         }
 
         @Override
-        public void draw(AlloyingWrapper wrapper, IRecipeSlotsView recipeSlotsView, GuiGraphics guiGraphics,
-                         double mouseX, double mouseY) {
+        public void draw(AlloyingWrapper wrapper, IRecipeSlotsView view, GuiGraphics gg, double mx, double my) {
             AlloyRecipe recipe = wrapper.recipe();
             var font = Minecraft.getInstance().font;
-
-            // Температура и время в столбик
-            guiGraphics.drawString(font, recipe.getOutputMetal().getMeltingPoint() + "°C", 77, 22, 0xFF555555, false);
-            guiGraphics.drawString(font, String.format("%.1fs", recipe.getSmeltTimeTicks() / 20f), 77, 32, 0xFF555555, false);
+            gg.drawString(font, recipe.getOutputMetal().getMeltingPoint() + "°C", 4, 42, 0xFF555555, false);
+            gg.drawString(font, String.format("%.1fs", recipe.getSmeltTimeTicks() / 20f), 4, 52, 0xFF555555, false);
         }
     }
 }
