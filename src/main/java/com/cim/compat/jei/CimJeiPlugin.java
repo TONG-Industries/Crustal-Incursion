@@ -153,7 +153,7 @@ public class CimJeiPlugin implements IModPlugin {
                     new ResourceLocation(CrustalIncursionMod.MOD_ID, "textures/gui/jei/jei_cast_gui.png"),
                     0, 0, 120, 60);
             this.icon = guiHelper.createDrawableIngredient(VanillaTypes.ITEM_STACK,
-                    new ItemStack(ModBlocks.SMELTER.get()));
+                    new ItemStack(ModBlocks.CASTING_DESCENT.get()));
             this.title = Component.translatable("jei.category.cim.smelting");
             this.machines = Arrays.asList(
                     new ItemStack(ModBlocks.SMELTER.get()),
@@ -197,14 +197,18 @@ public class CimJeiPlugin implements IModPlugin {
         private final IDrawable background;
         private final IDrawable icon;
         private final Component title;
-
+        private final List<ItemStack> machines;
         public CastingCategory(IGuiHelper guiHelper) {
             this.background = guiHelper.createDrawable(
                     new ResourceLocation(CrustalIncursionMod.MOD_ID, "textures/gui/jei/jei_cast_gui.png"),
                     0, 0, 120, 60);
             this.icon = guiHelper.createDrawableIngredient(VanillaTypes.ITEM_STACK,
-                    new ItemStack(ModBlocks.SMELTER.get()));
+                    new ItemStack(ModBlocks.CASTING_POT.get()));
             this.title = Component.translatable("jei.category.cim.casting");
+            this.machines = Arrays.asList(
+                    new ItemStack(ModBlocks.SMELTER.get()),
+                    new ItemStack(ModBlocks.SMALL_SMELTER.get())
+            );
         }
 
         @Override public RecipeType<CastingWrapper> getRecipeType() { return CASTING_TYPE; }

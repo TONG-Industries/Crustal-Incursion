@@ -297,7 +297,7 @@ public class ModLangProvider extends LanguageProvider {
 //        add(ModBlocks.SHAFT_PLACER.get(), "Установщик валов");
 //        add(ModBlocks.MINING_PORT.get(), "Сборочный порт");
         add("jei.category.cim.smelting", "Плавка");
-        add("jei.category.cim.casting", "Выплавка");
+        add("jei.category.cim.casting", "Отлив");
         add("jei.category.cim.alloying", "Сплав");
         add(ModItems.LIQUID_METAL.get(), "Жидкий металл");
         //Другие предметы
