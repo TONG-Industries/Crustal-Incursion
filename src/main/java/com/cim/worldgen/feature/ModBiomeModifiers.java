@@ -21,12 +21,15 @@ public class ModBiomeModifiers {
         var placedFeatures = context.lookup(Registries.PLACED_FEATURE);
         var biomes = context.lookup(Registries.BIOME);
 
-        context.register(ADD_CONGLOMERATE_VEIN,
-                new ForgeBiomeModifiers.AddFeaturesBiomeModifier(
-                        biomes.getOrThrow(BiomeTags.IS_OVERWORLD),
-                        HolderSet.direct(placedFeatures.getOrThrow(ModPlacedFeatures.CONGLOMERATE_VEIN_PLACED_KEY)),
-                        GenerationStep.Decoration.UNDERGROUND_ORES
-                ));
+        // === КОНГЛОМЕРАТЫ ===
+        for (OreVeinRegistry.ConglomerateEntry entry : OreVeinRegistry.CONGLOMERATES) {
+            context.register(entry.biomeModifierKey,
+                    new ForgeBiomeModifiers.AddFeaturesBiomeModifier(
+                            biomes.getOrThrow(BiomeTags.IS_OVERWORLD),
+                            HolderSet.direct(placedFeatures.getOrThrow(entry.placedKey)),
+                            GenerationStep.Decoration.UNDERGROUND_ORES
+                    ));
+        }
 
         // === АВТО-ДОБАВЛЕНИЕ РУД В БИОМЫ ===
         for (OreVeinRegistry.OreEntry ore : OreVeinRegistry.ORES) {

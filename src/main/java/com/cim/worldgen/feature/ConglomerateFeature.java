@@ -1,87 +1,85 @@
 package com.cim.worldgen.feature;
 
+import com.cim.api.vein.VeinCompositionGenerator;
 import com.cim.api.vein.VeinManager;
-import com.cim.api.vein.VeinManager.VeinType;
-
 import com.cim.block.basic.ModBlocks;
 import com.cim.block.entity.conglomerate.ConglomerateBlockEntity;
-import com.cim.main.CrustalIncursionMod;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-class ConglomerateVeinFeature extends Feature<NoneFeatureConfiguration> {
+class ConglomerateVeinFeature extends Feature<ConglomerateVeinConfiguration> {
 
-    public ConglomerateVeinFeature(Codec<NoneFeatureConfiguration> codec) {
+    public ConglomerateVeinFeature(Codec<ConglomerateVeinConfiguration> codec) {
         super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
+    public boolean place(FeaturePlaceContext<ConglomerateVeinConfiguration> context) {
         WorldGenLevel level = context.level();
         BlockPos origin = context.origin();
-        RandomSource rand = context.random();
+        RandomSource random = context.random();
+        ConglomerateVeinConfiguration cfg = context.config();
 
         if (!(level instanceof ServerLevel serverLevel)) return false;
 
-        // УВЕЛИЧЕННЫЕ ПАРАМЕТРЫ: радиус 5-8, высота 5-8
-        int radius = 5 + rand.nextInt(4); // 5-8 блоков в радиусе
-        int height = 5 + rand.nextInt(4); // 5-8 блоков в высоту
-        VeinType type = VeinType.values()[rand.nextInt(VeinType.values().length)];
+        float range = cfg.maxY() - cfg.minY();
+        float t = range > 0 ? Mth.clamp((origin.getY() - cfg.minY()) / range, 0f, 1f) : 0.5f;
+        int size = Mth.floor(Mth.lerp(t, cfg.minSize(), cfg.maxSize()));
+        if (size <= 0) return false;
 
-        Set<BlockPos> veinBlocks = new HashSet<>();
+        int rx = size;
+        int ry = Math.max(2, size / 2 + random.nextInt(3));
+        int rz = size;
 
-        // Генерация эллипсоида
-        for (int x = -radius; x <= radius; x++) {
-            for (int y = 0; y < height; y++) {
-                for (int z = -radius; z <= radius; z++) {
-                    // Проверка эллипсоида (делим height на 2 для правильной формы)
-                    double halfHeight = height / 2.0;
-                    double yOffset = y - halfHeight;
-                    double dist = (x*x)/(double)(radius*radius) +
-                            (yOffset*yOffset)/(halfHeight*halfHeight) +
-                            (z*z)/(double)(radius*radius);
+        Set<BlockPos> normalBlocks = new HashSet<>();
+        Set<BlockPos> depletedBlocks = new HashSet<>();
+
+        for (int x = -rx; x <= rx; x++) {
+            for (int y = -ry; y <= ry; y++) {
+                for (int z = -rz; z <= rz; z++) {
+                    double dist = (x * x) / (double) (rx * rx)
+                            + (y * y) / (double) (ry * ry)
+                            + (z * z) / (double) (rz * rz);
                     if (dist > 1.0) continue;
 
                     BlockPos pos = origin.offset(x, y, z);
+                    if (!isReplaceable(level, pos)) continue;
+                    if (random.nextFloat() > cfg.density()) continue;
 
-                    // Проверяем, что можно заменить (камень, глубинный сланец)
-                    if (isReplaceable(level, pos)) {
-                        veinBlocks.add(pos.immutable());
+                    if (random.nextFloat() < cfg.depletionChance()) {
+                        depletedBlocks.add(pos.immutable());
+                    } else {
+                        normalBlocks.add(pos.immutable());
                     }
                 }
             }
         }
 
-        // Минимум 30 блоков для жилы (вместо 10)
-        if (veinBlocks.size() < 30) return false;
+        if (normalBlocks.isEmpty()) return false;
 
-        // Регистрируем жилу в менеджере
-        UUID veinId = VeinManager.get(serverLevel).registerVein(veinBlocks, type);
+        var composition = VeinCompositionGenerator.generate(origin.getY(), random);
+        UUID veinId = VeinManager.get(serverLevel).registerVein(normalBlocks, composition, origin.getY());
 
-        // Ставим блоки
-        for (BlockPos pos : veinBlocks) {
-            // Сначала ставим блок
+        for (BlockPos pos : depletedBlocks) {
+            level.setBlock(pos, ModBlocks.DEPLETED_CONGLOMERATE.get().defaultBlockState(), 2);
+        }
+
+        for (BlockPos pos : normalBlocks) {
             level.setBlock(pos, ModBlocks.CONGLOMERATE.get().defaultBlockState(), 2);
-
-            // Получаем BE (должен создаться автоматически при setBlock)
             BlockEntity be = level.getBlockEntity(pos);
-
-            if (be instanceof ConglomerateBlockEntity conglomerateBe) {
-                conglomerateBe.setVeinId(veinId);
-            } else {
-                // Если BE не создался (редкий случай), логируем
-                CrustalIncursionMod.LOGGER.warn("Failed to create ConglomerateBlockEntity at {}", pos);
+            if (be instanceof ConglomerateBlockEntity cbe) {
+                cbe.setVeinId(veinId);
             }
         }
 
@@ -89,7 +87,6 @@ class ConglomerateVeinFeature extends Feature<NoneFeatureConfiguration> {
     }
 
     private boolean isReplaceable(WorldGenLevel level, BlockPos pos) {
-        return level.getBlockState(pos).is(net.minecraft.tags.BlockTags.BASE_STONE_OVERWORLD) ||
-                level.getBlockState(pos).is(net.minecraft.tags.BlockTags.DEEPSLATE_ORE_REPLACEABLES);
+        return level.getBlockState(pos).is(net.minecraft.tags.BlockTags.BASE_STONE_OVERWORLD);
     }
 }

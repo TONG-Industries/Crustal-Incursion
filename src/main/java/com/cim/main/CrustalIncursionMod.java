@@ -444,12 +444,11 @@ public class CrustalIncursionMod {
             RandomSource rand = level.random;
             int radius = 5 + rand.nextInt(4);
             int height = 5 + rand.nextInt(4);
-            VeinManager.VeinType type = VeinManager.VeinType.values()[rand.nextInt(VeinManager.VeinType.values().length)];
 
             Set<BlockPos> veinBlocks = new HashSet<>();
 
             for (int x = -radius; x <= radius; x++) {
-                for (int y = -height/2; y < height/2 + height%2; y++) { // Центрируем по Y
+                for (int y = -height/2; y < height/2 + height%2; y++) {
                     for (int z = -radius; z <= radius; z++) {
                         double halfHeight = height / 2.0;
                         double yOffset = y;
@@ -459,7 +458,6 @@ public class CrustalIncursionMod {
                         if (dist > 1.0) continue;
 
                         BlockPos pos = origin.offset(x, y, z);
-                        // ЗАМЕЩАЕМ любой не-бедрок блок (включая воздух, но кроме бедрока)
                         BlockState existing = level.getBlockState(pos);
                         if (!existing.is(net.minecraft.world.level.block.Blocks.BEDROCK)) {
                             veinBlocks.add(pos.immutable());
@@ -469,11 +467,12 @@ public class CrustalIncursionMod {
             }
 
             if (veinBlocks.size() < 30) {
-                event.getEntity().displayClientMessage(Component.literal("§cСлишком мало места для жилы! Нужно " + (30 - veinBlocks.size()) + " блоков"), true);
+                event.getEntity().displayClientMessage(Component.literal("§cСлишком мало места для жилы!"), true);
                 return;
             }
 
-            UUID veinId = VeinManager.get(level).registerVein(veinBlocks, type);
+            var composition = com.cim.api.vein.VeinCompositionGenerator.generate(origin.getY(), rand);
+            UUID veinId = VeinManager.get(level).registerVein(veinBlocks, composition, origin.getY());
 
             for (BlockPos pos : veinBlocks) {
                 level.setBlock(pos, ModBlocks.CONGLOMERATE.get().defaultBlockState(), 2);
@@ -484,7 +483,7 @@ public class CrustalIncursionMod {
             }
 
             event.getEntity().displayClientMessage(
-                    Component.literal("§aЖила: " + veinBlocks.size() + " блоков, " + type.name()),
+                    Component.literal("§aЖила: " + veinBlocks.size() + " блоков, основной металл: " + composition.getPrimaryMetal()),
                     false
             );
         }

@@ -25,7 +25,7 @@ import java.util.List;
 
 // Размещать в: src/main/java/razchexlitiel/cim/worldgen/ModConfiguredFeatures.java
 public class ModConfiguredFeatures {
-    public static final ResourceKey<ConfiguredFeature<?, ?>> CONGLOMERATE_VEIN_KEY = registerKey("conglomerate_vein");  // 1. Создаем уникальный ключ для нашего дерева
+// 1. Создаем уникальный ключ для нашего дерева
     public static final ResourceKey<ConfiguredFeature<?, ?>> GIANT_SEQUOIA_KEY = registerKey("giant_sequoia");
     public static final ResourceKey<ConfiguredFeature<?, ?>> SMALL_SEQUOIA_KEY = registerKey("small_sequoia");
     public static final ResourceKey<ConfiguredFeature<?, ?>> MEDIUM_SEQUOIA_KEY = registerKey("medium_sequoia");
@@ -53,6 +53,15 @@ public class ModConfiguredFeatures {
                     new SpecialVeinConfiguration(targets, ore.block.defaultBlockState(),
                             ore.minSize, ore.maxSize, ore.minY, ore.maxY,
                             ore.respectAir, ore.density, 0.1f));
+        }
+
+        // --- КОНГЛОМЕРАТЫ ---
+        for (OreVeinRegistry.ConglomerateEntry entry : OreVeinRegistry.CONGLOMERATES) {
+            register(context, entry.configuredKey, ModFeatures.CONGLOMERATE_VEIN.get(),
+                    new ConglomerateVeinConfiguration(
+                            entry.minSize, entry.maxSize, entry.minY, entry.maxY,
+                            entry.density, entry.depletionChance
+                    ));
         }
 
         // Собираем нашу гигантскую Секвойю!
@@ -94,9 +103,6 @@ public class ModConfiguredFeatures {
                 new MediumSequoiaFoliagePlacer(ConstantInt.of(1), ConstantInt.of(0)), // Радиус 1 даст нам аккуратные крестики
                 new TwoLayersFeatureSize(3, 0, 3)).build());
 
-        FeatureUtils.register(context, CONGLOMERATE_VEIN_KEY,
-                ModFeatures.CONGLOMERATE_VEIN.get(),
-                NoneFeatureConfiguration.INSTANCE);
 
     }
 

@@ -105,6 +105,51 @@ public class OreVeinRegistry {
         ORES.add(new OreEntry(name, block, veinSize, minY, maxY, countPerChunk));
     }
 
+    public static final List<ConglomerateEntry> CONGLOMERATES = new ArrayList<>();
+
+    public static class ConglomerateEntry {
+        public final String name;
+        public final int minY, maxY;
+        public final int minSize, maxSize;
+        public final int rarity;
+        public final float density;
+        public final float depletionChance;
+
+        public final ResourceKey<ConfiguredFeature<?, ?>> configuredKey;
+        public final ResourceKey<PlacedFeature> placedKey;
+        public final ResourceKey<BiomeModifier> biomeModifierKey;
+
+        public ConglomerateEntry(String name, int minY, int maxY, int minSize, int maxSize,
+                                 int rarity, float density, float depletionChance) {
+            this.name = name;
+            this.minY = minY;
+            this.maxY = maxY;
+            this.minSize = minSize;
+            this.maxSize = maxSize;
+            this.rarity = rarity;
+            this.density = density;
+            this.depletionChance = depletionChance;
+
+            this.configuredKey = ResourceKey.create(
+                    net.minecraft.core.registries.Registries.CONFIGURED_FEATURE,
+                    new ResourceLocation(CrustalIncursionMod.MOD_ID, "conglomerate_" + name)
+            );
+            this.placedKey = ResourceKey.create(
+                    net.minecraft.core.registries.Registries.PLACED_FEATURE,
+                    new ResourceLocation(CrustalIncursionMod.MOD_ID, "conglomerate_" + name + "_placed")
+            );
+            this.biomeModifierKey = ResourceKey.create(
+                    ForgeRegistries.Keys.BIOME_MODIFIERS,
+                    new ResourceLocation(CrustalIncursionMod.MOD_ID, "add_conglomerate_" + name)
+            );
+        }
+    }
+
+    public static void registerConglomerate(String name, int minY, int maxY, int minSize, int maxSize,
+                                            int rarity, float density, float depletionChance) {
+        CONGLOMERATES.add(new ConglomerateEntry(name, minY, maxY, minSize, maxSize, rarity, density, depletionChance));
+    }
+
     static {
 
         register("mineral1", ModBlocks.MINERAL1.get(), 9, 40, 150, 3);
@@ -115,6 +160,11 @@ public class OreVeinRegistry {
             registerSpecial("limestone", ModBlocks.LIMESTONE.get(), -20, 150, 6, 10, 4, false, 0.9f);
 
             registerSpecial("dolomite", ModBlocks.DOLOMITE.get(), -64, 70, 5, 8, 2, true, 0.6f);
-        }
+
+        // === КОНГЛОМЕРАТЫ ===
+        registerConglomerate("surface", 40, 150, 12, 22, 2, 0.75f, 0.3f);
+        registerConglomerate("medium", -20, 40, 10, 18, 2, 0.7f, 0.3f);
+        registerConglomerate("deep", -64, -20, 8, 14, 2, 0.65f, 0.3f);
+    }
 
     }

@@ -1,6 +1,5 @@
 package com.cim.item.tools.cast_pickaxes;
 
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Tier;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.Tags;
@@ -13,11 +12,11 @@ public class CastPickaxeStats {
     private final int chargeTicks;
     private final float maxDamage;
     private final float reach;
-    private final float maxHardnessMultiplier; // Эквивалент секунд добычи * 20
+    private final float maxHardnessMultiplier;
     private final int veinMinerLimit;
     private final float veinMinerDurabilityCost;
     private final Predicate<BlockState> veinMinerPredicate;
-    private final int veinMinerRange; // Радиус поиска (1 = 3x3x3, 2 = 5x5x5 и т.д.)
+    private final int veinMinerRange;
     private final List<PerkTooltip> perks;
 
     public static class PerkTooltip {
@@ -57,7 +56,7 @@ public class CastPickaxeStats {
 
         return new CastPickaxeStats(
                 net.minecraft.world.item.Tiers.IRON,
-                40, // 2 секунды
+                40,
                 12.0f,
                 5.0f,
                 120.0f,
@@ -82,7 +81,7 @@ public class CastPickaxeStats {
                     !state.is(net.minecraft.world.level.block.Blocks.SMOOTH_BASALT) &&
                     !state.is(net.minecraft.world.level.block.Blocks.COBBLED_DEEPSLATE) &&
                     !state.is(net.minecraft.world.level.block.Blocks.DEEPSLATE) &&
-                    !state.is(net.minecraft.tags.BlockTags.STONE_ORE_REPLACEABLES); // андезит/гранит/диорит
+                    !state.is(net.minecraft.tags.BlockTags.STONE_ORE_REPLACEABLES);
         };
 
         return new CastPickaxeStats(
@@ -105,19 +104,11 @@ public class CastPickaxeStats {
     public float getMaxDamage() { return maxDamage; }
     public float getReach() { return reach; }
 
-    /**
-     * Возвращает максимальную твердость, которую можно сломать при данном заряде.
-     * При 100% заряда = maxHardnessMultiplier / 30
-     * При 50% = половина от этого значения
-     */
     public float getMaxHardness(float chargePercent) {
         float maxHardnessAtFullCharge = (tier.getSpeed() * maxHardnessMultiplier) / 30.0f;
         return maxHardnessAtFullCharge * chargePercent;
     }
 
-    /**
-     * Возвращает эквивалент секунд добычи для тултипа
-     */
     public int getMiningSecondsEquivalent() {
         return (int)(maxHardnessMultiplier / 20f);
     }
@@ -127,4 +118,11 @@ public class CastPickaxeStats {
     public boolean canVeinMine(BlockState state) { return veinMinerPredicate.test(state); }
     public int getVeinMinerRange() { return veinMinerRange; }
     public List<PerkTooltip> getPerks() { return perks; }
+
+    public int getConglomerateTierLevel() {
+        if (tier == net.minecraft.world.item.Tiers.IRON) return 0;
+        if (tier == net.minecraft.world.item.Tiers.DIAMOND) return 1;
+        if (tier == net.minecraft.world.item.Tiers.NETHERITE) return 2;
+        return 0;
+    }
 }

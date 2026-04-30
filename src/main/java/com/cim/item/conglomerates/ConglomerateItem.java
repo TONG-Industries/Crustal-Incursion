@@ -85,7 +85,7 @@ public class ConglomerateItem extends Item {
         super.appendHoverText(stack, level, tooltip, flag);
 
         int ou = getOU(stack);
-        tooltip.add(Component.literal("§7Ore Units: §f" + ou + "/100"));
+        tooltip.add(Component.literal("§7Ore Units: §f" + ou + "/81"));
 
         // ТЕСТ: всегда показываем состав
         String veinType = stack.hasTag() ? stack.getTag().getString(TAG_VEIN_TYPE) : "unknown";

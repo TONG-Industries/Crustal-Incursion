@@ -268,36 +268,27 @@ public class CastPickaxeItem extends PickaxeItem implements GeoItem {
                                        Direction face, float chargePercent, InteractionHand hand) {
         if (level.isClientSide) return false;
 
-        BlockState state = level.getBlockState(pos);
         boolean fullCharge = chargePercent >= 1.0f;
+        BlockState state = level.getBlockState(pos);
 
-        // СНАЧАЛА проверяем ConglomerateBlock
+        // === КОНГЛОМЕРАТ ===
         if (state.getBlock() instanceof ConglomerateBlock conglomerate) {
             if (!fullCharge) {
-                // Эффекты как при ударе по недобываемому блоку (Пункт 2)
                 spawnCritParticles(level, pos.getCenter());
                 level.playSound(null, pos, SoundEvents.STONE_HIT, SoundSource.BLOCKS, 1.0f, 0.5f);
                 level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_WEAK, SoundSource.PLAYERS, 0.5f, 1.2f);
-
-                // Немного тратим прочность, чтобы игрок не спамил просто так
                 stack.hurtAndBreak(1, player, (p) -> p.broadcastBreakEvent(hand));
-                return true; // Строго возвращаем true, чтобы удар засчитался как завершенный, но БЕЗ добычи
+                return true;
             }
 
-            // Если заряд 100% - полноценная добыча
-            ConglomerateBlock.CastPickaxeTier tier = (this.stats == CastPickaxeStats.iron())
-                    ? ConglomerateBlock.CastPickaxeTier.IRON
-                    : ConglomerateBlock.CastPickaxeTier.STEEL;
+            int tierLevel = stats.getConglomerateTierLevel();
+            conglomerate.mineWithCastPickaxe((ServerLevel) level, pos, player, tierLevel);
 
-            conglomerate.mineWithCastPickaxe((ServerLevel)level, pos, player, tier);
-
-            // Эффекты успешного мощного удара
-            stack.hurtAndBreak(5, player, (p) -> p.broadcastBreakEvent(hand));
+            stack.hurtAndBreak(2, player, (p) -> p.broadcastBreakEvent(hand));
             spawnCritParticles(level, pos.getCenter());
-            playPickaxeHitSound(level, pos, 1.0f); // Сочный звук попадания
+            playPickaxeHitSound(level, pos, chargePercent);
             level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 1.0f, 0.8f);
             player.causeFoodExhaustion(0.2f);
-
             return true;
         }
 

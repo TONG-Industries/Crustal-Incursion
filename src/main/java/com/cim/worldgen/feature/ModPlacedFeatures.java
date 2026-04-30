@@ -25,7 +25,7 @@ public class ModPlacedFeatures {
     public static final ResourceKey<PlacedFeature> GIANT_SEQUOIA_PLACED_KEY = registerKey("giant_sequoia_placed");
     public static final ResourceKey<PlacedFeature> SMALL_SEQUOIA_PLACED_KEY = registerKey("small_sequoia_placed");
     public static final ResourceKey<PlacedFeature> MEDIUM_SEQUOIA_PLACED_KEY = registerKey("medium_sequoia_placed");
-    public static final ResourceKey<PlacedFeature> CONGLOMERATE_VEIN_PLACED_KEY = registerKey("conglomerate_vein_placed");
+
     // 2. Сборка (DataGen)
     public static void bootstrap(BootstapContext<PlacedFeature> context) {
         HolderGetter<ConfiguredFeature<?, ?>> configuredFeatures = context.lookup(Registries.CONFIGURED_FEATURE);
@@ -60,17 +60,19 @@ public class ModPlacedFeatures {
 
         var smallSequoia = context.lookup(Registries.CONFIGURED_FEATURE).getOrThrow(ModConfiguredFeatures.SMALL_SEQUOIA_KEY);
         var mediumSequoia = context.lookup(Registries.CONFIGURED_FEATURE).getOrThrow(ModConfiguredFeatures.MEDIUM_SEQUOIA_KEY);
-        var conglomerateVein = configuredFeatures.getOrThrow(ModConfiguredFeatures.CONGLOMERATE_VEIN_KEY);
-        register(context, CONGLOMERATE_VEIN_PLACED_KEY, conglomerateVein,
-                List.of(
-                        RarityFilter.onAverageOnceEvery(2),
-                        InSquarePlacement.spread(),
-                        HeightRangePlacement.uniform(
-                                VerticalAnchor.absolute(-64),
-                                VerticalAnchor.absolute(16)
-                        ),
-                        BiomeFilter.biome()
-                ));
+        // === КОНГЛОМЕРАТЫ ===
+        for (OreVeinRegistry.ConglomerateEntry entry : OreVeinRegistry.CONGLOMERATES) {
+            Holder<ConfiguredFeature<?, ?>> configured = configuredFeatures.getOrThrow(entry.configuredKey);
+            register(context, entry.placedKey, configured, List.of(
+                    RarityFilter.onAverageOnceEvery(entry.rarity),
+                    InSquarePlacement.spread(),
+                    HeightRangePlacement.uniform(
+                            VerticalAnchor.absolute(entry.minY),
+                            VerticalAnchor.absolute(entry.maxY)
+                    ),
+                    BiomeFilter.biome()
+            ));
+        }
 
         // Регистрируем размещение нашей секвойи
         register(context, GIANT_SEQUOIA_PLACED_KEY, configuredFeatures.getOrThrow(ModConfiguredFeatures.GIANT_SEQUOIA_KEY),
