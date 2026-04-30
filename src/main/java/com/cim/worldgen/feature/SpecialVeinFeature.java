@@ -57,11 +57,6 @@ public class SpecialVeinFeature extends Feature<SpecialVeinConfiguration> {
                     int absX = origin.getX() + x;
                     int absZ = origin.getZ() + z;
 
-                    // === ПРОВЕРКА: не выходим за границы чанка ===
-                    if (absX < minBlockX || absX > maxBlockX || absZ < minBlockZ || absZ > maxBlockZ) {
-                        continue;
-                    }
-
                     pos.set(absX, origin.getY() + y, absZ);
 
                     // Разрезание воздухом

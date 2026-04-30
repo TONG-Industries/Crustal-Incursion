@@ -7,18 +7,21 @@ import com.cim.block.entity.conglomerate.ConglomerateBlockEntity;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 
+import java.lang.reflect.Field;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-class ConglomerateVeinFeature extends Feature<ConglomerateVeinConfiguration> {
+public class ConglomerateVeinFeature extends Feature<ConglomerateVeinConfiguration> {
 
     public ConglomerateVeinFeature(Codec<ConglomerateVeinConfiguration> codec) {
         super(codec);
@@ -31,16 +34,17 @@ class ConglomerateVeinFeature extends Feature<ConglomerateVeinConfiguration> {
         RandomSource random = context.random();
         ConglomerateVeinConfiguration cfg = context.config();
 
-        if (!(level instanceof ServerLevel serverLevel)) return false;
+        ServerLevel serverLevel = getServerLevel(level);
+        if (serverLevel == null) return false;
 
         float range = cfg.maxY() - cfg.minY();
         float t = range > 0 ? Mth.clamp((origin.getY() - cfg.minY()) / range, 0f, 1f) : 0.5f;
         int size = Mth.floor(Mth.lerp(t, cfg.minSize(), cfg.maxSize()));
         if (size <= 0) return false;
 
-        int rx = size;
-        int ry = Math.max(2, size / 2 + random.nextInt(3));
-        int rz = size;
+        int rx = size + random.nextInt(size / 3 + 1);
+        int ry = Math.max(2, size / 3 + random.nextInt(2));
+        int rz = size + random.nextInt(size / 3 + 1);
 
         Set<BlockPos> normalBlocks = new HashSet<>();
         Set<BlockPos> depletedBlocks = new HashSet<>();
@@ -54,7 +58,9 @@ class ConglomerateVeinFeature extends Feature<ConglomerateVeinConfiguration> {
                     if (dist > 1.0) continue;
 
                     BlockPos pos = origin.offset(x, y, z);
-                    if (!isReplaceable(level, pos)) continue;
+                    BlockState existing = level.getBlockState(pos);
+
+                    if (!isReplaceable(existing)) continue;
                     if (random.nextFloat() > cfg.density()) continue;
 
                     if (random.nextFloat() < cfg.depletionChance()) {
@@ -86,7 +92,22 @@ class ConglomerateVeinFeature extends Feature<ConglomerateVeinConfiguration> {
         return true;
     }
 
-    private boolean isReplaceable(WorldGenLevel level, BlockPos pos) {
-        return level.getBlockState(pos).is(net.minecraft.tags.BlockTags.BASE_STONE_OVERWORLD);
+    private ServerLevel getServerLevel(WorldGenLevel level) {
+        if (level instanceof ServerLevel sl) return sl;
+        if (level instanceof WorldGenRegion region) {
+            try {
+                Field levelField = WorldGenRegion.class.getDeclaredField("level");
+                levelField.setAccessible(true);
+                return (ServerLevel) levelField.get(region);
+            } catch (Exception e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private boolean isReplaceable(BlockState state) {
+        return state.is(net.minecraft.tags.BlockTags.BASE_STONE_OVERWORLD)
+                || state.is(net.minecraft.tags.BlockTags.DEEPSLATE_ORE_REPLACEABLES);
     }
 }

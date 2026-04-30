@@ -6,7 +6,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Интерфейс для блоков, которые могут быть активированы детонатором
+ * Интерфейс для блоков, которые могут быть активированы детонаторами
  */
 public interface IDetonatable {
     /**

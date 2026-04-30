@@ -53,9 +53,15 @@ public class ModLangProvider extends LanguageProvider {
         add("fluid_type.cim.sulfuric_acid", "Sulfuric Acid");
         add("fluid_type.cim.natural_gas", "Natural Gas");
         add("fluid_type.cim.steam", "Steam");
-        // Подказки
-        add("tooltip.cim.detminer.line1", "Mines blocks in explosion radius");
-        add("tooltip.cim.detminer.line2", "Completely harmless to entities");
+
+
+        add("tooltip.cim.detminer.desc", "Breaks blocks in a natural blast pattern");
+        add("tooltip.cim.detminer.hardness", "Only affects blocks with hardness < 30");
+        add("tooltip.cim.detminer.conglomerate", "Has a chance to extract resources from conglomerate");
+
+        // Conglomerate drops
+        add("item.cim.conglomerate_chunk", "Conglomerate Chunk");
+        add("item.cim.hard_rock", "Hard Rock");
 
         // Metals
         add("metal.cim.gold", "Gold");
@@ -336,9 +342,7 @@ public class ModLangProvider extends LanguageProvider {
         add("itemGroup.cim.cim_recourses_tab", "Ресурсы");
         add("itemGroup.cim.cim_nature_tab", "Природа");
 
-        // Тултипы
-        add("tooltip.cim.detminer.line1", "Добывает блоки в радиусе взрыва");
-        add("tooltip.cim.detminer.line2", "Не наносит урон сущностям");
+
 // Fluid Identifier
         add("item.cim.fluid_identifier", "Жидкостный индефикатор");
         add("fluid.cim.none", "Ничего");
@@ -384,9 +388,6 @@ public class ModLangProvider extends LanguageProvider {
         add("fluid_type.cim.sulfuric_acid", "Сірчана кислота");
         add("fluid_type.cim.natural_gas", "Природний газ");
         add("fluid_type.cim.steam", "Пара");
-        // Підказки
-        add("tooltip.cim.detminer.line1", "Видобуває блоки в радіусі вибуху");
-        add("tooltip.cim.detminer.line2", "Не завдає шкоди істотам");
 
 
         // Секвойя
