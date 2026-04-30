@@ -13,6 +13,7 @@ bin/
 *.run
 .vscode/
 run/
+refs/
 run-data/
 logs/
 crash-reports/
