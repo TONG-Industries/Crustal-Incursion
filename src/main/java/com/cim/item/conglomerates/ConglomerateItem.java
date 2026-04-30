@@ -147,12 +147,5 @@ public class ConglomerateItem extends Item {
         return stack.hasTag() ? stack.getTag().getInt(TAG_OU) : 0;
     }
 
-    public static boolean isAnalyzed(ItemStack stack) {
-        return stack.hasTag() && stack.getTag().getBoolean(TAG_ANALYZED);
-    }
 
-    @Override
-    public boolean isFoil(ItemStack stack) {
-        return !isAnalyzed(stack);
-    }
 }
