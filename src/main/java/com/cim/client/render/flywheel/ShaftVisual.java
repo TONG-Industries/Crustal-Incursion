@@ -15,48 +15,66 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
-
-import static com.cim.client.render.flywheel.BeltInstance.TYPE;
 
 public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> implements SimpleDynamicVisual {
 
     private final TransformedInstance shaftInstance;
     @Nullable private TransformedInstance gearInstance;
-    @Nullable private TransformedInstance pulleyInstance; // НОВОЕ
+    @Nullable private TransformedInstance pulleyInstance;
 
     private final Direction facing;
 
-    // Список для ремней теперь использует наш кастомный тип BeltInstance
-    private final java.util.List<BeltInstance> beltSegments = new java.util.ArrayList<>();
+    private final List<TransformedInstance> beltTracks = new ArrayList<>();
     private BlockPos lastConnectedPos = null;
 
     private float phaseOffset = 0f;
     private net.minecraft.world.item.Item currentGearItem;
-    private net.minecraft.world.item.Item currentPulleyItem; // НОВОЕ
+    private net.minecraft.world.item.Item currentPulleyItem;
 
-    // Локальные координаты
     private final float localX;
     private final float localY;
     private final float localZ;
+
+    private static final float TRACK_LENGTH = 3.0f / 16.0f;
+    private static final int ORBIT_RESOLUTION = 200;
+
+    private float orbitTotalLength = 0f;
+    private int trackCount = 0;
+    private float trackSpacing = 0f;
+    private TrackPose[] orbitCache;
+
+    private static class TrackPose {
+        final float u, v;
+        final float angle;
+        TrackPose(float u, float v, float angle) {
+            this.u = u;
+            this.v = v;
+            this.angle = angle;
+        }
+    }
+
+    private static class Point2D {
+        float u, v;
+        Point2D(float u, float v) { this.u = u; this.v = v; }
+    }
 
     public ShaftVisual(VisualizationContext ctx, ShaftBlockEntity blockEntity, float partialTick) {
         super(ctx, blockEntity, partialTick);
         this.facing = blockState.getValue(ShaftBlock.FACING);
 
-        // Вычисляем локальную позицию
         Vec3i origin = ctx.renderOrigin();
         this.localX = pos.getX() - origin.getX();
         this.localY = pos.getY() - origin.getY();
         this.localZ = pos.getZ() - origin.getZ();
 
-        // 1. ИНИЦИАЛИЗАЦИЯ ВАЛА
         net.minecraft.resources.ResourceLocation shaftId = net.minecraftforge.registries.ForgeRegistries.BLOCKS.getKey(blockState.getBlock());
         String shaftName = shaftId != null ? shaftId.getPath() : "";
         PartialModel shaftModel = ModModels.SHAFT_MODELS.getOrDefault(shaftName, ModModels.HALF_SHAFT);
         this.shaftInstance = instancerProvider().instancer(InstanceTypes.TRANSFORMED, Models.partial(shaftModel)).createInstance();
 
-        // 2. Инициализация шестерни и шкива
         this.currentGearItem = blockEntity.getAttachedGear().getItem();
         this.currentPulleyItem = blockEntity.getAttachedPulley().getItem();
 
@@ -66,7 +84,6 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
         setupStatic(shaftInstance, 0);
         updateLight(partialTick);
 
-        // INFO: Логируем создание визуала (Твой оригинальный лог)
         if (com.cim.main.CrustalIncursionMod.LOGGER.isInfoEnabled()) {
             com.cim.main.CrustalIncursionMod.LOGGER.info("[CIM-Visual] ShaftVisual CREATED at {} | model={} | origin=({},{},{})",
                     pos, shaftModel != null ? "OK" : "NULL",
@@ -100,7 +117,6 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
                 else if (facing.getAxis() == Direction.Axis.Y) axisCoord = y;
                 else if (facing.getAxis() == Direction.Axis.Z) axisCoord = z;
 
-                // Твой алгоритм четности для стыковки
                 int parity = Math.abs(x + y + z + axisCoord + (gearSize == 2 ? 1 : 0)) % 2;
                 float halfToothAngle = gearSize == 2 ? 11.25f : 22.5f;
                 this.phaseOffset = (float) Math.toRadians(parity == 0 ? halfToothAngle : 0);
@@ -151,7 +167,6 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
     @Override
     public void update(float pt) {
         super.update(pt);
-        // Проверка изменений предметов для динамического обновления
         if (blockEntity.getAttachedGear().getItem() != this.currentGearItem) {
             this.currentGearItem = blockEntity.getAttachedGear().getItem();
             rebuildGear();
@@ -172,7 +187,6 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
 
     @Override
     public void beginFrame(Context ctx) {
-        // Мгновенное обновление при смене деталей
         if (blockEntity.getAttachedGear().getItem() != this.currentGearItem) {
             this.currentGearItem = blockEntity.getAttachedGear().getItem();
             rebuildGear();
@@ -184,9 +198,8 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
             if (this.pulleyInstance != null) relight(pos, this.pulleyInstance);
         }
 
-        // Логика обновления ремня
         BlockPos connectedPos = blockEntity.getConnectedPulley();
-        if (connectedPos != lastConnectedPos || (connectedPos != null && beltSegments.isEmpty())) {
+        if (connectedPos != lastConnectedPos || (connectedPos != null && beltTracks.isEmpty())) {
             lastConnectedPos = connectedPos;
             rebuildBelt();
         }
@@ -198,14 +211,12 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
 
         float targetSpeed = blockEntity.getVisualSpeed();
 
-        // Твой диагностический лог
         if (targetSpeed != lastLoggedSpeed) {
             com.cim.main.CrustalIncursionMod.LOGGER.info("[VISUAL-DIAG] beginFrame at {} | speed changed: {} -> {}",
                     pos, lastLoggedSpeed, targetSpeed);
             lastLoggedSpeed = targetSpeed;
         }
 
-        // 1. Плавная визуальная инерция
         float speedDiff = targetSpeed - smoothedSpeed;
         if (Math.abs(speedDiff) > 0.001f) {
             smoothedSpeed += speedDiff * 4.0f * deltaSeconds;
@@ -213,13 +224,11 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
             smoothedSpeed = targetSpeed;
         }
 
-        // 2. Расчет угла
         currentAngle += smoothedSpeed * 2.0f * deltaSeconds;
         float twoPi = (float) (2 * Math.PI);
         currentAngle = currentAngle % twoPi;
         if (currentAngle < 0) currentAngle += twoPi;
 
-        // 3. Синхронизация фазы
         if (smoothedSpeed == targetSpeed && targetSpeed != 0) {
             float time = (float) (now % 100000) / 50f;
             float globalAngle = (time * targetSpeed * 0.1f) % twoPi;
@@ -241,7 +250,6 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
             this.phaseSynced = false;
         }
 
-        // 4. Магнитный эффект доковки зубьев
         if (targetSpeed == 0 && Math.abs(smoothedSpeed) < 5.0f) {
             float PI_OVER_4 = (float) (Math.PI / 4.0);
             float targetSnap = Math.round(currentAngle / PI_OVER_4) * PI_OVER_4;
@@ -256,39 +264,48 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
         }
 
         // =========================================================
-        // 5. АНИМАЦИЯ РЕМНЯ (Уроборос 1:1)
+        // 5. АНИМАЦИЯ РЕМНЯ (3D Траки)
         // =========================================================
-        float radius = getPulleyRadius(blockEntity);
-        float speedScroll = currentAngle * radius;
+        if (orbitCache != null && orbitTotalLength > 0 && trackCount > 0) {
+            float r1 = getPulleyRadius(blockEntity);
+            boolean invert = (facing == Direction.SOUTH || facing == Direction.WEST || facing == Direction.DOWN);
+            float animatedAngle = invert ? currentAngle : -currentAngle;
+            float beltOffset = (animatedAngle * r1) % orbitTotalLength;
+            if (beltOffset < 0) beltOffset += orbitTotalLength;
 
-        net.minecraft.client.resources.model.BakedModel bakedModel = ModModels.BELT_SEGMENT.get();
-        net.minecraft.client.renderer.texture.TextureAtlasSprite sprite = bakedModel.getParticleIcon();
+            Direction.Axis axis = facing.getAxis();
 
-        float vHeight = sprite.getV1() - sprite.getV0();
-        float frameHeightOnAtlas = vHeight / 2.0f;
-        
-        for (BeltInstance segment : beltSegments) {
-            // Для двойной текстуры (верхняя половина - первый кадр, нижняя - второй):
-            // Модель использует UV верхней половины. Чтобы не выйти за пределы атласа,
-            // сдвиг (offset) должен быть СТРОГО ПОЛОЖИТЕЛЬНЫМ (от 0 до frameHeightOnAtlas).
-            
-            // Берем остаток от деления сдвига по длине и анимации
-            float totalScroll = (-segment.cumulativeLength - speedScroll) % 1.0f;
-            if (totalScroll < 0) totalScroll += 1.0f; // Приводим к [0, 1)
-
-            // offset сдвигает UV ВНИЗ (в пределы второго кадра)
-            float offset = totalScroll * frameHeightOnAtlas;
-            
-            // Компенсация длины сегмента: так как V в модели идет от 8 к 0,
-            // на сегментах короче 1 блока мы должны уменьшить "пробег" текстуры.
-            // При длине < 1 mult будет отрицательным, компенсируя падение V до 0.
-            float mult = (1.0f - segment.segmentLength) * frameHeightOnAtlas;
-            
-            segment.setScroll(offset, mult);
-            segment.setChanged();
+            for (int i = 0; i < trackCount; i++) {
+                float D = (beltOffset + i * trackSpacing) % orbitTotalLength;
+                
+                int index = (int) ((D / orbitTotalLength) * orbitCache.length);
+                if (index >= orbitCache.length) index = orbitCache.length - 1;
+                if (index < 0) index = 0;
+                
+                TrackPose pose = orbitCache[index];
+                TransformedInstance track = beltTracks.get(i);
+                
+                track.setIdentityTransform()
+                     .translate(localX + 0.5f, localY + 0.5f, localZ + 0.5f);
+                     
+                if (axis == Direction.Axis.X) {
+                    track.translate(0, pose.v, pose.u);
+                    track.rotateX(-pose.angle);
+                } else if (axis == Direction.Axis.Y) {
+                    track.translate(pose.u, 0, pose.v);
+                    track.rotateY(-pose.angle + (float) Math.PI / 2f);
+                    track.rotateZ((float) Math.PI / 2f);
+                } else if (axis == Direction.Axis.Z) {
+                    track.translate(pose.u, pose.v, 0);
+                    track.rotateZ(pose.angle);
+                    track.rotateY((float) Math.PI / 2f);
+                }
+                
+                track.translate(-0.5f, -0.5f, -1.5f / 16.0f);
+                track.setChanged();
+            }
         }
 
-        // 6. Применяем финальные трансформации
         setupStatic(shaftInstance, currentAngle);
         if (gearInstance != null) setupStatic(gearInstance, currentAngle + this.phaseOffset);
         if (pulleyInstance != null) setupStatic(pulleyInstance, currentAngle);
@@ -296,18 +313,20 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
 
     private float getPulleyRadius(ShaftBlockEntity be) {
         if (be.hasPulley() && be.getAttachedPulley().getItem() instanceof com.cim.item.rotation.PulleyItem pulley) {
-            return (pulley.getDiameterPixels() / 2.0f) / 16.0f;
+            return (pulley.getDiameterPixels() / 2.0f + 1.0f) / 16.0f;
         }
         return 0f;
     }
 
     private void rebuildBelt() {
-        beltSegments.forEach(Instance::delete);
-        beltSegments.clear();
+        beltTracks.forEach(Instance::delete);
+        beltTracks.clear();
+        orbitCache = null;
+        trackCount = 0;
+        orbitTotalLength = 0f;
 
         BlockPos connectedPos = blockEntity.getConnectedPulley();
         if (connectedPos == null) return;
-        // Отрисовываем ремень только один раз, со стороны блока с меньшими координатами
         if (pos.compareTo(connectedPos) > 0) return;
 
         if (!(level.getBlockEntity(connectedPos) instanceof ShaftBlockEntity otherBE)) return;
@@ -334,139 +353,87 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
         float alpha = (float) Math.asin((r1 - r2) / distance);
         float straightLength = (float) Math.sqrt(distance * distance - (r1 - r2) * (r1 - r2));
 
-        // === Верхняя касательная (A → B) ===
         float dirAngle1 = baseAngle - alpha;
         float touchAngle1 = dirAngle1 + (float) Math.PI / 2f;
-        float uTop = r1 * (float) Math.cos(touchAngle1);
-        float vTop = r1 * (float) Math.sin(touchAngle1);
 
-        // === Нижняя касательная (A → B, другая сторона) ===
         float dirAngle2 = baseAngle + alpha;
         float touchAngle2 = dirAngle2 - (float) Math.PI / 2f;
-        float uBot = r1 * (float) Math.cos(touchAngle2);
-        float vBot = r1 * (float) Math.sin(touchAngle2);
 
-        com.cim.main.CrustalIncursionMod.LOGGER.info("[BELT-DEBUG] ===== rebuildBelt at {} =====", pos);
-        com.cim.main.CrustalIncursionMod.LOGGER.info("[BELT-DEBUG] axis={} r1={} r2={} distance={}", axis, r1, r2, distance);
-
-        float currentCumulativeLength = 0.0f;
-
-        // Строим единый непрерывный контур (по часовой стрелке, CW):
-        // 1. Верхний прямой участок (A -> B) (разбитый на куски <= 1.0f)
-        currentCumulativeLength = addStraightBeltSegments(axis, uTop, vTop, dirAngle1, straightLength, currentCumulativeLength);
-
-        // 2. Дуга на шкиве B (от верха к низу, CW)
         float arcBStart = touchAngle1;
         float arcBEnd = touchAngle2;
         while (arcBEnd >= arcBStart) arcBEnd -= (float) (2 * Math.PI);
-        currentCumulativeLength = renderArc(axis, du, dv, r2, arcBStart, arcBEnd, currentCumulativeLength);
+        float arcLengthB = (arcBStart - arcBEnd) * r2;
 
-        // 3. Нижний прямой участок (B -> A) (разбитый на куски <= 1.0f)
-        // Начало в точке касания на B, направление противоположное dirAngle2
-        float uBotB = du + r2 * (float) Math.cos(touchAngle2);
-        float vBotB = dv + r2 * (float) Math.sin(touchAngle2);
-        currentCumulativeLength = addStraightBeltSegments(axis, uBotB, vBotB, dirAngle2 + (float) Math.PI, straightLength, currentCumulativeLength);
-
-        // 4. Дуга на шкиве A (от низа к верху, CW)
         float arcAStart = touchAngle2;
         float arcAEnd = touchAngle1;
         while (arcAEnd >= arcAStart) arcAEnd -= (float) (2 * Math.PI);
-        currentCumulativeLength = renderArc(axis, 0, 0, r1, arcAStart, arcAEnd, currentCumulativeLength);
+        float arcLengthA = (arcAStart - arcAEnd) * r1;
 
-        com.cim.main.CrustalIncursionMod.LOGGER.info("[BELT-DEBUG] Total segments created: {}, Belt Total Length: {}", beltSegments.size(), currentCumulativeLength);
-    }
+        orbitTotalLength = straightLength * 2 + arcLengthB + arcLengthA;
 
-    /**
-     * Рисует дугу ремня вокруг шкива, разбивая на маленькие сегменты.
-     * Обход по часовой стрелке (CW), startAngle -> endAngle, где endAngle < startAngle.
-     */
-    private float renderArc(Direction.Axis axis, float uCenter, float vCenter, float radius, float startAngle, float endAngle, float cumulativeLen) {
-        float step = (float) Math.toRadians(10); // Шаг 10 градусов
-        float currentCumLen = cumulativeLen;
+        trackCount = (int) Math.ceil(orbitTotalLength / TRACK_LENGTH);
+        trackSpacing = orbitTotalLength / trackCount;
 
-        for (float angle = startAngle; angle > endAngle; angle -= step) {
-            float nextAngle = Math.max(angle - step, endAngle);
-
-            float u1 = uCenter + radius * (float) Math.cos(angle);
-            float v1 = vCenter + radius * (float) Math.sin(angle);
-            float u2 = uCenter + radius * (float) Math.cos(nextAngle);
-            float v2 = vCenter + radius * (float) Math.sin(nextAngle);
-
-            float segDu = u2 - u1;
-            float segDv = v2 - v1;
-            float len = (float) Math.sqrt(segDu * segDu + segDv * segDv);
-            float dirAngle = (float) Math.atan2(segDv, segDu);
-
-            currentCumLen = addBeltSegment(axis, u1, v1, dirAngle, len, currentCumLen);
-        }
-        return currentCumLen;
-    }
-
-    /**
-     * Разбивает длинный прямой участок ремня на сегменты длиной не более 1.0f,
-     * чтобы текстура не выходила за пределы атласа при масштабировании.
-     */
-    private float addStraightBeltSegments(Direction.Axis axis, float uStart, float vStart, float angle, float totalLength, float cumulativeLen) {
-        float currentCumLen = cumulativeLen;
-        float remaining = totalLength;
-        float currentU = uStart;
-        float currentV = vStart;
-
-        // Идем по прямой, отрезая куски максимум по 1 блоку
-        while (remaining > 0.0001f) {
-            float len = Math.min(remaining, 1.0f);
-            currentCumLen = addBeltSegment(axis, currentU, currentV, angle, len, currentCumLen);
-            remaining -= len;
-            currentU += len * (float) Math.cos(angle);
-            currentV += len * (float) Math.sin(angle);
-        }
-        return currentCumLen;
-    }
-
-    /**
-     * Создаёт один сегмент ремня с заданной позицией, направлением и длиной (<= 1.0f).
-     * Возвращает обновленную кумулятивную длину.
-     */
-    private float addBeltSegment(Direction.Axis axis, float u, float v, float angle, float length, float cumulativeLen) {
-        BeltInstance segment = instancerProvider()
-                .instancer(TYPE, Models.partial(ModModels.BELT_SEGMENT))
-                .createInstance();
-
-        // Цепочка трансформаций (применяется снизу вверх):
-        // 5. Перемещение в мировые координаты (центр блока текущего шкива)
-        segment.setIdentityTransform()
-                .translate(localX + 0.5f, localY + 0.5f, localZ + 0.5f);
-
-        // 4. Смещение в 2D плоскости, перпендикулярной оси вала
-        if (axis == Direction.Axis.X) segment.translate(0, v, u);
-        else if (axis == Direction.Axis.Y) segment.translate(u, 0, v);
-        else if (axis == Direction.Axis.Z) segment.translate(u, v, 0);
-
-        // 3. Поворот ремня в направлении касательной + выравнивание ширины по оси вала
-        if (axis == Direction.Axis.X) {
-            segment.rotateX(-angle);
-        } else if (axis == Direction.Axis.Y) {
-            segment.rotateY(-angle + (float) Math.PI / 2f);
-            segment.rotateZ((float) Math.PI / 2f);
-        } else if (axis == Direction.Axis.Z) {
-            segment.rotateZ(angle);
-            segment.rotateY((float) Math.PI / 2f);
+        for (int i = 0; i < trackCount; i++) {
+            TransformedInstance track = instancerProvider()
+                    .instancer(InstanceTypes.TRANSFORMED, Models.partial(ModModels.BELT_SEGMENT))
+                    .createInstance();
+            beltTracks.add(track);
+            relight(pos, track);
         }
 
-        // 2. Растягиваем сегмент на нужную длину
-        segment.scale(1, 1, length);
+        int totalPoints = (int) Math.ceil(orbitTotalLength * ORBIT_RESOLUTION);
+        orbitCache = new TrackPose[totalPoints];
 
-        // 1. Центрируем геометрию belt_segment.json
-        segment.translate(-0.5f, -0.5f, 0.0f);
+        for (int i = 0; i < totalPoints; i++) {
+            float D = ((float) i / totalPoints) * orbitTotalLength;
+            
+            Point2D pointA = getPointOnPath(D, straightLength, arcLengthB, r1, r2, du, dv, touchAngle1, touchAngle2, arcBStart, arcBEnd, arcAStart, arcAEnd);
+            
+            float dB = (D - TRACK_LENGTH + orbitTotalLength) % orbitTotalLength;
+            Point2D pointB = getPointOnPath(dB, straightLength, arcLengthB, r1, r2, du, dv, touchAngle1, touchAngle2, arcBStart, arcBEnd, arcAStart, arcAEnd);
 
-        segment.cumulativeLength = cumulativeLen;
-        segment.segmentLength = length;
+            float cx = (pointA.u + pointB.u) / 2.0f;
+            float cy = (pointA.v + pointB.v) / 2.0f;
+            float angle = (float) Math.atan2(pointA.v - pointB.v, pointA.u - pointB.u);
 
-        segment.setChanged();
-        relight(pos, segment);
-        beltSegments.add(segment);
+            orbitCache[i] = new TrackPose(cx, cy, angle);
+        }
 
-        return cumulativeLen + length;
+        com.cim.main.CrustalIncursionMod.LOGGER.info("[BELT-DEBUG] rebuildBelt: orbitLength={}, trackCount={}, spacing={}", orbitTotalLength, trackCount, trackSpacing);
+    }
+
+    private Point2D getPointOnPath(float d, float straightLength, float arcLengthB, float r1, float r2, float du, float dv, float touchAngle1, float touchAngle2, float arcBStart, float arcBEnd, float arcAStart, float arcAEnd) {
+        if (d < straightLength) {
+            float fraction = d / straightLength;
+            float uA = r1 * (float) Math.cos(touchAngle1);
+            float vA = r1 * (float) Math.sin(touchAngle1);
+            float uB = du + r2 * (float) Math.cos(touchAngle1);
+            float vB = dv + r2 * (float) Math.sin(touchAngle1);
+            return new Point2D(uA + fraction * (uB - uA), vA + fraction * (vB - vA));
+        }
+        
+        d -= straightLength;
+        if (d < arcLengthB) {
+            float fraction = d / arcLengthB;
+            float angle = arcBStart - fraction * (arcBStart - arcBEnd);
+            return new Point2D(du + r2 * (float) Math.cos(angle), dv + r2 * (float) Math.sin(angle));
+        }
+
+        d -= arcLengthB;
+        if (d < straightLength) {
+            float fraction = d / straightLength;
+            float uB = du + r2 * (float) Math.cos(touchAngle2);
+            float vB = dv + r2 * (float) Math.sin(touchAngle2);
+            float uA = r1 * (float) Math.cos(touchAngle2);
+            float vA = r1 * (float) Math.sin(touchAngle2);
+            return new Point2D(uB + fraction * (uA - uB), vB + fraction * (vA - vB));
+        }
+
+        d -= straightLength;
+        float fraction = d / Math.max(0.0001f, (orbitTotalLength - straightLength * 2 - arcLengthB));
+        float angle = arcAStart - fraction * (arcAStart - arcAEnd);
+        return new Point2D(r1 * (float) Math.cos(angle), r1 * (float) Math.sin(angle));
     }
 
     @Override
@@ -474,8 +441,8 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
         relight(pos, shaftInstance);
         if (gearInstance != null) relight(pos, gearInstance);
         if (pulleyInstance != null) relight(pos, pulleyInstance);
-        for (BeltInstance segment : beltSegments) {
-            relight(pos, segment);
+        for (TransformedInstance track : beltTracks) {
+            relight(pos, track);
         }
     }
 
@@ -484,8 +451,8 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
         shaftInstance.delete();
         if (gearInstance != null) gearInstance.delete();
         if (pulleyInstance != null) pulleyInstance.delete();
-        beltSegments.forEach(Instance::delete);
-        beltSegments.clear();
+        beltTracks.forEach(Instance::delete);
+        beltTracks.clear();
     }
 
     @Override
@@ -493,8 +460,8 @@ public class ShaftVisual extends AbstractBlockEntityVisual<ShaftBlockEntity> imp
         consumer.accept(shaftInstance);
         if (gearInstance != null) consumer.accept(gearInstance);
         if (pulleyInstance != null) consumer.accept(pulleyInstance);
-        for (BeltInstance segment : beltSegments) {
-            consumer.accept(segment);
+        for (TransformedInstance track : beltTracks) {
+            consumer.accept(track);
         }
     }
 }
