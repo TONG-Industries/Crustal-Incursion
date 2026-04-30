@@ -15,6 +15,8 @@ public class ModModels {
     public static final PartialModel HALF_SHAFT = PartialModel.of(new ResourceLocation("cim", "block/half_shaft"));
     public static final PartialModel BEARING_INNER_RING = PartialModel.of(new ResourceLocation("cim", "block/bearing_shaft"));
     public static final PartialModel BEARING = PartialModel.of(new ResourceLocation("cim", "block/bearing"));
+    public static final Map<String, PartialModel> PULLEY_MODELS = new HashMap<>();
+    public static final PartialModel BELT_SEGMENT = PartialModel.of(new ResourceLocation("cim", "block/belt_segment"));
 
     // Статический блок вызывается самым первым, как только Java видит этот класс!
     // Flywheel 100% получит эти модели вовремя.
@@ -40,6 +42,8 @@ public class ModModels {
                 SHAFT_MODELS.put(name, PartialModel.of(new ResourceLocation("cim", "block/" + name)));
             }
         }
+
+        PULLEY_MODELS.put("pulley", PartialModel.of(new ResourceLocation("cim", "block/pulley")));
     }
 
     // Оставляем пустым. Этот метод просто служит "спусковым крючком",

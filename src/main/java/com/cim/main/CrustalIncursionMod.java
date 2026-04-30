@@ -240,7 +240,8 @@ public class CrustalIncursionMod {
 
             event.accept(ModBlocks.MOTOR_ELECTRO);
             event.accept(ModBlocks.BEARING_BLOCK);
-
+            event.accept(ModItems.PULLEY.get());
+            event.accept(ModItems.BELT.get());
 
             event.accept(ModItems.WIRE_COIL);
             event.accept(ModBlocks.CONNECTOR);
@@ -368,6 +369,7 @@ public class CrustalIncursionMod {
             event.accept(ModBlocks.SEQUOIA_BARK.get());
             event.accept(ModBlocks.SEQUOIA_HEARTWOOD.get());
             event.accept(ModBlocks.SEQUOIA_LEAVES.get());
+            event.accept(ModBlocks.SEQUOIA_BIOME_MOSS.get());
             event.accept(ModBlocks.WASTE_LOG.get());
             event.accept(ModBlocks.NECROSIS_PORTAL.get());
             event.accept(ModBlocks.NECROSIS_TEST.get());

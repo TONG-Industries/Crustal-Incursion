@@ -35,6 +35,7 @@ import org.jetbrains.annotations.Nullable;
 public class ShaftBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.FACING;
     public static final IntegerProperty GEAR_SIZE = IntegerProperty.create("gear_size", 0, 3);
+    public static final IntegerProperty PULLEY_SIZE = IntegerProperty.create("pulley_size", 0, 3);
 
     // НОВЫЕ ПЕРЕМЕННЫЕ
     private final ShaftMaterial material;
@@ -47,7 +48,8 @@ public class ShaftBlock extends BaseEntityBlock {
         this.diameter = diameter;
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
-                .setValue(GEAR_SIZE, 0)); // По умолчанию вал пустой
+                .setValue(GEAR_SIZE, 0)
+                .setValue(PULLEY_SIZE, 0)); // По умолчанию вал пустой
     }
 
     // Геттеры для сущности (BlockEntity)
@@ -56,45 +58,61 @@ public class ShaftBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, GEAR_SIZE);
+        builder.add(FACING, GEAR_SIZE, PULLEY_SIZE);
     }
 
     // ДИНАМИЧЕСКИЙ ХИТБОКС (зависит от диаметра)
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        // 1. Хитбокс вала (остается как был)
         double p = diameter.pixels / 2.0;
         double min = 8.0 - p;
         double max = 8.0 + p;
 
+        // Хитбокс самого вала
         VoxelShape shaftShape = switch (state.getValue(FACING).getAxis()) {
             case X -> Block.box(0.0, min, min, 16.0, max, max);
             case Y -> Block.box(min, 0.0, min, max, 16.0, max);
             case Z -> Block.box(min, min, 0.0, max, max, 16.0);
         };
 
-        // 2. Хитбокс шестерни
         int gearSize = state.getValue(GEAR_SIZE);
-        if (gearSize == 1) { // МАЛАЯ ШЕСТЕРНЯ
-            double gMin = 0.0, gMax = 16.0;
-            double tMin = 6.0, tMax = 10.0;
-            VoxelShape gearShape = switch (state.getValue(FACING).getAxis()) {
-                case X -> Block.box(tMin, gMin, gMin, tMax, gMax, gMax);
-                case Y -> Block.box(gMin, tMin, gMin, gMax, tMax, gMax);
-                case Z -> Block.box(gMin, gMin, tMin, gMax, gMax, tMax);
+        int pulleySize = state.getValue(PULLEY_SIZE);
+
+        VoxelShape attachmentShape = Shapes.empty();
+        double tMin = 6.0, tMax = 10.0; // Толщина детали по центру оси (4 пикселя)
+
+        // 1. Хитбокс шкива (Динамический, основан на размере)
+        if (pulleySize > 0) {
+            // Размеры в пикселях: 1 = 12px, 2 = 24px, 3 = 36px
+            double pulleyRadius = (pulleySize == 1 ? 6.0 : (pulleySize == 2 ? 12.0 : 18.0));
+            double pMin = 8.0 - pulleyRadius;
+            double pMax = 8.0 + pulleyRadius;
+
+            attachmentShape = switch (state.getValue(FACING).getAxis()) {
+                case X -> Block.box(tMin, pMin, pMin, tMax, pMax, pMax);
+                case Y -> Block.box(pMin, tMin, pMin, pMax, tMax, pMax);
+                case Z -> Block.box(pMin, pMin, tMin, pMax, pMax, tMax);
             };
-            return Shapes.or(shaftShape, gearShape);
+            return Shapes.or(shaftShape, attachmentShape);
         }
-        else if (gearSize == 2) { // БОЛЬШАЯ ШЕСТЕРНЯ 2x2
-            // Выходим на полблока (-8.0) в минус и (+24.0) в плюс
-            double gMin = -8.0, gMax = 24.0;
-            double tMin = 6.0, tMax = 10.0;
-            VoxelShape gearShape = switch (state.getValue(FACING).getAxis()) {
+
+        // 2. Хитбокс шестерни (твой старый код)
+        if (gearSize == 1) {
+            double gMin = 0.0, gMax = 16.0;
+            attachmentShape = switch (state.getValue(FACING).getAxis()) {
                 case X -> Block.box(tMin, gMin, gMin, tMax, gMax, gMax);
                 case Y -> Block.box(gMin, tMin, gMin, gMax, tMax, gMax);
                 case Z -> Block.box(gMin, gMin, tMin, gMax, gMax, tMax);
             };
-            return Shapes.or(shaftShape, gearShape);
+            return Shapes.or(shaftShape, attachmentShape);
+        } else if (gearSize >= 2) {
+            double gMin = -8.0, gMax = 24.0;
+            attachmentShape = switch (state.getValue(FACING).getAxis()) {
+                case X -> Block.box(tMin, gMin, gMin, tMax, gMax, gMax);
+                case Y -> Block.box(gMin, tMin, gMin, gMax, tMax, gMax);
+                case Z -> Block.box(gMin, gMin, tMin, gMax, gMax, tMax);
+            };
+            return Shapes.or(shaftShape, attachmentShape);
         }
 
         return shaftShape;
@@ -102,37 +120,42 @@ public class ShaftBlock extends BaseEntityBlock {
 
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        // Проверяем, держит ли игрок отвертку в руке, которой кликает
         if (player.getItemInHand(hand).is(ModItems.SCREWDRIVER.get())) {
+            boolean isGear = state.getValue(GEAR_SIZE) > 0;
+            boolean isPulley = state.getValue(PULLEY_SIZE) > 0;
 
-            // Проверяем, есть ли вообще шестерня на валу
-            if (state.getValue(GEAR_SIZE) > 0) {
+            if (isGear || isPulley) {
                 if (!level.isClientSide) {
                     BlockEntity be = level.getBlockEntity(pos);
-                    if (be instanceof ShaftBlockEntity shaftBE && shaftBE.hasGear()) {
+                    if (be instanceof ShaftBlockEntity shaftBE) {
 
-                        // 1. Выкидываем шестерню в мир
-                        Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), shaftBE.getAttachedGear());
+                        if (isGear && shaftBE.hasGear()) {
+                            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), shaftBE.getAttachedGear());
+                            shaftBE.setAttachedGear(net.minecraft.world.item.ItemStack.EMPTY);
+                        } else if (isPulley && shaftBE.hasPulley()) {
+                            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), shaftBE.getAttachedPulley());
+                            shaftBE.setAttachedPulley(net.minecraft.world.item.ItemStack.EMPTY);
 
-                        // 2. Очищаем память вала
-                        shaftBE.setAttachedGear(net.minecraft.world.item.ItemStack.EMPTY);
+                            // ОБРЫВ РЕМНЯ: Чистим память у связанного вала!
+                            BlockPos connected = shaftBE.getConnectedPulley();
+                            if (connected != null && level.getBlockEntity(connected) instanceof ShaftBlockEntity otherBE) {
+                                otherBE.setConnectedPulley(null);
+                            }
+                            shaftBE.setConnectedPulley(null);
+                        }
 
-                        // 3. Возвращаем валу хитбокс без шестерни (обновляем BlockState)
-                        level.setBlock(pos, state.setValue(GEAR_SIZE, 0), 3);
-
-                        // 4. Проигрываем приятный механический звук снятия
+                        level.setBlock(pos, state.setValue(GEAR_SIZE, 0).setValue(PULLEY_SIZE, 0), 3);
                         level.playSound(null, pos, SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 1.0f, 1.0f);
 
-                        // 5. ПЕРЕСОБИРАЕМ СЕТЬ (ОБЯЗАТЕЛЬНО!)
+                        // Пересчет
                         KineticNetworkManager manager = KineticNetworkManager.get((ServerLevel) level);
                         manager.updateNetworkAfterRemove(pos);
-                        manager.updateNetworkAfterPlace(pos);                    }
+                        manager.updateNetworkAfterPlace(pos);
+                    }
                 }
-                // Возвращаем success, чтобы рука игрока взмахнула и действие засчиталось
                 return InteractionResult.sidedSuccess(level.isClientSide);
             }
         }
-
         return super.use(state, level, pos, player, hand, hit);
     }
 
@@ -216,21 +239,26 @@ public class ShaftBlock extends BaseEntityBlock {
 
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        // Выполняем логику, только если блок действительно меняется (а не просто обновляется стейт)
         if (state.getBlock() != newState.getBlock()) {
-
-            // ВАЖНО: Достаем предметы ДО вызова super.onRemove, иначе BlockEntity исчезнет
             BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof ShaftBlockEntity shaftBE && shaftBE.hasGear()) {
-                Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), shaftBE.getAttachedGear());
-            }
+            if (be instanceof ShaftBlockEntity shaftBE) {
+                if (shaftBE.hasGear()) {
+                    Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), shaftBE.getAttachedGear());
+                }
+                if (shaftBE.hasPulley()) {
+                    Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), shaftBE.getAttachedPulley());
 
+                    // ОБРЫВ РЕМНЯ при ломании блока киркой
+                    BlockPos connected = shaftBE.getConnectedPulley();
+                    if (connected != null && level.getBlockEntity(connected) instanceof ShaftBlockEntity otherBE) {
+                        otherBE.setConnectedPulley(null);
+                    }
+                }
+            }
             if (!level.isClientSide) {
                 KineticNetworkManager.get((ServerLevel) level).updateNetworkAfterRemove(pos);
             }
         }
-
-        // Теперь можно безопасно удалять сам блок и его BlockEntity
         super.onRemove(state, level, pos, newState, isMoving);
     }
 }

@@ -92,6 +92,7 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(ModItems.GRENADEFIRE);
 
         simpleItem(ModItems.MOLD_INGOT);
+        simpleItem(ModItems.BELT);
 
         simpleItem(ModItems.GRENADE_NUC);
         simpleItem(ModItems.GRENADE_IF_HE);
@@ -114,12 +115,33 @@ public class ModItemModelProvider extends ItemModelProvider {
         complexBlockItem(ModBlocks.BEARING_BLOCK);
 
         generateAllGears();
-
+        generateAllPulleys();
         // Пример регистрации блоков как предметов (если это обычный куб)
         // complexBlockItem(ModBlocks.NECROTIC_ORE);
 
         // Для дверей (плоские иконки как в ванилле)
         // doorItem(ModBlocks.METAL_DOOR);
+    }
+
+    public void generateAllPulleys() {
+        for (RegistryObject<Item> itemObj : com.cim.item.ModItems.ITEMS.getEntries()) {
+            if (itemObj.get() instanceof com.cim.item.rotation.PulleyItem pulley) {
+                String name = itemObj.getId().getPath(); // должно быть "pulley"
+
+                ResourceLocation objModel = modLoc("models/block/" + name + ".obj");
+                ResourceLocation texture = modLoc("block/" + name); // берет текстуру из assets/cim/textures/block/pulley.png
+
+                getBuilder(name)
+                        .parent(new net.minecraftforge.client.model.generators.ModelFile.UncheckedModelFile(modLoc("item/pulley_template")))
+                        .customLoader(net.minecraftforge.client.model.generators.loaders.ObjModelBuilder::begin)
+                        .modelLocation(objModel)
+                        .flipV(true)
+                        .end()
+                        // ВАЖНО: Имя "pulley_texture" должно быть в pulley.mtl!
+                        .texture("pulley_texture", texture)
+                        .texture("particle", texture);
+            }
+        }
     }
 
     public void generateAllGears() {

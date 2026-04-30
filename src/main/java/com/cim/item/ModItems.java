@@ -65,7 +65,19 @@ public class ModItems {
             () -> new PokerItem(new Item.Properties()
                     .stacksTo(1)
                     .durability(128)));
-    //ИНСТРУМЕНТЫ
+    // ИНСТРУМЕНТЫ
+    public static final RegistryObject<Item> BELT = ITEMS.register("belt",
+            () -> new com.cim.item.rotation.BeltItem(new Item.Properties()));
+
+    // ШКИВЫ
+    public static final RegistryObject<Item> PULLEY = ITEMS.register("pulley",
+            () -> new com.cim.item.rotation.PulleyItem(new Item.Properties(),
+                    1, // Размер для BlockState (PULLEY_SIZE = 1)
+                    12, // Физический диаметр в пикселях (для передаточного числа)
+                    com.cim.api.rotation.ShaftMaterial.IRON,
+                    com.cim.api.rotation.ShaftDiameter.LIGHT,
+                    com.cim.api.rotation.ShaftDiameter.MEDIUM));
+
     public static final RegistryObject<Item> SCREWDRIVER = ITEMS.register("screwdriver",
             () -> new ScrewdriverItem(new Item.Properties().stacksTo(1).durability(256)));
 

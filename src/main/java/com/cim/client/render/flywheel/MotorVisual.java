@@ -67,11 +67,66 @@ public class MotorVisual extends AbstractBlockEntityVisual<MotorElectroBlockEnti
         base.setChanged();
     }
 
+    private float smoothedSpeed = 0f;
+    private float currentAngle = 0f;
+    private long lastFrameTime = -1;
+    private boolean phaseSynced = false;
+
     @Override
     public void beginFrame(Context ctx) {
-        long speed = blockEntity.getVisualSpeed();
-        float time = (float) (System.currentTimeMillis() % 100000) / 50f;
-        float angle = time * speed * 0.1f;
+        long now = System.currentTimeMillis();
+        if (lastFrameTime == -1) lastFrameTime = now;
+        float deltaSeconds = (now - lastFrameTime) / 1000f;
+        lastFrameTime = now;
+
+        float targetSpeed = blockEntity.getVisualSpeed();
+
+        float speedDiff = targetSpeed - smoothedSpeed;
+        if (Math.abs(speedDiff) > 0.001f) {
+            smoothedSpeed += speedDiff * 4.0f * deltaSeconds;
+        } else {
+            smoothedSpeed = targetSpeed;
+        }
+
+        currentAngle += smoothedSpeed * 2.0f * deltaSeconds;
+        
+        float twoPi = (float) (2 * Math.PI);
+        currentAngle = currentAngle % twoPi;
+        if (currentAngle < 0) currentAngle += twoPi;
+
+        if (smoothedSpeed == targetSpeed && targetSpeed != 0) {
+            float time = (float) (now % 100000) / 50f;
+            float globalAngle = (time * targetSpeed * 0.1f) % twoPi;
+            if (globalAngle < 0) globalAngle += twoPi;
+            
+            if (!this.phaseSynced) {
+                currentAngle = globalAngle;
+                this.phaseSynced = true;
+            } else {
+                float angleDiff = (globalAngle - currentAngle) % twoPi;
+                if (angleDiff > Math.PI) angleDiff -= twoPi;
+                if (angleDiff < -Math.PI) angleDiff += twoPi;
+                
+                float maxCorrection = 0.5f * deltaSeconds;
+                float correction = Math.signum(angleDiff) * Math.min(Math.abs(angleDiff), maxCorrection);
+                currentAngle += correction;
+            }
+        } else {
+            this.phaseSynced = false;
+        }
+
+        if (targetSpeed == 0 && Math.abs(smoothedSpeed) < 5.0f) {
+            float PI_OVER_4 = (float) (Math.PI / 4.0);
+            float targetSnap = Math.round(currentAngle / PI_OVER_4) * PI_OVER_4;
+            float snapDiff = targetSnap - currentAngle;
+            
+            if (Math.abs(snapDiff) > 0.001f) {
+                float pull = 8.0f * (1.0f - (Math.abs(smoothedSpeed) / 5.0f));
+                currentAngle += snapDiff * pull * deltaSeconds;
+            } else {
+                currentAngle = targetSnap;
+            }
+        }
 
         shaft.setIdentityTransform()
                 // Используем localX, Y, Z вместо pos!
@@ -87,8 +142,8 @@ public class MotorVisual extends AbstractBlockEntityVisual<MotorElectroBlockEnti
             shaft.rotateY((float) Math.toRadians(180));
         }
 
-        // Никаких проверок, просто крутим!
-        shaft.rotateZ(angle);
+        // Крутим плавно!
+        shaft.rotateZ(currentAngle);
 
         shaft.translate(-0.5f, -0.5f, -0.5f);
         shaft.setChanged();

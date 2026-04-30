@@ -169,7 +169,7 @@ public class ModBlockStateProvider extends BlockStateProvider {
         generateAllShafts();
         //генерация моделей для шестеренок
         generateGearBlockModels();
-
+        generatePulleyBlockModels();
 
 
         stairsAndSlabs(ModBlocks.CONCRETE_TILE_ALT.get(), ModBlocks.CONCRETE_TILE_ALT_STAIRS.get(), ModBlocks.CONCRETE_TILE_ALT_SLAB.get());
@@ -190,6 +190,24 @@ public class ModBlockStateProvider extends BlockStateProvider {
 
     }
 
+    public void generatePulleyBlockModels() {
+        for (RegistryObject<Item> itemObj : com.cim.item.ModItems.ITEMS.getEntries()) {
+            if (itemObj.get() instanceof com.cim.item.rotation.PulleyItem pulley) {
+                String name = itemObj.getId().getPath();
+
+                ResourceLocation objModel = modLoc("models/block/" + name + ".obj");
+                ResourceLocation texture = modLoc("block/" + name);
+
+                // Создаем пустышку JSON, чтобы Flywheel мог на неё сослаться
+                models().getBuilder(name)
+                        .customLoader(net.minecraftforge.client.model.generators.loaders.ObjModelBuilder::begin)
+                        .modelLocation(objModel)
+                        .flipV(true)
+                        .end()
+                        .texture("pulley_texture", texture);
+            }
+        }
+    }
 
     public void hiveRootsBlock(RegistryObject<Block> block) {
         getVariantBuilder(block.get()).forAllStates(state -> {

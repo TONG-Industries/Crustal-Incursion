@@ -55,6 +55,12 @@ public class BearingVisual extends AbstractBlockEntityVisual<BearingBlockEntity>
 
         createShaftInstance();
         setupStaticPositions();
+        updateLight(partialTick);
+
+        // DEBUG: Логируем создание визуала для отслеживания бага с прозрачностью
+        if (com.cim.main.CrustalIncursionMod.LOGGER.isInfoEnabled()) {
+            com.cim.main.CrustalIncursionMod.LOGGER.info("[CIM-Visual] BearingVisual CREATED at {} | hasShaft={}", pos, blockEntity.hasShaft());
+        }
     }
 
     private void createShaftInstance() {
@@ -103,6 +109,11 @@ public class BearingVisual extends AbstractBlockEntityVisual<BearingBlockEntity>
         instance.setChanged();
     }
 
+    private float smoothedSpeed = 0f;
+    private float currentAngle = 0f;
+    private long lastFrameTime = -1;
+    private boolean phaseSynced = false;
+
     @Override
     public void beginFrame(Context ctx) {
         // 1. АБСОЛЮТНАЯ ЗАЩИТА ОТ ДЕСИНКА
@@ -129,15 +140,68 @@ public class BearingVisual extends AbstractBlockEntityVisual<BearingBlockEntity>
             }
         }
 
-        // 2. ВРАЩЕНИЕ
-        long speed = blockEntity.getVisualSpeed();
-        float time = (float) (System.currentTimeMillis() % 100000) / 50f;
-        // Даже если скорость 0, вызываем пересчет позиций, чтобы модель не исчезла!
-        float angle = speed == 0 ? 0 : time * speed * 0.1f;
+        // 2. ВРАЩЕНИЕ с плавной инерцией
+        long now = System.currentTimeMillis();
+        if (lastFrameTime == -1) lastFrameTime = now;
+        float deltaSeconds = (now - lastFrameTime) / 1000f;
+        lastFrameTime = now;
 
-        applyRotation(this.innerRing, angle);
+        float targetSpeed = blockEntity.getVisualSpeed();
+
+        // 2.1 Плавное изменение скорости
+        float speedDiff = targetSpeed - smoothedSpeed;
+        if (Math.abs(speedDiff) > 0.001f) {
+            smoothedSpeed += speedDiff * 4.0f * deltaSeconds; // Увеличил до 4
+        } else {
+            smoothedSpeed = targetSpeed;
+        }
+
+        // 2.2 Увеличиваем внутренний угол плавно
+        currentAngle += smoothedSpeed * 2.0f * deltaSeconds;
+        
+        float twoPi = (float) (2 * Math.PI);
+        currentAngle = currentAngle % twoPi;
+        if (currentAngle < 0) currentAngle += twoPi;
+
+        // 2.3 Синхронизация фазы при постоянной скорости
+        if (smoothedSpeed == targetSpeed && targetSpeed != 0) {
+            float time = (float) (now % 100000) / 50f;
+            float globalAngle = (time * targetSpeed * 0.1f) % twoPi;
+            if (globalAngle < 0) globalAngle += twoPi;
+            
+            if (!this.phaseSynced) {
+                currentAngle = globalAngle;
+                this.phaseSynced = true;
+            } else {
+                float angleDiff = (globalAngle - currentAngle) % twoPi;
+                if (angleDiff > Math.PI) angleDiff -= twoPi;
+                if (angleDiff < -Math.PI) angleDiff += twoPi;
+                
+                float maxCorrection = 0.5f * deltaSeconds;
+                float correction = Math.signum(angleDiff) * Math.min(Math.abs(angleDiff), maxCorrection);
+                currentAngle += correction;
+            }
+        } else {
+            this.phaseSynced = false;
+        }
+
+        // 2.4 ДОКОВКА ПРИ ОСТАНОВКЕ (МАГНИТНЫЙ ЭФФЕКТ)
+        if (targetSpeed == 0 && Math.abs(smoothedSpeed) < 5.0f) {
+            float PI_OVER_4 = (float) (Math.PI / 4.0);
+            float targetSnap = Math.round(currentAngle / PI_OVER_4) * PI_OVER_4;
+            float snapDiff = targetSnap - currentAngle;
+            
+            if (Math.abs(snapDiff) > 0.001f) {
+                float pull = 8.0f * (1.0f - (Math.abs(smoothedSpeed) / 5.0f));
+                currentAngle += snapDiff * pull * deltaSeconds;
+            } else {
+                currentAngle = targetSnap;
+            }
+        }
+        
+        applyRotation(this.innerRing, currentAngle);
         if (this.shaft != null) {
-            applyRotation(this.shaft, angle);
+            applyRotation(this.shaft, currentAngle);
         }
     }
 

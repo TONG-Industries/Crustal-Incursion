@@ -67,7 +67,7 @@ public interface Rotational {
 
     default void forceSyncVisuals(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
         if (!level.isClientSide && this instanceof net.minecraft.world.level.block.entity.BlockEntity be) {
-            level.sendBlockUpdated(pos, be.getBlockState(), be.getBlockState(), 2);
+            level.sendBlockUpdated(pos, be.getBlockState(), be.getBlockState(), 3);
         }
     }
 }
